@@ -24,6 +24,8 @@ import { Articles } from './collections/Articles'
 import { ContentImage } from './blocks/ContentImage'
 import { MapBlock } from './blocks/Map'
 import { SeasonalityBlock } from './blocks/Seasonality'
+import { NiceToKnowBlock } from './blocks/NiceToKnow'
+import { DailyCostsBlock } from './blocks/DailyCosts'
 import { Homepage } from './globals/Homepage'
 import { Header } from './globals/Header'
 import { Footer } from './globals/Footer'
@@ -68,7 +70,13 @@ export default buildConfig({
       HTMLConverterFeature({}),
       EXPERIMENTAL_TableFeature(),
       BlocksFeature({
-        blocks: [ContentImage, MapBlock, SeasonalityBlock],
+        blocks: [
+          ContentImage,
+          MapBlock,
+          SeasonalityBlock,
+          NiceToKnowBlock,
+          DailyCostsBlock,
+        ],
       }),
     ],
   }),

@@ -92,7 +92,7 @@ async function fetchOldRecords(conn: mysql.Connection): Promise<OldRecord[]> {
       \`main_image_css\`,
       \`main_image_name\`
     FROM \`${OLD_TABLE}\`
-    WHERE \`${COL_ID}\` = 782
+    WHERE \`${COL_ID}\` = 4497
     ORDER BY \`${COL_ID}\`
     ${limitClause}
   `
@@ -165,6 +165,18 @@ async function htmlToLexical(
         })
       })
 
+      // Validace délky pole pro Payload (minRows: 12, maxRows: 12)
+      if (months.length > 12) {
+        months.splice(12)
+      } else {
+        while (months.length < 12) {
+          months.push({
+            monthNumber: months.length + 1,
+            status: 'off',
+          })
+        }
+      }
+
       const legend: any[] = []
       if (legendContainer) {
         const labels = legendContainer.querySelectorAll('.climate-legend__label')
@@ -228,6 +240,307 @@ async function htmlToLexical(
         }
       }
     }
+    // ─────────────────────────────────────────────────────────────────────────────
+    // EXTRAKCE NICE TO KNOW (PRAKTICKÉ INFORMACE)
+    // ─────────────────────────────────────────────────────────────────────────────
+    const niceToKnowSection = doc.querySelector('.nice-to-know')
+
+    if (niceToKnowSection) {
+      const index = blocks.length
+      const items: any[] = []
+
+      const niceItems = niceToKnowSection.querySelectorAll('.nice-to-know-item')
+      niceItems.forEach((item: any) => {
+        let type = 'language'
+        if (item.classList.contains('nice-to-know__item--electricity')) type = 'electricity'
+        else if (item.classList.contains('nice-to-know__item--currency')) type = 'currency'
+        else if (item.classList.contains('nice-to-know__item--weather')) type = 'weather'
+        else if (item.classList.contains('nice-to-know__item--time')) type = 'time'
+        else if (item.classList.contains('nice-to-know__item--language')) type = 'language'
+
+        const body = item.querySelector('.nice-to-know-item__body')
+        const titleEl = body?.querySelector('.nice-to-know-item__title')
+        const title = (titleEl?.textContent || '').trim()
+
+        // Získáme hodnotu - text ve spanu vedle titulku
+        const bodySpans = body?.querySelectorAll('span') || []
+        let value = ''
+        bodySpans.forEach((s: any) => {
+          if (
+            !s.classList.contains('nice-to-know-item__title') &&
+            !s.classList.contains('js-localTimeCard-offset')
+          ) {
+            const t = (s.textContent || '').trim()
+            if (t && !value) value = t
+          }
+        })
+
+        // Sekundární hodnota (elektřina: 230V, měna: Kuna)
+        let secondaryValue = ''
+        bodySpans.forEach((s: any) => {
+          if (
+            !s.classList.contains('nice-to-know-item__title') &&
+            !s.classList.contains('js-localTimeCard-offset')
+          ) {
+            const t = (s.textContent || '').trim()
+            if (t && t !== value) secondaryValue = t
+          }
+        })
+
+        // Header text
+        const header = item.querySelector('.nice-to-know-item__content__header')
+        let headerText = ''
+        let headerSubtext = ''
+
+        if (type === 'language') {
+          const bubble = item.querySelector('.language-bubble') || header
+          if (bubble) {
+            let textParts: string[] = []
+            // Pokud je tam <a> tag, použijeme ho jako kontejner, jinak bublinu samotnou
+            const container = bubble.querySelector('a') || bubble
+            container.childNodes.forEach((node: any) => {
+              if (node.nodeName === 'SPAN') return
+              const txt = (node.textContent || '').trim()
+              if (txt) textParts.push(txt)
+            })
+            headerText = textParts.join(' ').replace(/\s+/g, ' ')
+            const subSpan = bubble.querySelector('span')
+            headerSubtext = (subSpan?.textContent || '').trim()
+            console.log(
+              `    [DEBUG] Jazyk nalezen: text="${headerText}", subtext="${headerSubtext}"`,
+            )
+          }
+        } else if (type === 'currency') {
+          const foreignEl = header?.querySelector('.nice-to-know-item__content__header--foreign')
+          headerText = (foreignEl?.textContent || '').trim().replace(/\s+/g, ' ')
+        } else if (type === 'time') {
+          const dayEl = header?.querySelector('.nice-to-know-item__day')
+          const timeEl = header?.querySelector('.nice-to-know-item__time')
+          headerText = (dayEl?.textContent || '').trim()
+          headerSubtext = (timeEl?.textContent || '').trim()
+        }
+
+        // Timezone
+        let timezone = ''
+        if (type === 'time') {
+          const tzEl = header?.querySelector('.js-localTimeCard')
+          timezone = tzEl?.getAttribute('data-timezone') || ''
+        }
+
+        items.push({
+          type,
+          headerText,
+          headerSubtext,
+          title,
+          value,
+          secondaryValue,
+          timezone,
+        })
+      })
+
+      blocks.push({
+        type: 'block',
+        version: 2,
+        format: '',
+        fields: {
+          blockType: 'niceToKnowBlock',
+          items,
+        },
+      })
+
+      const p = doc.createElement('p')
+      p.textContent = `__PAYLOAD_BLOCK_${index}__`
+      niceToKnowSection.parentNode?.replaceChild(p, niceToKnowSection)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // EXTRAKCE DENNÍCH NÁKLADŮ (MĚNA A CENY)
+    // ─────────────────────────────────────────────────────────────────────────────
+    const dailyCostsSection = doc.querySelector('.pi-budget')
+
+    const buildDailyCostsColumns = (container: Element) => {
+      const normalizeText = (value: string) => value.replace(/\s+/g, ' ').trim()
+      const columnNodes = container.querySelectorAll('.pi-budget-container')
+      const columns: any[] = []
+
+      columnNodes.forEach((columnContainer: any, columnIndex: number) => {
+        const titleEl = columnContainer.querySelector('.pi-budget-container__title')
+        let tier = 'budget'
+        if (titleEl?.classList.contains('pi-budget-container__title--midrange')) tier = 'midrange'
+        else if (titleEl?.classList.contains('pi-budget-container__title--top')) tier = 'top'
+        else if (columnIndex === 1) tier = 'midrange'
+        else if (columnIndex === 2) tier = 'top'
+
+        const rangeLabel = normalizeText(
+          (columnContainer.querySelector('.pi-budget-container__range h5')?.textContent || '') as string,
+        )
+        const price = normalizeText(
+          (columnContainer.querySelector('.pi-budget-container__price')?.textContent || '') as string,
+        )
+
+        const listItems = Array.from(
+          columnContainer.querySelectorAll('.pi-budget-container__list__item, .pi-budget-container__list li'),
+        )
+          .map((item: any) => normalizeText((item.textContent || '') as string))
+          .filter(Boolean)
+          .map((text) => ({ text }))
+
+        if (rangeLabel || price || listItems.length > 0) {
+          columns.push({ tier, rangeLabel, price, items: listItems })
+        }
+      })
+
+      return columns
+    }
+
+    if (dailyCostsSection) {
+      const normalizeText = (value: string) => value.replace(/\s+/g, ' ').trim()
+
+      const index = blocks.length
+      const headingEl = dailyCostsSection.querySelector('h2, h3, h4') as any
+      const heading = normalizeText((headingEl?.textContent || 'Denní náklady') as string)
+      const columns = buildDailyCostsColumns(dailyCostsSection)
+
+      if (columns.length > 0) {
+        blocks.push({
+          type: 'block',
+          version: 2,
+          format: '',
+          fields: {
+            blockType: 'dailyCostsBlock',
+            heading,
+            columns,
+          },
+        })
+
+        const placeholder = doc.createElement('p')
+        placeholder.textContent = `__PAYLOAD_BLOCK_${index}__`
+
+        if (headingEl?.parentNode) {
+          headingEl.parentNode.insertBefore(placeholder, headingEl)
+          headingEl.parentNode.removeChild(headingEl)
+        } else if (dailyCostsSection.parentNode) {
+          dailyCostsSection.parentNode.insertBefore(placeholder, dailyCostsSection)
+        }
+
+        const containersToRemove = Array.from(
+          dailyCostsSection.querySelectorAll('.pi-budget-container'),
+        )
+        containersToRemove.forEach((node: any) => {
+          node.parentNode?.removeChild(node)
+        })
+
+        // Pokud po vyjmuti dennich nakladu wrapper nic neobsahuje, odstranime ho.
+        const hasMeaningfulContent = Array.from(dailyCostsSection.childNodes).some((node: any) => {
+          if (node.nodeType === 3) {
+            return (node.textContent || '').trim().length > 0
+          }
+          return true
+        })
+        if (!hasMeaningfulContent) {
+          dailyCostsSection.parentNode?.removeChild(dailyCostsSection)
+        }
+      }
+    } else {
+      const normalizeText = (value: string) => value.replace(/\s+/g, ' ').trim()
+      const headingCandidates = Array.from(doc.querySelectorAll('h2, h3, h4')) as any[]
+      const headingEl = headingCandidates.find((el) =>
+        /denn[ií]\s+n[áa]klady/i.test(normalizeText((el.textContent || '') as string)),
+      )
+
+      if (headingEl) {
+        const index = blocks.length
+        const heading = normalizeText((headingEl.textContent || 'Denní náklady') as string)
+        const nodesToRemove: Element[] = [headingEl]
+        const columns: any[] = []
+        const isBudgetTierLabel = (value: string) =>
+          /(levn[ée]|st[řr]edn[ěe]|luxusn[íi]).*cestov[aá]n[ií]/i.test(value)
+
+        let cursor = headingEl.nextElementSibling as Element | null
+        while (cursor) {
+          const tag = cursor.tagName.toLowerCase()
+          const text = normalizeText((cursor.textContent || '') as string)
+
+          // Denni naklady maji jen 3 sloupce. Dalsi nadpis uz patri dalsi sekci.
+          if (columns.length >= 3 && (tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'p')) {
+            break
+          }
+
+          if (tag === 'h2' || tag === 'h3') {
+            break
+          }
+
+          if ((tag === 'h4' || tag === 'h5' || tag === 'p') && isBudgetTierLabel(text)) {
+            const tier =
+              columns.length === 0 ? 'budget' : columns.length === 1 ? 'midrange' : 'top'
+            const rangeLabel = text
+            nodesToRemove.push(cursor)
+
+            let price = ''
+            const maybePrice = cursor.nextElementSibling
+            if (maybePrice && maybePrice.tagName.toLowerCase() === 'p') {
+              price = normalizeText((maybePrice.textContent || '') as string)
+              nodesToRemove.push(maybePrice)
+            }
+
+            let items: { text: string }[] = []
+            const maybeList = (maybePrice && maybePrice.nextElementSibling) || cursor.nextElementSibling
+            if (maybeList && maybeList.tagName.toLowerCase() === 'ul') {
+              items = Array.from(maybeList.querySelectorAll('li'))
+                .map((li: any) => normalizeText((li.textContent || '') as string))
+                .filter(Boolean)
+                .map((text) => ({ text }))
+              nodesToRemove.push(maybeList)
+              cursor = maybeList.nextElementSibling as Element | null
+            } else {
+              cursor = cursor.nextElementSibling as Element | null
+            }
+
+            if (rangeLabel || price || items.length > 0) {
+              columns.push({ tier, rangeLabel, price, items })
+            }
+            continue
+          }
+
+          // Narazili jsme na jinou obsahovou sekci (napr. Spropitne a smlouvani)
+          if (tag === 'h4' || tag === 'h5') {
+            break
+          }
+
+          if (tag === 'ul') {
+            const items = Array.from(cursor.querySelectorAll('li'))
+              .map((li: any) => normalizeText((li.textContent || '') as string))
+              .filter(Boolean)
+              .map((text) => ({ text }))
+
+            if (columns.length > 0 && items.length > 0) {
+              columns[columns.length - 1].items = items
+              nodesToRemove.push(cursor)
+            }
+          }
+
+          cursor = cursor.nextElementSibling as Element | null
+        }
+
+        if (columns.length > 0) {
+          blocks.push({
+            type: 'block',
+            version: 2,
+            format: '',
+            fields: {
+              blockType: 'dailyCostsBlock',
+              heading,
+              columns,
+            },
+          })
+
+          const placeholder = doc.createElement('p')
+          placeholder.textContent = `__PAYLOAD_BLOCK_${index}__`
+          headingEl.parentNode?.insertBefore(placeholder, headingEl)
+          nodesToRemove.forEach((node) => node.parentNode?.removeChild(node))
+        }
+      }
+    }
 
     // Extrakce <table> pro nativní Lexical tabulku
     const tables = doc.querySelectorAll('table')
@@ -243,14 +556,16 @@ async function htmlToLexical(
         tds.forEach((td: any, colIndex: number) => {
           // Bitmask: 1 = ROW, 2 = COLUMN, 3 = BOTH
           let headerState = 0
-          if (rowIndex === 0 && colIndex === 0) {
-            headerState = 3
-          } else if (rowIndex === 0) {
-            headerState = 2
-          } else if (colIndex === 0) {
-            headerState = 1
-          } else if (td.tagName.toLowerCase() === 'th') {
-            headerState = 1
+          const isTh = td.tagName.toLowerCase() === 'th'
+
+          if (isTh || rowIndex === 0 || colIndex === 0) {
+            if (rowIndex === 0 && colIndex === 0) {
+              headerState = 3
+            } else if (rowIndex === 0) {
+              headerState = 2
+            } else {
+              headerState = 1
+            }
           }
 
           const cellText = td.textContent?.trim() || ''
@@ -437,6 +752,11 @@ async function htmlToLexical(
                 const blockIndex = parseInt(match[1], 10)
                 if (blocks[blockIndex]) {
                   newChildren.push(blocks[blockIndex])
+                } else {
+                  console.warn(
+                    `    ⚠️  Blok s indexem ${blockIndex} nebyl nalezen! Zachovávám text.`,
+                  )
+                  newChildren.push({ ...child, text: part })
                 }
               } else {
                 newChildren.push({ ...child, text: part })
@@ -447,22 +767,19 @@ async function htmlToLexical(
             replaceBlocks(child)
           }
         }
-        node.children = newChildren
 
-        // Speciální případ: Pokud je v rootu paragraph, který obsahuje jen blok,
-        // a nic jiného, můžeme ten paragraph odstranit a nechat jen ten blok (flattening).
-        if (node.type === 'root') {
-          node.children = node.children.flatMap((c: any) => {
-            if (
-              c.type === 'paragraph' &&
-              c.children?.length === 1 &&
-              c.children[0].type === 'block'
-            ) {
-              return [c.children[0]]
-            }
-            return [c]
-          })
-        }
+        // Flattening: Pokud potomek je paragraph, který obsahuje jen JEDEN blok, vytáhneme ho ven (povýšíme ho).
+        // To pomáhá čistotě stromu a řeší problémy s vnořením v seznamech/tabulkách.
+        node.children = newChildren.flatMap((c: any) => {
+          if (
+            c.type === 'paragraph' &&
+            c.children?.length === 1 &&
+            (c.children[0].type === 'block' || c.children[0].type === 'upload')
+          ) {
+            return [c.children[0]]
+          }
+          return [c]
+        })
       }
     }
 

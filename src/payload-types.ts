@@ -821,6 +821,53 @@ export interface SeasonalityBlock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "NiceToKnowBlock".
+ */
+export interface NiceToKnowBlock {
+  items?:
+    | {
+        type: 'language' | 'electricity' | 'currency' | 'weather' | 'time';
+        headerText?: string | null;
+        headerSubtext?: string | null;
+        title: string;
+        value: string;
+        /**
+         * Pokud zůstane prázdné, použije se nastavení z detailu stránky.
+         */
+        timezone?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'niceToKnowBlock';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "DailyCostsBlock".
+ */
+export interface DailyCostsBlock {
+  heading?: string | null;
+  columns?:
+    | {
+        tier: 'budget' | 'midrange' | 'top';
+        rangeLabel: string;
+        price: string;
+        items?:
+          | {
+              text: string;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'dailyCostsBlock';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "auth".
  */
 export interface Auth {

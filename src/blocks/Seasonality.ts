@@ -1,5 +1,11 @@
 import type { Block } from 'payload'
 
+const SEASON_STATUS_OPTIONS = [
+  { label: 'Mimo sezónu', value: 'off' },
+  { label: 'Vedlejší sezóna', value: 'mid' },
+  { label: 'Hlavní sezóna', value: 'peak' },
+]
+
 export const SeasonalityBlock: Block = {
   slug: 'seasonalityBlock',
   interfaceName: 'SeasonalityBlock',
@@ -36,11 +42,7 @@ export const SeasonalityBlock: Block = {
           type: 'select',
           label: 'Status sezóny',
           required: true,
-          options: [
-            { label: 'Mimo sezónu', value: 'off' },
-            { label: 'Vedlejší sezóna', value: 'mid' },
-            { label: 'Hlavní sezóna', value: 'peak' },
-          ],
+          options: SEASON_STATUS_OPTIONS,
         },
       ],
     },
@@ -54,11 +56,7 @@ export const SeasonalityBlock: Block = {
           type: 'select',
           label: 'Status sezóny',
           required: true,
-          options: [
-            { label: 'Mimo sezónu', value: 'off' },
-            { label: 'Vedlejší sezóna', value: 'mid' },
-            { label: 'Hlavní sezóna', value: 'peak' },
-          ],
+          options: SEASON_STATUS_OPTIONS,
         },
         {
           name: 'label',
