@@ -55,6 +55,11 @@ export const NiceToKnowBlock: Block = {
           required: true,
         },
         {
+          name: 'secondaryValue',
+          type: 'text',
+          label: 'Sekundární hodnota (např. 230V, Kuna)',
+        },
+        {
           name: 'timezone',
           type: 'text',
           label: 'Časová zóna (např. Europe/Zagreb)',

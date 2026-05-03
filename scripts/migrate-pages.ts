@@ -42,6 +42,10 @@ const COL_TITLE = 'title'
 const COL_SLUG = 'unique_url' // v db to je unique_url
 const COL_HTML = 'text'
 
+// Base URL of the old CMS site — used to convert relative links to absolute
+// so convertHTMLToLexical treats them as external links, not internal Payload document links.
+const OLD_SITE_BASE_URL = process.env.OLD_SITE_BASE_URL || 'https://www.aracze.cz'
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 const isDryRun = process.argv.includes('--dry-run')
@@ -60,6 +64,154 @@ type OldRecord = {
   slug: string
   text: string
   [key: string]: unknown
+}
+
+const categoryMap: Record<string, string> = {
+  PLACE_TO_VISIT: 'Místo k navštívení',
+  TOURIST_POINT: 'Turistický cíl',
+  DESTINATION_LIST: 'Místa',
+  PRACTICAL_INFORMATION: 'Praktické informace',
+  ENTRY_REQUIREMENTS: 'Vstupní podmínky',
+  GETTING_THERE: 'Cesta',
+  WEATHER: 'Počasí',
+  TRANSPORT: 'Doprava',
+  CURRENCY_AND_PRICES: 'Měna a ceny',
+  HEALTH_AND_SAFETY: 'Zdraví a bezpečí',
+  LANGUAGE_AND_CULTURE: 'Jazyk a kultura',
+  FOOD_AND_DRINKS: 'Jídlo a pití',
+  ACCOMMODATION: 'Ubytování',
+  ARTICLE_LIST: 'Články',
+  INSPIRATION: 'Články',
+}
+
+function shouldSkipRecord(record: OldRecord): boolean {
+  const mappedCategory =
+    categoryMap[String(record.page_category)] || 'Místo k navštívení'
+
+  const normalizedTitle = String(record.title || '')
+    .trim()
+    .toLocaleLowerCase('cs')
+
+  const skipByCategory = mappedCategory === 'Místa' || mappedCategory === 'Články'
+  const skipByTitle = normalizedTitle === 'místa' || normalizedTitle === 'články'
+
+  return skipByCategory || skipByTitle
+}
+
+type SourceLinkMeta = {
+  href: string
+  nofollow: boolean
+}
+
+function normalizeInternalPath(path: string): string {
+  const normalized = path.trim().replace(/\/+$/, '')
+  return normalized === '' ? '/' : normalized
+}
+
+function buildInternalPagePathMap(pages: any[]): Map<string, number | string> {
+  const map = new Map<string, number | string>()
+
+  pages.forEach((page: any) => {
+    const id = page?.id
+    const fullSlug = typeof page?.fullSlug === 'string' ? normalizeInternalPath(page.fullSlug) : ''
+
+    if (!id || !fullSlug) return
+    map.set(fullSlug, id)
+  })
+
+  return map
+}
+
+function hasNoFollowRel(value: string | null): boolean {
+  if (!value) return false
+  return value
+    .split(/\s+/)
+    .map((token) => token.trim().toLowerCase())
+    .includes('nofollow')
+}
+
+function applyNoFollowToLexicalLinks(lexicalData: any, sourceLinks: SourceLinkMeta[]): number {
+  let annotated = 0
+  let sourceIndex = 0
+
+  const visit = (node: any) => {
+    if (!node || typeof node !== 'object') return
+
+    if (node.type === 'link' && node.fields && typeof node.fields === 'object') {
+      const fields = node.fields as Record<string, unknown>
+      const url = typeof fields.url === 'string' ? fields.url.trim() : ''
+
+      if (sourceIndex < sourceLinks.length && url) {
+        if (sourceLinks[sourceIndex]?.href !== url) {
+          const lookaheadLimit = Math.min(sourceIndex + 5, sourceLinks.length - 1)
+          for (let i = sourceIndex + 1; i <= lookaheadLimit; i++) {
+            if (sourceLinks[i]?.href === url) {
+              sourceIndex = i
+              break
+            }
+          }
+        }
+
+        const sourceLink = sourceLinks[sourceIndex]
+        if (sourceLink?.nofollow) {
+          fields.nofollow = true
+          annotated++
+        }
+        sourceIndex++
+      }
+    }
+
+    if (Array.isArray(node.children)) {
+      node.children.forEach(visit)
+    }
+  }
+
+  visit(lexicalData?.root)
+  return annotated
+}
+
+function convertAraLinksToInternalLinks(
+  lexicalData: any,
+  internalPagePathMap: Map<string, number | string>,
+): number {
+  let converted = 0
+
+  const visit = (node: any) => {
+    if (!node || typeof node !== 'object') return
+
+    if (node.type === 'link' && node.fields && typeof node.fields === 'object') {
+      const fields = node.fields as Record<string, unknown>
+      const linkType = String(fields.linkType || '')
+      const url = typeof fields.url === 'string' ? fields.url.trim() : ''
+
+      if (linkType !== 'internal' && url.startsWith('https://ara.cz')) {
+        try {
+          const parsed = new URL(url)
+          const targetPath = normalizeInternalPath(parsed.pathname)
+          const targetPageId = internalPagePathMap.get(targetPath)
+
+          if (targetPageId) {
+            fields.linkType = 'internal'
+            fields.doc = {
+              relationTo: 'pages',
+              value: targetPageId,
+            }
+            delete fields.url
+            converted++
+          }
+        } catch {
+          // Ignore malformed URL and leave the original custom link untouched.
+        }
+      }
+    }
+
+    if (Array.isArray(node.children)) {
+      node.children.forEach(visit)
+    }
+  }
+
+  visit(lexicalData?.root)
+  return converted
 }
 
 async function fetchOldRecords(conn: mysql.Connection): Promise<OldRecord[]> {
@@ -92,7 +244,7 @@ async function fetchOldRecords(conn: mysql.Connection): Promise<OldRecord[]> {
       \`main_image_css\`,
       \`main_image_name\`
     FROM \`${OLD_TABLE}\`
-    WHERE \`${COL_ID}\` = 4497
+    WHERE \`${COL_ID}\` = 845
     ORDER BY \`${COL_ID}\`
     ${limitClause}
   `
@@ -117,27 +269,56 @@ async function htmlToLexical(
     const dom = new JSDOM(html)
     const doc = dom.window.document
 
-    const anchors = doc.querySelectorAll('a[href^="#"], a[name]')
-    anchors.forEach((a: any) => {
+    const unwrapAnchor = (a: any) => {
       const parent = a.parentNode
       if (parent) {
         while (a.firstChild) {
           parent.insertBefore(a.firstChild, a)
         }
         parent.removeChild(a)
+      }
+    }
+
+    const links = doc.querySelectorAll('a')
+    links.forEach((a: any) => {
+      if (a.hasAttribute('name')) {
+        unwrapAnchor(a)
+        return
+      }
+
+      const href = (a.getAttribute('href') || '').trim()
+      if (!href || href.startsWith('#')) {
+        unwrapAnchor(a)
+        return
+      }
+
+      if (/^(mailto:|tel:|sms:)/i.test(href)) {
+        return
+      }
+
+      // Odkazy na ara.cz ponechame jako normalni klikaci linky.
+      // Nesmime je rozbalit na plain text, jinak se ztrati v obsahu.
+      if (href.startsWith('https://ara.cz')) {
+        const resolvedInternal = new URL(href, OLD_SITE_BASE_URL)
+        a.setAttribute('href', resolvedInternal.href)
+        return
+      }
+
+      const hasExplicitScheme = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(href)
+
+      try {
+        const resolvedUrl = new URL(href, OLD_SITE_BASE_URL)
+        a.setAttribute('href', hasExplicitScheme ? href : resolvedUrl.href)
+      } catch {
+        // malformed href — unwrap the link to avoid Lexical confusion
+        unwrapAnchor(a)
       }
     })
 
-    const emptyLinks = doc.querySelectorAll('a:not([href]), a[href=""]')
-    emptyLinks.forEach((a: any) => {
-      const parent = a.parentNode
-      if (parent) {
-        while (a.firstChild) {
-          parent.insertBefore(a.firstChild, a)
-        }
-        parent.removeChild(a)
-      }
-    })
+    const sourceLinks: SourceLinkMeta[] = Array.from(doc.querySelectorAll('a')).map((a: any) => ({
+      href: (a.getAttribute('href') || '').trim(),
+      nofollow: hasNoFollowRel(a.getAttribute('rel')),
+    }))
 
     const blocks: any[] = []
 
@@ -385,7 +566,7 @@ async function htmlToLexical(
           .filter(Boolean)
           .map((text) => ({ text }))
 
-        if (rangeLabel || price || listItems.length > 0) {
+        if (rangeLabel && price && columns.length < 3) {
           columns.push({ tier, rangeLabel, price, items: listItems })
         }
       })
@@ -558,7 +739,7 @@ async function htmlToLexical(
           let headerState = 0
           const isTh = td.tagName.toLowerCase() === 'th'
 
-          if (isTh || rowIndex === 0 || colIndex === 0) {
+          if (isTh) {
             if (rowIndex === 0 && colIndex === 0) {
               headerState = 3
             } else if (rowIndex === 0) {
@@ -784,6 +965,7 @@ async function htmlToLexical(
     }
 
     replaceBlocks(lexicalData?.root)
+    applyNoFollowToLexicalLinks(lexicalData, sourceLinks)
     return lexicalData
   } catch (err) {
     console.warn(`    ⚠️  HTML → Lexical selhalo, ukládám jako plain text. (${err})`)
@@ -889,6 +1071,7 @@ async function run() {
         .filter((p: any) => p.legacyPageId != null)
         .map((p: any) => [Number(p.legacyPageId), { id: p.id, slug: p.slug }]),
     )
+    const internalPagePathMap = buildInternalPagePathMap(allPages.docs)
 
     console.log(
       `✅ Cache připravena: ${usersMap.size} uživatelů, ${allMedia.docs.length} médií, ${pagesMap.size} stránek\n`,
@@ -897,10 +1080,19 @@ async function run() {
     let created = 0
     let updated = 0
     let skippedDryRun = 0
+    let skippedByRule = 0
     let errors = 0
 
     for (const [index, record] of records.entries()) {
       const progress = `[${index + 1}/${records.length}]`
+
+      if (shouldSkipRecord(record)) {
+        console.log(
+          `${progress} ⏭️  Přeskočeno (Místa/Články): "${record.title}" (legacy id: ${record.id})`,
+        )
+        skippedByRule++
+        continue
+      }
 
       // Zkontroluj zda záznam v Payload už existuje podle legacyPageId (z cache)
       const existingInfo = pagesMap.get(record.id)
@@ -964,23 +1156,12 @@ async function run() {
 
         // Převod HTML → Lexical JSON (s využitím mediaMap pro inline obrázky)
         const lexicalText = await htmlToLexical(record.text || '', payload, mediaMap)
-
-        const categoryMap: Record<string, string> = {
-          PLACE_TO_VISIT: 'Místo k navštívení',
-          TOURIST_POINT: 'Turistický cíl',
-          DESTINATION_LIST: 'Místa',
-          PRACTICAL_INFORMATION: 'Praktické informace',
-          ENTRY_REQUIREMENTS: 'Vstupní podmínky',
-          GETTING_THERE: 'Cesta',
-          WEATHER: 'Počasí',
-          TRANSPORT: 'Doprava',
-          CURRENCY_AND_PRICES: 'Měna a ceny',
-          HEALTH_AND_SAFETY: 'Zdraví a bezpečí',
-          LANGUAGE_AND_CULTURE: 'Jazyk a kultura',
-          FOOD_AND_DRINKS: 'Jídlo a pití',
-          ACCOMMODATION: 'Ubytování',
-          ARTICLE_LIST: 'Články',
-          INSPIRATION: 'Články',
+        const convertedInternalLinks = convertAraLinksToInternalLinks(
+          lexicalText,
+          internalPagePathMap,
+        )
+        if (convertedInternalLinks > 0) {
+          console.log(`   [DEBUG] Internal links převedeno: ${convertedInternalLinks}`)
         }
 
         // Příprava slugu (vzetí části za posledním lomítkem nebo očištění od prefixu rodiče)
@@ -1071,6 +1252,7 @@ async function run() {
     console.log(`   Vytvořeno:            ${created}`)
     console.log(`   Aktualizováno:        ${updated}`)
     console.log(`   Přeskočeno (dry-run): ${skippedDryRun}`)
+    console.log(`   Přeskočeno (pravidlo): ${skippedByRule}`)
     console.log(`   Chyby:                ${errors}`)
     console.log('══════════════════════════════════════════\n')
 

@@ -831,6 +831,7 @@ export interface NiceToKnowBlock {
         headerSubtext?: string | null;
         title: string;
         value: string;
+        secondaryValue?: string | null;
         /**
          * Pokud zůstane prázdné, použije se nastavení z detailu stránky.
          */

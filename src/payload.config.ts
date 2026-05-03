@@ -2,6 +2,7 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import {
   FixedToolbarFeature,
   InlineToolbarFeature,
+  LinkFeature,
   lexicalEditor,
   UploadFeature,
   HTMLConverterFeature,
@@ -51,7 +52,18 @@ export default buildConfig({
   globals: [Homepage, Header, Footer],
   editor: lexicalEditor({
     features: ({ defaultFeatures }) => [
-      ...defaultFeatures,
+      ...defaultFeatures.filter((feature: any) => feature?.key !== 'link'),
+      LinkFeature({
+        fields: ({ defaultFields }) => [
+          ...defaultFields,
+          {
+            name: 'nofollow',
+            type: 'checkbox',
+            label: 'No follow',
+            defaultValue: false,
+          },
+        ],
+      }),
       FixedToolbarFeature(),
       InlineToolbarFeature(),
       UploadFeature({
