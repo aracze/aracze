@@ -85,8 +85,7 @@ const categoryMap: Record<string, string> = {
 }
 
 function shouldSkipRecord(record: OldRecord): boolean {
-  const mappedCategory =
-    categoryMap[String(record.page_category)] || 'Místo k navštívení'
+  const mappedCategory = categoryMap[String(record.page_category)] || 'Místo k navštívení'
 
   const normalizedTitle = String(record.title || '')
     .trim()
@@ -553,14 +552,18 @@ async function htmlToLexical(
         else if (columnIndex === 2) tier = 'top'
 
         const rangeLabel = normalizeText(
-          (columnContainer.querySelector('.pi-budget-container__range h5')?.textContent || '') as string,
+          (columnContainer.querySelector('.pi-budget-container__range h5')?.textContent ||
+            '') as string,
         )
         const price = normalizeText(
-          (columnContainer.querySelector('.pi-budget-container__price')?.textContent || '') as string,
+          (columnContainer.querySelector('.pi-budget-container__price')?.textContent ||
+            '') as string,
         )
 
         const listItems = Array.from(
-          columnContainer.querySelectorAll('.pi-budget-container__list__item, .pi-budget-container__list li'),
+          columnContainer.querySelectorAll(
+            '.pi-budget-container__list__item, .pi-budget-container__list li',
+          ),
         )
           .map((item: any) => normalizeText((item.textContent || '') as string))
           .filter(Boolean)
@@ -643,7 +646,10 @@ async function htmlToLexical(
           const text = normalizeText((cursor.textContent || '') as string)
 
           // Denni naklady maji jen 3 sloupce. Dalsi nadpis uz patri dalsi sekci.
-          if (columns.length >= 3 && (tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'p')) {
+          if (
+            columns.length >= 3 &&
+            (tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'p')
+          ) {
             break
           }
 
@@ -652,8 +658,7 @@ async function htmlToLexical(
           }
 
           if ((tag === 'h4' || tag === 'h5' || tag === 'p') && isBudgetTierLabel(text)) {
-            const tier =
-              columns.length === 0 ? 'budget' : columns.length === 1 ? 'midrange' : 'top'
+            const tier = columns.length === 0 ? 'budget' : columns.length === 1 ? 'midrange' : 'top'
             const rangeLabel = text
             nodesToRemove.push(cursor)
 
@@ -665,7 +670,8 @@ async function htmlToLexical(
             }
 
             let items: { text: string }[] = []
-            const maybeList = (maybePrice && maybePrice.nextElementSibling) || cursor.nextElementSibling
+            const maybeList =
+              (maybePrice && maybePrice.nextElementSibling) || cursor.nextElementSibling
             if (maybeList && maybeList.tagName.toLowerCase() === 'ul') {
               items = Array.from(maybeList.querySelectorAll('li'))
                 .map((li: any) => normalizeText((li.textContent || '') as string))
