@@ -185,6 +185,48 @@ export const Media: CollectionConfig = {
       type: 'text',
     },
     {
+      name: 'isCreativeCommons',
+      label: 'Obrázek je Creative Commons',
+      type: 'checkbox',
+      defaultValue: false,
+    },
+    {
+      name: 'author',
+      type: 'text',
+      admin: {
+        condition: (data) => data?.isCreativeCommons,
+      },
+    },
+    {
+      type: 'row',
+      admin: {
+        condition: (data) => data?.isCreativeCommons,
+      },
+      fields: [
+        {
+          name: 'source',
+          type: 'text',
+          admin: {
+            width: '33%',
+          },
+        },
+        {
+          name: 'sourceLink',
+          type: 'text',
+          admin: {
+            width: '33%',
+          },
+        },
+        {
+          name: 'creativeCommonsLicense',
+          type: 'text',
+          admin: {
+            width: '33%',
+          },
+        },
+      ],
+    },
+    {
       name: 'r2BackupStatus',
       type: 'select',
       access: {

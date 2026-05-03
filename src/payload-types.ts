@@ -172,6 +172,11 @@ export interface User {
 export interface Media {
   id: number;
   alt?: string | null;
+  isCreativeCommons?: boolean | null;
+  author?: string | null;
+  source?: string | null;
+  sourceLink?: string | null;
+  creativeCommonsLicense?: string | null;
   r2BackupStatus?: ('pending' | 'success' | 'error') | null;
   cloudinaryPublicId?: string | null;
   cloudinaryUrl?: string | null;
@@ -223,6 +228,11 @@ export interface Page {
     | 'Jídlo a pití'
     | 'Ubytování'
     | 'Články';
+  featuredImage?: {
+    image?: (number | null) | Media;
+    featureImageStyleCss?: string | null;
+    cloudinarySetting?: string | null;
+  };
   text?: {
     root: {
       type: string;
@@ -238,21 +248,6 @@ export interface Page {
     };
     [k: string]: unknown;
   } | null;
-  featuredImage?: {
-    image?: (number | null) | Media;
-    featureImageStyleCss?: string | null;
-    cloudinarySetting?: string | null;
-    isCreativeCommons?: boolean | null;
-    author?: string | null;
-    description?: string | null;
-    source?: string | null;
-    sourceLink?: string | null;
-    creativeCommonsLicense?: string | null;
-    /**
-     * Zde vložte kód SVG (volitelné)
-     */
-    svgCode?: string | null;
-  };
   detail?: {
     googleMapsAddress?: string | null;
     latitude?: string | null;
@@ -314,6 +309,11 @@ export interface Article {
   id: number;
   title: string;
   category: 'Článek' | 'Průvodce' | 'RadyNaCestu';
+  featuredImage?: {
+    image?: (number | null) | Media;
+    featureImageStyleCss?: string | null;
+    cloudinarySetting?: string | null;
+  };
   text?: {
     root: {
       type: string;
@@ -329,21 +329,6 @@ export interface Article {
     };
     [k: string]: unknown;
   } | null;
-  featuredImage?: {
-    image?: (number | null) | Media;
-    featureImageStyleCss?: string | null;
-    cloudinarySetting?: string | null;
-    isCreativeCommons?: boolean | null;
-    author?: string | null;
-    description?: string | null;
-    source?: string | null;
-    sourceLink?: string | null;
-    creativeCommonsLicense?: string | null;
-    /**
-     * Zde vložte kód SVG (volitelné)
-     */
-    svgCode?: string | null;
-  };
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -479,6 +464,11 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  isCreativeCommons?: T;
+  author?: T;
+  source?: T;
+  sourceLink?: T;
+  creativeCommonsLicense?: T;
   r2BackupStatus?: T;
   cloudinaryPublicId?: T;
   cloudinaryUrl?: T;
@@ -506,21 +496,14 @@ export interface MediaSelect<T extends boolean = true> {
 export interface PagesSelect<T extends boolean = true> {
   title?: T;
   category?: T;
-  text?: T;
   featuredImage?:
     | T
     | {
         image?: T;
         featureImageStyleCss?: T;
         cloudinarySetting?: T;
-        isCreativeCommons?: T;
-        author?: T;
-        description?: T;
-        source?: T;
-        sourceLink?: T;
-        creativeCommonsLicense?: T;
-        svgCode?: T;
       };
+  text?: T;
   detail?:
     | T
     | {
@@ -575,21 +558,14 @@ export interface PagesSelect<T extends boolean = true> {
 export interface ArticlesSelect<T extends boolean = true> {
   title?: T;
   category?: T;
-  text?: T;
   featuredImage?:
     | T
     | {
         image?: T;
         featureImageStyleCss?: T;
         cloudinarySetting?: T;
-        isCreativeCommons?: T;
-        author?: T;
-        description?: T;
-        source?: T;
-        sourceLink?: T;
-        creativeCommonsLicense?: T;
-        svgCode?: T;
       };
+  text?: T;
   meta?:
     | T
     | {

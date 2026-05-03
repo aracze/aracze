@@ -102,6 +102,14 @@ type SourceLinkMeta = {
   nofollow: boolean
 }
 
+type MediaCcMeta = {
+  isCreativeCommons: boolean
+  author: string
+  source: string
+  sourceLink: string
+  creativeCommonsLicense: string
+}
+
 function normalizeInternalPath(path: string): string {
   const normalized = path.trim().replace(/\/+$/, '')
   return normalized === '' ? '/' : normalized
@@ -213,6 +221,75 @@ function convertAraLinksToInternalLinks(
   return converted
 }
 
+function insertFeaturedImageIntoTouristPointContent(
+  lexicalData: any,
+  featuredImageId: number | string,
+  caption: string,
+): boolean {
+  if (!lexicalData || typeof lexicalData !== 'object') return false
+
+  const root = lexicalData.root as { children?: any[] } | undefined
+  if (!root || !Array.isArray(root.children)) return false
+
+  const hasSameContentImage = (() => {
+    let found = false
+    const visit = (node: any) => {
+      if (found || !node || typeof node !== 'object') return
+
+      if (
+        node.type === 'block' &&
+        node.fields?.blockType === 'contentImage' &&
+        node.fields?.image != null &&
+        String(node.fields.image) === String(featuredImageId)
+      ) {
+        found = true
+        return
+      }
+
+      if (Array.isArray(node.children)) {
+        node.children.forEach(visit)
+      }
+    }
+
+    visit(root)
+    return found
+  })()
+
+  if (hasSameContentImage) return false
+
+  const contentImageBlock = {
+    type: 'block',
+    version: 2,
+    format: '',
+    fields: {
+      blockType: 'contentImage',
+      image: featuredImageId,
+      caption,
+    },
+  }
+
+  const paragraphIndexes: number[] = []
+  root.children.forEach((node: any, index: number) => {
+    if (node?.type === 'paragraph') {
+      paragraphIndexes.push(index)
+    }
+  })
+
+  if (paragraphIndexes.length === 0) {
+    root.children.unshift(contentImageBlock)
+    return true
+  }
+
+  const targetParagraphOrder = paragraphIndexes.length > 2 ? 2 : 1
+  const targetParagraphIndex = paragraphIndexes[targetParagraphOrder - 1]
+  root.children.splice(targetParagraphIndex + 1, 0, contentImageBlock)
+  return true
+}
+
+function normalizeMetaValue(value: unknown): string {
+  return String(value || '').trim()
+}
+
 async function fetchOldRecords(conn: mysql.Connection): Promise<OldRecord[]> {
   const limitClause = limit && Number.isFinite(limit) ? `LIMIT ${limit}` : ''
   const query = `
@@ -241,9 +318,15 @@ async function fetchOldRecords(conn: mysql.Connection): Promise<OldRecord[]> {
       \`affiliate_fourth_item\`,
       \`affiliate_kiwi_fly_to\`,
       \`main_image_css\`,
-      \`main_image_name\`
+      \`main_image_name\`,
+      \`practical_information_main_image_name\`,
+      \`practical_information_image_title\`,
+      \`practical_information_image_source\`,
+      \`practical_information_image_original_url\`,
+      \`practical_information_image_copyright\`,
+      \`practical_information_image_author\`
     FROM \`${OLD_TABLE}\`
-    WHERE \`${COL_ID}\` = 845
+    WHERE \`${COL_ID}\` = 2696
     ORDER BY \`${COL_ID}\`
     ${limitClause}
   `
@@ -683,7 +766,10 @@ async function htmlToLexical(
               cursor = cursor.nextElementSibling as Element | null
             }
 
-            if (rangeLabel || price || items.length > 0) {
+            const hasRangeLabel = typeof rangeLabel === 'string' && rangeLabel.trim().length > 0
+            const hasPrice = typeof price === 'string' && price.trim().length > 0
+
+            if (hasRangeLabel && hasPrice) {
               columns.push({ tier, rangeLabel, price, items })
             }
             continue
@@ -1064,6 +1150,37 @@ async function run() {
           .map((m: any) => [m.cloudinaryPublicId, m.id]),
       ),
     }
+    const mediaHasAltMap = new Map(
+      allMedia.docs.map((m: any) => [String(m.id), Boolean(String(m.alt || '').trim())]),
+    )
+    const mediaAltMap = new Map(
+      allMedia.docs.map((m: any) => [String(m.id), normalizeMetaValue(m.alt)]),
+    )
+    const mediaCcMap = new Map<string, MediaCcMeta>(
+      allMedia.docs.map((m: any) => {
+        const ccLicense = normalizeMetaValue(m.creativeCommonsLicense)
+        const source = normalizeMetaValue(m.source)
+        const sourceLink = normalizeMetaValue(m.sourceLink)
+        const author = normalizeMetaValue(m.author)
+        const isCreativeCommons =
+          Boolean(m.isCreativeCommons) ||
+          ccLicense.length > 0 ||
+          source.length > 0 ||
+          sourceLink.length > 0 ||
+          author.length > 0
+
+        return [
+          String(m.id),
+          {
+            isCreativeCommons,
+            author,
+            source,
+            sourceLink,
+            creativeCommonsLicense: ccLicense,
+          },
+        ]
+      }),
+    )
 
     // 3. Načtení stávajících stránek (pro update a parent vztahy)
     const allPages = await payload.find({
@@ -1141,24 +1258,150 @@ async function run() {
         }
 
         // Zpracování vztahu obrázku (featuredImage) podle filename nebo cloudinaryPublicId (z cache)
-        let featuredImageId = undefined
-        if (record.main_image_name) {
-          const imageName = String(record.main_image_name)
+        const resolveMediaId = (rawImageName: unknown) => {
+          if (!rawImageName) return undefined
+
+          const imageName = String(rawImageName).trim()
+          if (!imageName) return undefined
+
           const imageNameWithoutExt = imageName.includes('.')
             ? imageName.split('.').slice(0, -1).join('.')
             : imageName
 
-          featuredImageId =
+          return (
             mediaMap.filename.get(imageName) ||
             mediaMap.cloudinary.get(imageNameWithoutExt) ||
             mediaMap.cloudinary.get(imageName)
+          )
+        }
 
-          if (!featuredImageId) {
+        let featuredImageId = resolveMediaId(record.main_image_name)
+        let usedPracticalInfoImageFallback = false
+
+        if (record.main_image_name && !featuredImageId) {
+          console.warn(`   [DEBUG] Obrázek ${record.main_image_name} NEBYL NALEZEN v Payload CMS!`)
+        }
+
+        if (!featuredImageId) {
+          featuredImageId = resolveMediaId(record.practical_information_main_image_name)
+          usedPracticalInfoImageFallback = Boolean(featuredImageId)
+
+          if (usedPracticalInfoImageFallback) {
+            console.log(
+              `   [DEBUG] Použit fallback featured image z practical_information_main_image_name: ${record.practical_information_main_image_name}`,
+            )
+          } else if (record.practical_information_main_image_name) {
             console.warn(
-              `   [DEBUG] Obrázek ${record.main_image_name} NEBYL NALEZEN v Payload CMS!`,
+              `   [DEBUG] Fallback obrázek ${record.practical_information_main_image_name} NEBYL NALEZEN v Payload CMS!`,
             )
           }
         }
+
+        const mappedCategory = (categoryMap[String(record.page_category)] ||
+          'Místo k navštívení') as Page['category']
+        const featuredImageDescription = String(
+          record.practical_information_image_title || '',
+        ).trim()
+        const sourceMeta = {
+          author: normalizeMetaValue(record.practical_information_image_author),
+          source: normalizeMetaValue(record.practical_information_image_source),
+          sourceLink: normalizeMetaValue(record.practical_information_image_original_url),
+          creativeCommonsLicense: normalizeMetaValue(record.practical_information_image_copyright),
+        }
+
+        const hasIncomingCcMeta = Object.values(sourceMeta).some((value) => value.length > 0)
+
+        if (featuredImageId && hasIncomingCcMeta) {
+          const mediaIdKey = String(featuredImageId)
+          const currentCcMeta = mediaCcMap.get(mediaIdKey) || {
+            isCreativeCommons: false,
+            author: '',
+            source: '',
+            sourceLink: '',
+            creativeCommonsLicense: '',
+          }
+
+          const nextCcMeta: MediaCcMeta = {
+            isCreativeCommons: currentCcMeta.isCreativeCommons,
+            author: currentCcMeta.author,
+            source: currentCcMeta.source,
+            sourceLink: currentCcMeta.sourceLink,
+            creativeCommonsLicense: currentCcMeta.creativeCommonsLicense,
+          }
+
+          if (!nextCcMeta.author && sourceMeta.author) nextCcMeta.author = sourceMeta.author
+          if (!nextCcMeta.source && sourceMeta.source) nextCcMeta.source = sourceMeta.source
+          if (!nextCcMeta.sourceLink && sourceMeta.sourceLink) {
+            nextCcMeta.sourceLink = sourceMeta.sourceLink
+          }
+          if (!nextCcMeta.creativeCommonsLicense && sourceMeta.creativeCommonsLicense) {
+            nextCcMeta.creativeCommonsLicense = sourceMeta.creativeCommonsLicense
+          }
+
+          nextCcMeta.isCreativeCommons =
+            nextCcMeta.isCreativeCommons ||
+            nextCcMeta.creativeCommonsLicense.length > 0 ||
+            nextCcMeta.source.length > 0 ||
+            nextCcMeta.sourceLink.length > 0 ||
+            nextCcMeta.author.length > 0
+
+          const ccChanged =
+            nextCcMeta.isCreativeCommons !== currentCcMeta.isCreativeCommons ||
+            nextCcMeta.author !== currentCcMeta.author ||
+            nextCcMeta.source !== currentCcMeta.source ||
+            nextCcMeta.sourceLink !== currentCcMeta.sourceLink ||
+            nextCcMeta.creativeCommonsLicense !== currentCcMeta.creativeCommonsLicense
+
+          if (ccChanged) {
+            try {
+              await payload.update({
+                collection: 'media',
+                id: featuredImageId,
+                data: {
+                  isCreativeCommons: nextCcMeta.isCreativeCommons,
+                  author: nextCcMeta.author,
+                  source: nextCcMeta.source,
+                  sourceLink: nextCcMeta.sourceLink,
+                  creativeCommonsLicense: nextCcMeta.creativeCommonsLicense,
+                },
+                overrideAccess: true,
+              })
+              mediaCcMap.set(mediaIdKey, nextCcMeta)
+              console.log('   [DEBUG] Creative Commons metadata přesunuta do media')
+            } catch (mediaCcError) {
+              console.warn(
+                `   [DEBUG] Nepodařilo se zapsat Creative Commons metadata do media: ${mediaCcError}`,
+              )
+            }
+          }
+        }
+
+        if (featuredImageId && featuredImageDescription) {
+          const mediaIdKey = String(featuredImageId)
+          const hasAlt = mediaHasAltMap.get(mediaIdKey) === true
+
+          if (!hasAlt) {
+            try {
+              await payload.update({
+                collection: 'media',
+                id: featuredImageId,
+                data: {
+                  alt: featuredImageDescription,
+                },
+                overrideAccess: true,
+              })
+              mediaHasAltMap.set(mediaIdKey, true)
+              mediaAltMap.set(mediaIdKey, featuredImageDescription)
+              console.log('   [DEBUG] Doplněn alt text do media z featured image description')
+            } catch (mediaAltError) {
+              console.warn(`   [DEBUG] Nepodařilo se doplnit alt text do media: ${mediaAltError}`)
+            }
+          }
+        }
+
+        const resolvedFeaturedImageDescription = featuredImageId
+          ? mediaAltMap.get(String(featuredImageId)) || featuredImageDescription
+          : featuredImageDescription
 
         // Převod HTML → Lexical JSON (s využitím mediaMap pro inline obrázky)
         const lexicalText = await htmlToLexical(record.text || '', payload, mediaMap)
@@ -1168,6 +1411,18 @@ async function run() {
         )
         if (convertedInternalLinks > 0) {
           console.log(`   [DEBUG] Internal links převedeno: ${convertedInternalLinks}`)
+        }
+
+        if (mappedCategory === 'Turistický cíl' && featuredImageId) {
+          const insertedFeaturedImage = insertFeaturedImageIntoTouristPointContent(
+            lexicalText,
+            featuredImageId,
+            resolvedFeaturedImageDescription,
+          )
+
+          if (insertedFeaturedImage) {
+            console.log('   [DEBUG] Featured image vložen do obsahu turistického cíle')
+          }
         }
 
         // Příprava slugu (vzetí části za posledním lomítkem nebo očištění od prefixu rodiče)
@@ -1190,8 +1445,7 @@ async function run() {
           title: String(record.title || '').substring(0, 255),
           slug: slug,
           text: lexicalText,
-          category: (categoryMap[String(record.page_category)] ||
-            'Místo k navštívení') as Page['category'],
+          category: mappedCategory,
           createdBy: createdByUserId,
           parent: parentId,
           includeInChildUrlPaths: record.stop_place_to_visit_propagate_here !== 0,
