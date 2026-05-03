@@ -82,13 +82,7 @@ export default buildConfig({
       HTMLConverterFeature({}),
       EXPERIMENTAL_TableFeature(),
       BlocksFeature({
-        blocks: [
-          ContentImage,
-          MapBlock,
-          SeasonalityBlock,
-          NiceToKnowBlock,
-          DailyCostsBlock,
-        ],
+        blocks: [ContentImage, MapBlock, SeasonalityBlock, NiceToKnowBlock, DailyCostsBlock],
       }),
     ],
   }),
