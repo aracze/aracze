@@ -300,6 +300,7 @@ export interface Page {
   };
   updatedAt: string;
   createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -550,6 +551,7 @@ export interface PagesSelect<T extends boolean = true> {
   secondaryArticles?: T;
   updatedAt?: T;
   createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -667,21 +669,32 @@ export interface Footer {
       href?: string | null;
       isExternal?: boolean | null;
       isButtonLink?: boolean | null;
-      id?: string | null;
     };
     image?: (number | null) | Media;
     svgCode?: string | null;
   };
   navItems?:
     | {
-        title?: string | null;
-        href?: string | null;
-        isExternal?: boolean | null;
-        isButtonLink?: boolean | null;
+        label: string;
+        href: string;
         id?: string | null;
       }[]
     | null;
-  copyright?: string | null;
+  copyrightText?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -740,7 +753,6 @@ export interface FooterSelect<T extends boolean = true> {
               href?: T;
               isExternal?: T;
               isButtonLink?: T;
-              id?: T;
             };
         image?: T;
         svgCode?: T;
@@ -748,13 +760,11 @@ export interface FooterSelect<T extends boolean = true> {
   navItems?:
     | T
     | {
-        title?: T;
+        label?: T;
         href?: T;
-        isExternal?: T;
-        isButtonLink?: T;
         id?: T;
       };
-  copyright?: T;
+  copyrightText?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

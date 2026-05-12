@@ -10,12 +10,21 @@ import {
 
 export const Pages: CollectionConfig = {
   slug: 'pages',
+  versions: {
+    drafts: true,
+  },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'updatedAt'],
   },
   access: {
-    read: () => true,
+    read: ({ req }) => {
+      // Logged-in users (admin/editor) can see drafts; public traffic sees only published.
+      if (req.user) return true
+      return {
+        or: [{ _status: { equals: 'published' } }, { _status: { exists: false } }],
+      }
+    },
   },
   fields: [
     {
@@ -320,6 +329,7 @@ export const Pages: CollectionConfig = {
       type: 'join',
       collection: 'pages',
       on: 'parent',
+      defaultLimit: 100,
       admin: {
         position: 'sidebar',
         allowCreate: false,
@@ -331,6 +341,7 @@ export const Pages: CollectionConfig = {
       type: 'join',
       collection: 'articles',
       on: 'mainPage',
+      defaultLimit: 100,
       admin: {
         position: 'sidebar',
         allowCreate: false,
@@ -342,6 +353,7 @@ export const Pages: CollectionConfig = {
       type: 'join',
       collection: 'articles',
       on: 'pages',
+      defaultLimit: 100,
       admin: {
         position: 'sidebar',
         allowCreate: false,

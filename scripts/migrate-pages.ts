@@ -63,6 +63,7 @@ type OldRecord = {
   title: string
   slug: string
   text: string
+  status?: 'DRAFT' | 'PUBLISH'
   [key: string]: unknown
 }
 
@@ -92,7 +93,8 @@ function shouldSkipRecord(record: OldRecord): boolean {
     .toLocaleLowerCase('cs')
 
   const skipByCategory = mappedCategory === 'Místa' || mappedCategory === 'Články'
-  const skipByTitle = normalizedTitle === 'místa' || normalizedTitle === 'články'
+  const skipByTitle =
+    normalizedTitle === 'místa' || normalizedTitle === 'články' || normalizedTitle === 'destinace'
 
   return skipByCategory || skipByTitle
 }
@@ -324,10 +326,10 @@ async function fetchOldRecords(conn: mysql.Connection): Promise<OldRecord[]> {
       \`practical_information_image_source\`,
       \`practical_information_image_original_url\`,
       \`practical_information_image_copyright\`,
-      \`practical_information_image_author\`
+      \`practical_information_image_author\`,
+      \`status\`
     FROM \`${OLD_TABLE}\`
-    WHERE \`${COL_ID}\` = 2696
-    ORDER BY \`${COL_ID}\`
+    ORDER BY \`${COL_ID}\` ASC
     ${limitClause}
   `
   const [rows] = await conn.execute<mysql.RowDataPacket[]>(query)
@@ -939,7 +941,31 @@ async function htmlToLexical(
     for (let i = 0; i < imgs.length; i++) {
       const img = imgs[i] as any
       const src = img.getAttribute('src') || ''
-      const alt = img.getAttribute('alt') || ''
+      const alt = (img.getAttribute('alt') || '').trim()
+
+      // Legacy HTML často obsahuje samostatný odstavec popisku za figure nebo img; pokud je shodný s altem,
+      // odstraníme ho, aby se text nezdvojil.
+      let captionToRemove: any = null
+      const parentFigure = img.closest?.('figure') || null
+      let searchContext = parentFigure || img
+      let current = searchContext.nextElementSibling
+
+      // Hledáme popisek v následujících dvou elementech (pro případ prázdných tagů mezi nimi)
+      for (let j = 0; j < 2; j++) {
+        if (!current) break
+        const tag = current.tagName.toLowerCase()
+        const text = (current.textContent || '').trim().replace(/\s+/g, ' ')
+        const normalizedAlt = alt.replace(/\s+/g, ' ')
+
+        if (alt && (tag === 'p' || tag === 'figcaption') && text === normalizedAlt) {
+          captionToRemove = current
+          break
+        }
+
+        // Pokud element není prázdný a není to p/figcaption, nepokračujeme v hledání popisku
+        if (text) break
+        current = current.nextElementSibling
+      }
 
       const filename = src.split('/').pop()?.split('?')[0] || ''
       const nameWithoutExt = filename.includes('.')
@@ -990,7 +1016,20 @@ async function htmlToLexical(
       const p = doc.createElement('p')
       p.textContent = `__PAYLOAD_BLOCK_${index}__`
       if (img.parentNode) img.parentNode.replaceChild(p, img)
+
+      if (captionToRemove && captionToRemove.parentNode) {
+        captionToRemove.parentNode.removeChild(captionToRemove)
+      }
     }
+
+    // Převod h1 na h2 v obsahu (H1 má být jen hlavní nadpis stránky, jinak se nezobrazí v pravém panelu)
+    doc.querySelectorAll('h1').forEach((h1: any) => {
+      const h2 = doc.createElement('h2')
+      h2.innerHTML = h1.innerHTML
+      if (h1.parentNode) {
+        h1.parentNode.replaceChild(h2, h1)
+      }
+    })
 
     // Čištění prázdných odstavců před převodem
     doc.querySelectorAll('p').forEach((p: any) => {
@@ -1299,6 +1338,7 @@ async function run() {
 
         const mappedCategory = (categoryMap[String(record.page_category)] ||
           'Místo k navštívení') as Page['category']
+        const isLegacyDraft = String(record.status || '').toUpperCase() === 'DRAFT'
         const featuredImageDescription = String(
           record.practical_information_image_title || '',
         ).trim()
@@ -1445,10 +1485,10 @@ async function run() {
           title: String(record.title || '').substring(0, 255),
           slug: slug,
           text: lexicalText,
+          _status: isLegacyDraft ? 'draft' : 'published',
           category: mappedCategory,
           createdBy: createdByUserId,
           parent: parentId,
-          includeInChildUrlPaths: record.stop_place_to_visit_propagate_here !== 0,
           detail: {
             googleMapsAddress: String(record.google_map_search_phrase || ''),
             latitude: record.latitude ? String(record.latitude) : undefined,
@@ -1477,22 +1517,24 @@ async function run() {
         }
 
         if (isUpdate && existingInfo) {
-          await payload.update({
+          const updatedDoc = await payload.update({
             collection: 'pages',
             id: existingInfo.id,
             data: pageData,
-            draft: false,
+            draft: isLegacyDraft,
             overrideAccess: true,
           })
+          pagesMap.set(record.id, { id: updatedDoc.id, slug: updatedDoc.slug })
           console.log(`${progress} ✅ Aktualizováno: "${record.title}"`)
           updated++
         } else {
-          await payload.create({
+          const createdDoc = await payload.create({
             collection: 'pages',
             data: pageData,
-            draft: false,
+            draft: isLegacyDraft,
             overrideAccess: true,
           })
+          pagesMap.set(record.id, { id: createdDoc.id, slug: createdDoc.slug })
           console.log(`${progress} ✅ Vytvořeno: "${record.title}"`)
           created++
         }
