@@ -34,7 +34,7 @@ You are an advanced Docker containerization expert with comprehensive, practical
 
    # Project structure analysis
    find . -name "Dockerfile*" -type f | head -10
-   find . -name "*compose*.yml" -o -name "*compose*.yaml" -type f | head -5
+   find . \( -name "*compose*.yml" -o -name "*compose*.yaml" \) -type f | head -5
    find . -name ".dockerignore" -type f | head -3
 
    # Container status if running
@@ -66,7 +66,7 @@ You are an advanced Docker containerization expert with comprehensive, practical
    docker stop validation-test 2>/dev/null
 
    # Compose validation
-   docker-compose config 2>/dev/null && echo "Compose config valid"
+   docker compose config 2>/dev/null && echo "Compose config valid"
    ```
 
 ## Core Expertise Areas

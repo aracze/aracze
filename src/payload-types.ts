@@ -172,6 +172,11 @@ export interface User {
 export interface Media {
   id: number;
   alt?: string | null;
+  isCreativeCommons?: boolean | null;
+  author?: string | null;
+  source?: string | null;
+  sourceLink?: string | null;
+  creativeCommonsLicense?: string | null;
   r2BackupStatus?: ('pending' | 'success' | 'error') | null;
   cloudinaryPublicId?: string | null;
   cloudinaryUrl?: string | null;
@@ -223,6 +228,11 @@ export interface Page {
     | 'Jídlo a pití'
     | 'Ubytování'
     | 'Články';
+  featuredImage?: {
+    image?: (number | null) | Media;
+    featureImageStyleCss?: string | null;
+    cloudinarySetting?: string | null;
+  };
   text?: {
     root: {
       type: string;
@@ -238,21 +248,6 @@ export interface Page {
     };
     [k: string]: unknown;
   } | null;
-  featuredImage?: {
-    image?: (number | null) | Media;
-    featureImageStyleCss?: string | null;
-    cloudinarySetting?: string | null;
-    isCreativeCommons?: boolean | null;
-    author?: string | null;
-    description?: string | null;
-    source?: string | null;
-    sourceLink?: string | null;
-    creativeCommonsLicense?: string | null;
-    /**
-     * Zde vložte kód SVG (volitelné)
-     */
-    svgCode?: string | null;
-  };
   detail?: {
     googleMapsAddress?: string | null;
     latitude?: string | null;
@@ -275,6 +270,7 @@ export interface Page {
     kiwiIataCode?: string | null;
   };
   slug?: string | null;
+  legacyPageId?: number | null;
   createdBy?: (number | null) | User;
   parent?: (number | null) | Page;
   fullSlug?: string | null;
@@ -302,8 +298,18 @@ export interface Page {
     hasNextPage?: boolean;
     totalDocs?: number;
   };
+  createdByPublic?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -313,6 +319,11 @@ export interface Article {
   id: number;
   title: string;
   category: 'Článek' | 'Průvodce' | 'RadyNaCestu';
+  featuredImage?: {
+    image?: (number | null) | Media;
+    featureImageStyleCss?: string | null;
+    cloudinarySetting?: string | null;
+  };
   text?: {
     root: {
       type: string;
@@ -328,21 +339,6 @@ export interface Article {
     };
     [k: string]: unknown;
   } | null;
-  featuredImage?: {
-    image?: (number | null) | Media;
-    featureImageStyleCss?: string | null;
-    cloudinarySetting?: string | null;
-    isCreativeCommons?: boolean | null;
-    author?: string | null;
-    description?: string | null;
-    source?: string | null;
-    sourceLink?: string | null;
-    creativeCommonsLicense?: string | null;
-    /**
-     * Zde vložte kód SVG (volitelné)
-     */
-    svgCode?: string | null;
-  };
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -478,6 +474,11 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  isCreativeCommons?: T;
+  author?: T;
+  source?: T;
+  sourceLink?: T;
+  creativeCommonsLicense?: T;
   r2BackupStatus?: T;
   cloudinaryPublicId?: T;
   cloudinaryUrl?: T;
@@ -505,21 +506,14 @@ export interface MediaSelect<T extends boolean = true> {
 export interface PagesSelect<T extends boolean = true> {
   title?: T;
   category?: T;
-  text?: T;
   featuredImage?:
     | T
     | {
         image?: T;
         featureImageStyleCss?: T;
         cloudinarySetting?: T;
-        isCreativeCommons?: T;
-        author?: T;
-        description?: T;
-        source?: T;
-        sourceLink?: T;
-        creativeCommonsLicense?: T;
-        svgCode?: T;
       };
+  text?: T;
   detail?:
     | T
     | {
@@ -548,6 +542,7 @@ export interface PagesSelect<T extends boolean = true> {
         kiwiIataCode?: T;
       };
   slug?: T;
+  legacyPageId?: T;
   createdBy?: T;
   parent?: T;
   fullSlug?: T;
@@ -563,8 +558,10 @@ export interface PagesSelect<T extends boolean = true> {
   subPages?: T;
   primaryArticles?: T;
   secondaryArticles?: T;
+  createdByPublic?: T;
   updatedAt?: T;
   createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -573,21 +570,14 @@ export interface PagesSelect<T extends boolean = true> {
 export interface ArticlesSelect<T extends boolean = true> {
   title?: T;
   category?: T;
-  text?: T;
   featuredImage?:
     | T
     | {
         image?: T;
         featureImageStyleCss?: T;
         cloudinarySetting?: T;
-        isCreativeCommons?: T;
-        author?: T;
-        description?: T;
-        source?: T;
-        sourceLink?: T;
-        creativeCommonsLicense?: T;
-        svgCode?: T;
       };
+  text?: T;
   meta?:
     | T
     | {
@@ -689,21 +679,32 @@ export interface Footer {
       href?: string | null;
       isExternal?: boolean | null;
       isButtonLink?: boolean | null;
-      id?: string | null;
     };
     image?: (number | null) | Media;
     svgCode?: string | null;
   };
   navItems?:
     | {
-        title?: string | null;
-        href?: string | null;
-        isExternal?: boolean | null;
-        isButtonLink?: boolean | null;
+        label: string;
+        href: string;
         id?: string | null;
       }[]
     | null;
-  copyright?: string | null;
+  copyrightText?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -762,7 +763,6 @@ export interface FooterSelect<T extends boolean = true> {
               href?: T;
               isExternal?: T;
               isButtonLink?: T;
-              id?: T;
             };
         image?: T;
         svgCode?: T;
@@ -770,16 +770,98 @@ export interface FooterSelect<T extends boolean = true> {
   navItems?:
     | T
     | {
-        title?: T;
+        label?: T;
         href?: T;
-        isExternal?: T;
-        isButtonLink?: T;
         id?: T;
       };
-  copyright?: T;
+  copyrightText?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "MapBlock".
+ */
+export interface MapBlock {
+  iframeUrl: string;
+  caption?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'mapBlock';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "SeasonalityBlock".
+ */
+export interface SeasonalityBlock {
+  prefixText?: string | null;
+  idealMonthsText?: string | null;
+  months?:
+    | {
+        monthNumber: number;
+        status: 'off' | 'mid' | 'peak';
+        id?: string | null;
+      }[]
+    | null;
+  legend?:
+    | {
+        status: 'off' | 'mid' | 'peak';
+        label: string;
+        id?: string | null;
+      }[]
+    | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'seasonalityBlock';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "NiceToKnowBlock".
+ */
+export interface NiceToKnowBlock {
+  items?:
+    | {
+        type: 'language' | 'electricity' | 'currency' | 'weather' | 'time';
+        headerText?: string | null;
+        headerSubtext?: string | null;
+        title: string;
+        value: string;
+        secondaryValue?: string | null;
+        /**
+         * Pokud zůstane prázdné, použije se nastavení z detailu stránky.
+         */
+        timezone?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'niceToKnowBlock';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "DailyCostsBlock".
+ */
+export interface DailyCostsBlock {
+  heading?: string | null;
+  columns?:
+    | {
+        tier: 'budget' | 'midrange' | 'top';
+        rangeLabel: string;
+        price: string;
+        items?:
+          | {
+              text: string;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'dailyCostsBlock';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

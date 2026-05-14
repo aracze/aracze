@@ -42,13 +42,16 @@ export const Articles: CollectionConfig = {
           label: 'Content',
           fields: [
             {
-              name: 'text',
-              type: 'richText',
-            },
-            {
               name: 'featuredImage',
               type: 'group',
               fields: imageFields,
+              admin: {
+                className: 'content-featured-image',
+              },
+            },
+            {
+              name: 'text',
+              type: 'richText',
             },
           ],
         },

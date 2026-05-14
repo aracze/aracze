@@ -1,6 +1,6 @@
 import type { GlobalConfig } from 'payload'
+import { lexicalEditor, LinkFeature } from '@payloadcms/richtext-lexical'
 import { imageLinkFields } from '../fields/imageLink'
-import { linkFields } from '../fields/link'
 
 export const Footer: GlobalConfig = {
   slug: 'footer',
@@ -15,12 +15,33 @@ export const Footer: GlobalConfig = {
     },
     {
       name: 'navItems',
+      label: 'Navigační položky',
       type: 'array',
-      fields: linkFields,
+      fields: [
+        {
+          name: 'label',
+          label: 'Popisek',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'href',
+          label: 'URL',
+          type: 'text',
+          required: true,
+        },
+      ],
     },
     {
-      name: 'copyright',
-      type: 'text',
+      name: 'copyrightText',
+      label: 'Copyright text (celý odstavec včetně odkazů)',
+      type: 'richText',
+      editor: lexicalEditor({
+        features: ({ defaultFeatures }) => [
+          ...defaultFeatures.filter((f: any) => f?.key !== 'link'),
+          LinkFeature({ enabledCollections: ['pages'] }),
+        ],
+      }),
     },
   ],
 }

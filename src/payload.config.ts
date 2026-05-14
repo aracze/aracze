@@ -2,10 +2,13 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import {
   FixedToolbarFeature,
   InlineToolbarFeature,
+  LinkFeature,
   lexicalEditor,
   UploadFeature,
   HTMLConverterFeature,
   BlocksFeature,
+  // TODO: Replace EXPERIMENTAL_TableFeature with stable TableFeature once it graduates
+  EXPERIMENTAL_TableFeature,
 } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
@@ -20,6 +23,10 @@ import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Articles } from './collections/Articles'
 import { ContentImage } from './blocks/ContentImage'
+import { MapBlock } from './blocks/Map'
+import { SeasonalityBlock } from './blocks/Seasonality'
+import { NiceToKnowBlock } from './blocks/NiceToKnow'
+import { DailyCostsBlock } from './blocks/DailyCosts'
 import { Homepage } from './globals/Homepage'
 import { Header } from './globals/Header'
 import { Footer } from './globals/Footer'
@@ -45,7 +52,18 @@ export default buildConfig({
   globals: [Homepage, Header, Footer],
   editor: lexicalEditor({
     features: ({ defaultFeatures }) => [
-      ...defaultFeatures,
+      ...defaultFeatures.filter((feature: any) => feature?.key !== 'link'),
+      LinkFeature({
+        fields: ({ defaultFields }) => [
+          ...defaultFields,
+          {
+            name: 'nofollow',
+            type: 'checkbox',
+            label: 'No follow',
+            defaultValue: false,
+          },
+        ],
+      }),
       FixedToolbarFeature(),
       InlineToolbarFeature(),
       UploadFeature({
@@ -62,8 +80,9 @@ export default buildConfig({
         },
       }),
       HTMLConverterFeature({}),
+      EXPERIMENTAL_TableFeature(),
       BlocksFeature({
-        blocks: [ContentImage],
+        blocks: [ContentImage, MapBlock, SeasonalityBlock, NiceToKnowBlock, DailyCostsBlock],
       }),
     ],
   }),

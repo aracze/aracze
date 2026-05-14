@@ -10,12 +10,22 @@ import {
 
 export const Pages: CollectionConfig = {
   slug: 'pages',
+  hooks: {},
+  versions: {
+    drafts: true,
+  },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'updatedAt'],
   },
   access: {
-    read: () => true,
+    read: ({ req }) => {
+      // Logged-in users (admin/editor) can see drafts; public traffic sees only published.
+      if (req.user) return true
+      return {
+        or: [{ _status: { equals: 'published' } }, { _status: { exists: false } }],
+      }
+    },
   },
   fields: [
     {
@@ -52,13 +62,16 @@ export const Pages: CollectionConfig = {
           label: 'Content',
           fields: [
             {
-              name: 'text',
-              type: 'richText',
-            },
-            {
               name: 'featuredImage',
               type: 'group',
               fields: imageFields,
+              admin: {
+                className: 'content-featured-image',
+              },
+            },
+            {
+              name: 'text',
+              type: 'richText',
             },
           ],
         },
@@ -192,6 +205,20 @@ export const Pages: CollectionConfig = {
     },
     slugField(),
     {
+      name: 'legacyPageId',
+      label: 'Legacy Page ID',
+      type: 'number',
+      unique: true,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+      },
+      access: {
+        update: ({ req: { user } }) => Boolean(user?.roles?.includes('admin')),
+      },
+    },
+    {
       name: 'createdBy',
       label: 'Autor',
       type: 'relationship',
@@ -303,6 +330,7 @@ export const Pages: CollectionConfig = {
       type: 'join',
       collection: 'pages',
       on: 'parent',
+      defaultLimit: 100,
       admin: {
         position: 'sidebar',
         allowCreate: false,
@@ -314,6 +342,7 @@ export const Pages: CollectionConfig = {
       type: 'join',
       collection: 'articles',
       on: 'mainPage',
+      defaultLimit: 100,
       admin: {
         position: 'sidebar',
         allowCreate: false,
@@ -325,9 +354,57 @@ export const Pages: CollectionConfig = {
       type: 'join',
       collection: 'articles',
       on: 'pages',
+      defaultLimit: 100,
       admin: {
         position: 'sidebar',
         allowCreate: false,
+      },
+    },
+    {
+      name: 'createdByPublic',
+      type: 'json',
+      virtual: true,
+      hooks: {
+        afterRead: [
+          async ({ data, req }) => {
+            const createdBy = data?.createdBy
+            if (!createdBy) return null
+
+            const authorId =
+              typeof createdBy === 'number'
+                ? createdBy
+                : typeof createdBy === 'object' && createdBy && 'id' in createdBy
+                  ? Number(createdBy.id)
+                  : null
+
+            if (!authorId) return null
+
+            try {
+              const user = (await req.payload.findByID({
+                collection: 'users',
+                id: authorId,
+                depth: 1,
+                overrideAccess: true,
+              })) as any
+
+              return {
+                id: user.id,
+                username: user.username ?? null,
+                firstName: user.firstName ?? null,
+                lastName: user.lastName ?? null,
+                avatar:
+                  user.avatar && typeof user.avatar === 'object'
+                    ? { url: user.avatar.url ?? null }
+                    : null,
+              }
+            } catch {
+              return null
+            }
+          },
+        ],
+      },
+      admin: {
+        hidden: true,
       },
     },
   ],
