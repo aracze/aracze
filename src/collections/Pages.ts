@@ -10,6 +10,7 @@ import {
 
 export const Pages: CollectionConfig = {
   slug: 'pages',
+  hooks: {},
   versions: {
     drafts: true,
   },
@@ -357,6 +358,53 @@ export const Pages: CollectionConfig = {
       admin: {
         position: 'sidebar',
         allowCreate: false,
+      },
+    },
+    {
+      name: 'createdByPublic',
+      type: 'json',
+      virtual: true,
+      hooks: {
+        afterRead: [
+          async ({ data, req }) => {
+            const createdBy = data?.createdBy
+            if (!createdBy) return null
+
+            const authorId =
+              typeof createdBy === 'number'
+                ? createdBy
+                : typeof createdBy === 'object' && createdBy && 'id' in createdBy
+                  ? Number(createdBy.id)
+                  : null
+
+            if (!authorId) return null
+
+            try {
+              const user = (await req.payload.findByID({
+                collection: 'users',
+                id: authorId,
+                depth: 1,
+                overrideAccess: true,
+              })) as any
+
+              return {
+                id: user.id,
+                username: user.username ?? null,
+                firstName: user.firstName ?? null,
+                lastName: user.lastName ?? null,
+                avatar:
+                  user.avatar && typeof user.avatar === 'object'
+                    ? { url: user.avatar.url ?? null }
+                    : null,
+              }
+            } catch {
+              return null
+            }
+          },
+        ],
+      },
+      admin: {
+        hidden: true,
       },
     },
   ],

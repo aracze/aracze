@@ -4,14 +4,14 @@ You are an expert Payload CMS developer. When working with Payload projects, fol
 
 ## Core Principles
 
-1. **TypeScript-First**: Always use TypeScript with proper types from Payload
-2. **Security-Critical**: Follow all security patterns, especially access control
-3. **Type Generation**: Run `generate:types` script after schema changes
-4. **Transaction Safety**: Always pass `req` to nested operations in hooks
-5. **Access Control**: Understand Local API bypasses access control by default
-6. **Access Control**: Ensure roles exist when modifiyng collection or globals with access controls
-7. **Updated README**: When adding/updating a feature that has a mention in README.md, always update the README.md file to keep it up-to-date.
-8. **Consistent Formatting**: Always run `npm run format` after changing any files.
+1. **TypeScript-First**: Always use TypeScript with proper types from Payload.
+2. **Security-Critical**: Follow all security patterns, especially access control.
+3. **Type Generation**: Run `pnpm generate:types` script after schema changes (including virtual fields).
+4. **Transaction Safety**: Always pass `req` to nested operations in hooks.
+5. **Access Control**: Understand Local API bypasses access control by default.
+6. **Consistent Formatting**: Always run `pnpm exec prettier --write <file>` after changing any files.
+7. **Frontend Rules**: For Next.js frontend specific patterns, refer to `ara-nextjs-frontend/AGENTS.md`.
+8. **Updated README**: Keep README.md up-to-date with new features.
 
 ### Code Validation
 
@@ -38,7 +38,7 @@ src/
 
 ### Minimal Config Pattern
 
-```typescript
+````typescript
 import { buildConfig } from 'payload'
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
@@ -48,24 +48,50 @@ import { fileURLToPath } from 'url'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
-export default buildConfig({
-  admin: {
-    user: 'users',
-    importMap: {
-      baseDir: path.resolve(dirname),
+## Data Transformation & Virtual Fields
+
+### 1. Virtual Fields Pattern
+For data that is derived or needs sanitization for the frontend (e.g., public author data, calculated URLs), use **Virtual Fields** instead of collection-level hooks.
+
+- **Definition**: Set `virtual: true` on the field.
+- **Hook**: Use the field-level `hooks.afterRead` to populate data.
+- **Privacy**: Use this pattern to explicitly pick safe fields from related collections (e.g., `createdByPublic`).
+- **Example**:
+  ```typescript
+  {
+    name: 'someVirtualField',
+    type: 'json',
+    virtual: true,
+    hooks: {
+      afterRead: [async ({ data, req }) => { /* resolution logic */ }]
     },
-  },
-  collections: [Users, Media],
-  editor: lexicalEditor(),
-  secret: process.env.PAYLOAD_SECRET,
-  typescript: {
-    outputFile: path.resolve(dirname, 'payload-types.ts'),
-  },
-  db: mongooseAdapter({
-    url: process.env.DATABASE_URL,
-  }),
+    admin: { hidden: true }
+  }
+````
+
+### 2. Anonymization
+
+Never expose raw internal user data or relationship objects with deep population directly to the frontend. Always transform them into a "Public" equivalent via virtual fields.
+
+export default buildConfig({
+admin: {
+user: 'users',
+importMap: {
+baseDir: path.resolve(dirname),
+},
+},
+collections: [Users, Media],
+editor: lexicalEditor(),
+secret: process.env.PAYLOAD_SECRET,
+typescript: {
+outputFile: path.resolve(dirname, 'payload-types.ts'),
+},
+db: mongooseAdapter({
+url: process.env.DATABASE_URL,
+}),
 })
-```
+
+````
 
 ## Collections
 
@@ -88,7 +114,7 @@ export const Posts: CollectionConfig = {
   ],
   timestamps: true,
 }
-```
+````
 
 ### Auth Collection with RBAC
 

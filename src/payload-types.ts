@@ -298,6 +298,15 @@ export interface Page {
     hasNextPage?: boolean;
     totalDocs?: number;
   };
+  createdByPublic?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -549,6 +558,7 @@ export interface PagesSelect<T extends boolean = true> {
   subPages?: T;
   primaryArticles?: T;
   secondaryArticles?: T;
+  createdByPublic?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
