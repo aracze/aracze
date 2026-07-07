@@ -1,4 +1,4 @@
-import type { Access, CollectionConfig } from 'payload'
+import type { Access, CollectionConfig, Where } from 'payload'
 
 // Zápis (vkládání/úpravy/mazání) zatím jen pro adminy — stejný vzor jako u Users.
 // Veřejné odesílání z frontendu (jméno + captcha) se doplní později spolu s frontendem.
@@ -14,8 +14,58 @@ export const Comments: CollectionConfig = {
     defaultColumns: ['authorName', 'type', 'rating', 'status', 'commentedAt'],
   },
   access: {
-    // Veřejně čitelné, kromě označeného spamu (ten vidí jen přihlášení v adminu).
-    read: ({ req: { user } }) => (user ? true : { status: { not_equals: 'spam' } }),
+    // Anonym: skrýt spam + recenze na NEpublikované stránky. Články jsou vždy veřejné
+    // (nemají drafty). Řeší se přes polymorfní `relatedTo` (relationTo + value), protože
+    // nelze filtrovat cizí `_status` inline; `not_in` na polymorfní value navíc není podporováno.
+    read: async ({ req }): Promise<boolean | Where> => {
+      if (req.user) return true
+      const notSpam: Where = { status: { not_equals: 'spam' } }
+
+      // Rychlá cesta: bez draft stránek není co skrývat (běžný stav).
+      const drafts = await req.payload.find({
+        collection: 'pages',
+        where: { _status: { equals: 'draft' } },
+        depth: 0,
+        limit: 0,
+        pagination: false,
+        overrideAccess: true,
+        req,
+        select: {},
+      })
+      if (drafts.docs.length === 0) return notSpam
+
+      // Jsou drafty → povolit komentáře na články + recenze jen na publikované stránky.
+      const published = await req.payload.find({
+        collection: 'pages',
+        where: {
+          or: [{ _status: { equals: 'published' } }, { _status: { exists: false } }],
+        },
+        depth: 0,
+        limit: 0,
+        pagination: false,
+        overrideAccess: true,
+        req,
+        select: {},
+      })
+      const publishedIds = published.docs.map((p) => p.id)
+
+      return {
+        and: [
+          notSpam,
+          {
+            or: [
+              { 'relatedTo.relationTo': { equals: 'articles' } },
+              {
+                and: [
+                  { 'relatedTo.relationTo': { equals: 'pages' } },
+                  { 'relatedTo.value': { in: publishedIds } },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+    },
     create: isAdmin,
     update: isAdmin,
     delete: isAdmin,
