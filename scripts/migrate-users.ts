@@ -110,7 +110,14 @@ async function fetchEligibleUsers(conn: mysql.Connection): Promise<MySQLUserRow[
       u.*,
       COUNT(DISTINCT t.id) AS transaction_count,
       COALESCE(SUM(t.cash_amount), 0) AS total_amount,
-      COUNT(DISTINCT p.id) AS page_count
+      COUNT(DISTINCT p.id) AS page_count,
+      (
+        SELECT COUNT(*)
+        FROM comment_link cl
+        JOIN comment c ON c.id = cl.comment_id
+        JOIN comment_details cd ON cd.id = c.poster_id
+        WHERE cd.user_id = u.id AND cl.type IN ('article', 'page')
+      ) AS comment_count
     FROM \`user\` u
     LEFT JOIN account a ON a.user_id = u.id
     LEFT JOIN transaction t ON t.account_id = a.id
@@ -118,7 +125,7 @@ async function fetchEligibleUsers(conn: mysql.Connection): Promise<MySQLUserRow[
     WHERE 1=1
       ${skipLegacyClause}
     GROUP BY u.id
-    HAVING total_amount > 0 OR page_count > 0
+    HAVING total_amount > 0 OR page_count > 0 OR comment_count > 0
     ORDER BY u.id
     ${limitClause}
   `

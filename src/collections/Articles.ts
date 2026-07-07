@@ -84,6 +84,24 @@ export const Articles: CollectionConfig = {
             }),
           ],
         },
+        {
+          label: 'Comments',
+          fields: [
+            {
+              // Reverzní pohled: komentáře/recenze mířící na tento článek přes `relatedTo`.
+              name: 'comments',
+              label: false,
+              type: 'join',
+              collection: 'comments',
+              on: 'relatedTo',
+              defaultSort: '-commentedAt',
+              admin: {
+                defaultColumns: ['authorName', 'body', 'commentedAt', 'status'],
+                allowCreate: false,
+              },
+            },
+          ],
+        },
       ],
     },
     slugField(),

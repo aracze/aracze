@@ -71,6 +71,7 @@ export interface Config {
     media: Media;
     pages: Page;
     articles: Article;
+    comments: Comment;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,9 +79,13 @@ export interface Config {
   };
   collectionsJoins: {
     pages: {
+      comments: 'comments';
       subPages: 'pages';
       primaryArticles: 'articles';
       secondaryArticles: 'articles';
+    };
+    articles: {
+      comments: 'comments';
     };
   };
   collectionsSelect: {
@@ -88,6 +93,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
+    comments: CommentsSelect<false> | CommentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -271,6 +277,11 @@ export interface Page {
     carRentalUrl?: string | null;
     kiwiIataCode?: string | null;
   };
+  comments?: {
+    docs?: (number | Comment)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   slug?: string | null;
   legacyPageId?: number | null;
   createdBy?: (number | null) | User;
@@ -312,6 +323,44 @@ export interface Page {
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments".
+ */
+export interface Comment {
+  id: number;
+  /**
+   * Recenze (na místech) má navíc hvězdičkové hodnocení.
+   */
+  type: 'comment' | 'review';
+  rating?: number | null;
+  body: string;
+  relatedTo:
+    | {
+        relationTo: 'articles';
+        value: number | Article;
+      }
+    | {
+        relationTo: 'pages';
+        value: number | Page;
+      };
+  /**
+   * Vyplňuje každý (registrace se nevyžaduje).
+   */
+  authorName: string;
+  author?: (number | null) | User;
+  /**
+   * Vše se publikuje; spam se označí (skryje z veřejnosti).
+   */
+  status: 'published' | 'spam';
+  /**
+   * Původní datum z legacy webu (u migrovaných dat).
+   */
+  commentedAt?: string | null;
+  legacyCommentId?: number | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -362,6 +411,11 @@ export interface Article {
   meta?: {
     title?: string | null;
     description?: string | null;
+  };
+  comments?: {
+    docs?: (number | Comment)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
   };
   slug?: string | null;
   publishedAt?: string | null;
@@ -426,6 +480,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'articles';
         value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'comments';
+        value: number | Comment;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -572,6 +630,7 @@ export interface PagesSelect<T extends boolean = true> {
         carRentalUrl?: T;
         kiwiIataCode?: T;
       };
+  comments?: T;
   slug?: T;
   legacyPageId?: T;
   createdBy?: T;
@@ -616,6 +675,7 @@ export interface ArticlesSelect<T extends boolean = true> {
         title?: T;
         description?: T;
       };
+  comments?: T;
   slug?: T;
   publishedAt?: T;
   legacyArticleId?: T;
@@ -623,6 +683,23 @@ export interface ArticlesSelect<T extends boolean = true> {
   mainPage?: T;
   pages?: T;
   createdByPublic?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments_select".
+ */
+export interface CommentsSelect<T extends boolean = true> {
+  type?: T;
+  rating?: T;
+  body?: T;
+  relatedTo?: T;
+  authorName?: T;
+  author?: T;
+  status?: T;
+  commentedAt?: T;
+  legacyCommentId?: T;
   updatedAt?: T;
   createdAt?: T;
 }

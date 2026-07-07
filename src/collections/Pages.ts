@@ -207,6 +207,24 @@ export const Pages: CollectionConfig = {
             },
           ],
         },
+        {
+          label: 'Reviews',
+          fields: [
+            {
+              // Reverzní pohled: recenze/komentáře mířící na tuto stránku přes `relatedTo`.
+              name: 'comments',
+              label: false,
+              type: 'join',
+              collection: 'comments',
+              on: 'relatedTo',
+              defaultSort: '-commentedAt',
+              admin: {
+                defaultColumns: ['authorName', 'rating', 'body', 'commentedAt', 'status'],
+                allowCreate: false,
+              },
+            },
+          ],
+        },
       ],
     },
     slugField(),
