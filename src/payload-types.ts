@@ -227,7 +227,9 @@ export interface Page {
     | 'Jazyk a kultura'
     | 'Jídlo a pití'
     | 'Ubytování'
-    | 'Články';
+    | 'Články'
+    | 'Rubrika'
+    | 'Statická stránka';
   featuredImage?: {
     image?: (number | null) | Media;
     featureImageStyleCss?: string | null;
@@ -339,11 +341,31 @@ export interface Article {
     };
     [k: string]: unknown;
   } | null;
+  /**
+   * Zdroj na konci článku (např. "Zdroj: www.example.com"). Zobrazí se zarovnaný vpravo kurzívou.
+   */
+  attribution?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
   meta?: {
     title?: string | null;
     description?: string | null;
   };
   slug?: string | null;
+  publishedAt?: string | null;
+  legacyArticleId?: number | null;
   createdBy?: (number | null) | User;
   /**
    * Určuje výslednou domovskou URL adresu článku a kanonický odkaz pro Google.
@@ -353,6 +375,15 @@ export interface Article {
    * Vyberte další destinace, ve kterých se má tento článek zobrazit v doporučeném výpisu.
    */
   pages?: (number | Page)[] | null;
+  createdByPublic?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -578,6 +609,7 @@ export interface ArticlesSelect<T extends boolean = true> {
         cloudinarySetting?: T;
       };
   text?: T;
+  attribution?: T;
   meta?:
     | T
     | {
@@ -585,9 +617,12 @@ export interface ArticlesSelect<T extends boolean = true> {
         description?: T;
       };
   slug?: T;
+  publishedAt?: T;
+  legacyArticleId?: T;
   createdBy?: T;
   mainPage?: T;
   pages?: T;
+  createdByPublic?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -862,6 +897,30 @@ export interface DailyCostsBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'dailyCostsBlock';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PromoBlock".
+ */
+export interface PromoBlock {
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'promoBlock';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

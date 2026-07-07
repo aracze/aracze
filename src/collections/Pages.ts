@@ -51,6 +51,8 @@ export const Pages: CollectionConfig = {
         { label: 'Jídlo a pití', value: 'Jídlo a pití' },
         { label: 'Ubytování', value: 'Ubytování' },
         { label: 'Články', value: 'Články' },
+        { label: 'Rubrika', value: 'Rubrika' },
+        { label: 'Statická stránka', value: 'Statická stránka' },
       ],
       required: true,
       defaultValue: 'Místo k navštívení',
@@ -178,6 +180,10 @@ export const Pages: CollectionConfig = {
         {
           name: 'affiliate',
           label: 'Affiliate',
+          admin: {
+            // Affiliate (booking) odkazy dávají smysl jen u míst k navštívení.
+            condition: (data) => data?.category === 'Místo k navštívení',
+          },
           fields: [
             {
               name: 'toursUrl',

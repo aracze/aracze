@@ -27,6 +27,7 @@ import { MapBlock } from './blocks/Map'
 import { SeasonalityBlock } from './blocks/Seasonality'
 import { NiceToKnowBlock } from './blocks/NiceToKnow'
 import { DailyCostsBlock } from './blocks/DailyCosts'
+import { PromoBlock } from './blocks/Promo'
 import { Homepage } from './globals/Homepage'
 import { Header } from './globals/Header'
 import { Footer } from './globals/Footer'
@@ -82,7 +83,14 @@ export default buildConfig({
       HTMLConverterFeature({}),
       EXPERIMENTAL_TableFeature(),
       BlocksFeature({
-        blocks: [ContentImage, MapBlock, SeasonalityBlock, NiceToKnowBlock, DailyCostsBlock],
+        blocks: [
+          ContentImage,
+          MapBlock,
+          SeasonalityBlock,
+          NiceToKnowBlock,
+          DailyCostsBlock,
+          PromoBlock,
+        ],
       }),
     ],
   }),

@@ -53,6 +53,15 @@ export const Articles: CollectionConfig = {
               name: 'text',
               type: 'richText',
             },
+            {
+              name: 'attribution',
+              label: 'Zdroj / attribution',
+              type: 'richText',
+              admin: {
+                description:
+                  'Zdroj na konci článku (např. "Zdroj: www.example.com"). Zobrazí se zarovnaný vpravo kurzívou.',
+              },
+            },
           ],
         },
         {
@@ -78,6 +87,31 @@ export const Articles: CollectionConfig = {
       ],
     },
     slugField(),
+    {
+      name: 'publishedAt',
+      label: 'Datum publikace',
+      type: 'date',
+      admin: {
+        position: 'sidebar',
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+    },
+    {
+      name: 'legacyArticleId',
+      label: 'Legacy Article ID',
+      type: 'number',
+      unique: true,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+      },
+      access: {
+        update: ({ req: { user } }) => Boolean(user?.roles?.includes('admin')),
+      },
+    },
     {
       name: 'createdBy',
       label: 'Autor',
@@ -118,6 +152,55 @@ export const Articles: CollectionConfig = {
         position: 'sidebar',
         description:
           'Vyberte další destinace, ve kterých se má tento článek zobrazit v doporučeném výpisu.',
+      },
+    },
+    {
+      // Bezpečná podmnožina autorových údajů pro veřejný frontend (bez e-mailu/rolí).
+      name: 'createdByPublic',
+      type: 'json',
+      virtual: true,
+      hooks: {
+        afterRead: [
+          async ({ data, req }) => {
+            const createdBy = data?.createdBy
+            if (!createdBy) return null
+
+            const authorId =
+              typeof createdBy === 'number'
+                ? createdBy
+                : typeof createdBy === 'object' && createdBy && 'id' in createdBy
+                  ? Number(createdBy.id)
+                  : null
+
+            if (!authorId) return null
+
+            try {
+              const user = (await req.payload.findByID({
+                collection: 'users',
+                id: authorId,
+                depth: 1,
+                overrideAccess: true,
+              })) as any
+
+              return {
+                id: user.id,
+                username: user.username ?? null,
+                firstName: user.firstName ?? null,
+                lastName: user.lastName ?? null,
+                description: user.description ?? null,
+                avatar:
+                  user.avatar && typeof user.avatar === 'object'
+                    ? { url: user.avatar.url ?? null }
+                    : null,
+              }
+            } catch {
+              return null
+            }
+          },
+        ],
+      },
+      admin: {
+        hidden: true,
       },
     },
   ],
