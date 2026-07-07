@@ -1,4 +1,8 @@
-import type { CollectionConfig } from 'payload'
+import type { Access, CollectionConfig } from 'payload'
+
+// Zápis (vkládání/úpravy/mazání) zatím jen pro adminy — stejný vzor jako u Users.
+// Veřejné odesílání z frontendu (jméno + captcha) se doplní později spolu s frontendem.
+const isAdmin: Access = ({ req: { user } }) => Boolean(user?.roles?.includes('admin'))
 
 // Komentáře (na článcích) a recenze (na místech / turistických cílech = Pages).
 // Jediný strukturální rozdíl: recenze má hvězdičkové hodnocení (rating), komentář ne.
@@ -12,8 +16,9 @@ export const Comments: CollectionConfig = {
   access: {
     // Veřejně čitelné, kromě označeného spamu (ten vidí jen přihlášení v adminu).
     read: ({ req: { user } }) => (user ? true : { status: { not_equals: 'spam' } }),
-    // Vkládání/úpravy/mazání zatím jen pro přihlášené (admin). Veřejné odesílání
-    // z frontendu (jméno + captcha) se doplní spolu s frontendovou částí.
+    create: isAdmin,
+    update: isAdmin,
+    delete: isAdmin,
   },
   fields: [
     {
@@ -39,7 +44,10 @@ export const Comments: CollectionConfig = {
         // Zobrazit jen u recenze.
         condition: (data) => data?.type === 'review',
       },
-      validate: (value: number | null | undefined, { siblingData }: { siblingData: Partial<{ type: string }> }) => {
+      validate: (
+        value: number | null | undefined,
+        { siblingData }: { siblingData: Partial<{ type: string }> },
+      ) => {
         if (siblingData?.type === 'review') {
           if (value == null) return 'Recenze musí mít hodnocení 1–5.'
           if (value < 1 || value > 5) return 'Hodnocení musí být 1–5.'
@@ -88,6 +96,8 @@ export const Comments: CollectionConfig = {
       name: 'status',
       type: 'select',
       required: true,
+      // Anonymní read filtruje `status != spam` na každém requestu → index.
+      index: true,
       defaultValue: 'published',
       options: [
         { label: 'Publikováno', value: 'published' },

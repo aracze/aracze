@@ -145,7 +145,7 @@ async function run() {
   console.log('✅ Payload inicializován')
 
   const users = await fetchEligibleUsers(conn)
-  console.log(`📦 Nalezeno ${users.length} uživatelů s total_amount > 0\n`)
+  console.log(`📦 Nalezeno ${users.length} uživatelů (transakce, vlastní stránky nebo komentáře)\n`)
 
   let created = 0
   let updated = 0

@@ -46,7 +46,21 @@ const URL_TABLE = 'url_to_article'
 
 // Base URL of the old CMS site — used to convert relative links to absolute
 // so convertHTMLToLexical treats them as external links, not internal Payload document links.
-const OLD_SITE_BASE_URL = process.env.OLD_SITE_BASE_URL || 'https://www.aracze.cz'
+const OLD_SITE_BASE_URL = process.env.OLD_SITE_BASE_URL || 'https://www.ara.cz'
+
+// Hostitelé považovaní za „interní" při konverzi odkazů. Odvozeno i z OLD_SITE_BASE_URL,
+// aby relativní legacy odkazy (absolutizované přes base URL) byly rozpoznány konzistentně.
+const ARA_HOSTS: Set<string> = new Set(
+  ['ara.cz', 'www.ara.cz', safeHostname(OLD_SITE_BASE_URL)].filter((h): h is string => Boolean(h)),
+)
+
+function safeHostname(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase()
+  } catch {
+    return null
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -68,9 +82,12 @@ const idArg = process.argv.find((arg) => arg.startsWith('--id='))
 let onlyLegacyId: number | null = DEFAULT_LEGACY_ID
 if (idArg) {
   const parsed = parseInt(idArg.split('=')[1], 10)
-  if (!isNaN(parsed) && parsed > 0) {
-    onlyLegacyId = parsed
+  // Neplatné --id nesmí tiše spadnout do defaultu (a spustit tak plnou migraci).
+  if (isNaN(parsed) || parsed <= 0) {
+    console.error(`❌ Neplatné --id: "${idArg.split('=')[1]}". Musí být kladné celé číslo.`)
+    process.exit(1)
   }
+  onlyLegacyId = parsed
 }
 
 type OldRecord = {
@@ -220,8 +237,7 @@ function buildAraLinkResolver(pages: any[]): (pathname: string) => number | stri
 }
 
 function isAraHost(hostname: string): boolean {
-  const h = hostname.toLowerCase()
-  return h === 'ara.cz' || h === 'www.ara.cz'
+  return ARA_HOSTS.has(hostname.toLowerCase())
 }
 
 function hasNoFollowRel(value: string | null): boolean {
@@ -365,6 +381,32 @@ function convertAraLinksToInternalLinks(
   return { converted, unresolved }
 }
 
+// Legacy „lightbox" kotvy kolem obrázků (<a href="…/full.jpg"><img/></a>) skončí po
+// konverzi jako link uzel obalující ContentImage/upload blok. To je nevalidní (blok
+// uvnitř inline linku) a na frontendu se serializuje jako prázdný <a> kolem obrázku.
+// Takové obaly zahodíme a blok povýšíme na místo linku.
+function unwrapBlockLinks(node: any): number {
+  if (!node || typeof node !== 'object' || !Array.isArray(node.children)) return 0
+  let count = 0
+  const next: any[] = []
+  for (const child of node.children) {
+    if (
+      child?.type === 'link' &&
+      Array.isArray(child.children) &&
+      child.children.length > 0 &&
+      child.children.every((c: any) => c?.type === 'block' || c?.type === 'upload')
+    ) {
+      next.push(...child.children)
+      count++
+    } else {
+      next.push(child)
+    }
+  }
+  node.children = next
+  for (const child of next) count += unwrapBlockLinks(child)
+  return count
+}
+
 function normalizeMetaValue(value: unknown): string {
   return String(value || '').trim()
 }
@@ -452,11 +494,6 @@ async function htmlToLexical(
         unwrapAnchor(a)
       }
     })
-
-    const sourceLinks: SourceLinkMeta[] = Array.from(doc.querySelectorAll('a')).map((a: any) => ({
-      href: (a.getAttribute('href') || '').trim(),
-      nofollow: hasNoFollowRel(a.getAttribute('rel')),
-    }))
 
     const blocks: any[] = []
 
@@ -695,7 +732,13 @@ async function htmlToLexical(
 
       const p = doc.createElement('p')
       p.textContent = `__PAYLOAD_BLOCK_${index}__`
-      if (img.parentNode) img.parentNode.replaceChild(p, img)
+      // Když je obrázek zabalený jen v <a> (legacy lightbox), nahradíme celý <a>, ne jen
+      // <img> — jinak by placeholder (a tím i blok) zůstal uvnitř odkazu a skončil pod
+      // Lexical link uzlem.
+      const parent = img.parentNode as any
+      const outer =
+        parent && parent.tagName === 'A' && (parent.textContent || '').trim() === '' ? parent : img
+      if (outer.parentNode) outer.parentNode.replaceChild(p, outer)
 
       if (captionToRemove && captionToRemove.parentNode) {
         captionToRemove.parentNode.removeChild(captionToRemove)
@@ -737,6 +780,13 @@ async function htmlToLexical(
         p.parentNode?.removeChild(p)
       }
     })
+
+    // sourceLinks sbíráme až z finálního DOM (po extrakci bloků, obrázků a dalších mutacích),
+    // aby pořadí odkazů sedělo s Lexical výstupem a applyNoFollowToLexicalLinks() nemíchal metadata.
+    const sourceLinks: SourceLinkMeta[] = Array.from(doc.querySelectorAll('a')).map((a: any) => ({
+      href: (a.getAttribute('href') || '').trim(),
+      nofollow: hasNoFollowRel(a.getAttribute('rel')),
+    }))
 
     const finalHtml = doc.body.innerHTML
 
@@ -981,6 +1031,7 @@ async function run() {
       limit: 0,
       depth: 0,
       pagination: false,
+      select: { legacyUserId: true },
     })
     const usersMap = new Map(
       allUsers.docs
@@ -993,6 +1044,15 @@ async function run() {
       limit: 0,
       depth: 0,
       pagination: false,
+      select: {
+        filename: true,
+        cloudinaryPublicId: true,
+        isCreativeCommons: true,
+        author: true,
+        source: true,
+        sourceLink: true,
+        creativeCommonsLicense: true,
+      },
     })
     const mediaMap = {
       filename: new Map(
@@ -1023,6 +1083,7 @@ async function run() {
       limit: 0,
       depth: 0,
       pagination: false,
+      select: { fullSlug: true, legacyPageId: true },
     })
     const pagesMap = new Map(
       allPages.docs
@@ -1036,6 +1097,7 @@ async function run() {
       limit: 0,
       depth: 0,
       pagination: false,
+      select: { legacyArticleId: true, slug: true },
     })
     const articlesMap = new Map(
       allArticles.docs
@@ -1160,6 +1222,10 @@ async function run() {
 
         const imageCcSink = new Map<number | string, ParsedCcImg>()
         const lexicalText = await htmlToLexical(body, payload, mediaMap, imageCcSink)
+        const unwrappedBlockLinks = unwrapBlockLinks(lexicalText?.root)
+        if (unwrappedBlockLinks > 0) {
+          console.log(`   [DEBUG] Rozbaleno lightbox obalů kolem obrázků: ${unwrappedBlockLinks}`)
+        }
         const { converted: convertedInternalLinks, unresolved: unresolvedAraLinks } =
           convertAraLinksToInternalLinks(lexicalText, resolveAraLink)
         if (convertedInternalLinks > 0) {

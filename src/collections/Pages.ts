@@ -181,8 +181,10 @@ export const Pages: CollectionConfig = {
           name: 'affiliate',
           label: 'Affiliate',
           admin: {
-            // Affiliate (booking) odkazy dávají smysl jen u míst k navštívení.
-            condition: (data) => data?.category === 'Místo k navštívení',
+            // Affiliate (booking) odkazy dávají smysl u míst — stejné kategorie jako Detail
+            // (zahrnuje i legacy hodnoty „Turistický cíl" a „Místa", ne jen „Místo k navštívení").
+            condition: (data) =>
+              ['Místo k navštívení', 'Turistický cíl', 'Místa'].includes(data?.category),
           },
           fields: [
             {
@@ -409,6 +411,7 @@ export const Pages: CollectionConfig = {
                 id: authorId,
                 depth: 1,
                 overrideAccess: true,
+                req,
               })) as any
 
               return {

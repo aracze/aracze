@@ -9,6 +9,16 @@ import {
   PreviewField,
 } from '@payloadcms/plugin-seo/fields'
 
+// Veřejná (bezpečná) podmnožina autora pro frontend.
+type PublicAuthor = {
+  id: number
+  username: string | null
+  firstName: string | null
+  lastName: string | null
+  description: string | null
+  avatar: { url: string | null } | null
+}
+
 export const Articles: CollectionConfig = {
   slug: 'articles',
   admin: {
@@ -127,6 +137,7 @@ export const Articles: CollectionConfig = {
         readOnly: true,
       },
       access: {
+        create: ({ req: { user } }) => Boolean(user?.roles?.includes('admin')),
         update: ({ req: { user } }) => Boolean(user?.roles?.includes('admin')),
       },
     },
@@ -179,7 +190,7 @@ export const Articles: CollectionConfig = {
       virtual: true,
       hooks: {
         afterRead: [
-          async ({ data, req }) => {
+          async ({ data, req }): Promise<PublicAuthor | null> => {
             const createdBy = data?.createdBy
             if (!createdBy) return null
 
@@ -192,15 +203,33 @@ export const Articles: CollectionConfig = {
 
             if (!authorId) return null
 
+            // Cache autorů per-request → výpisy nefetchují stejného autora opakovaně.
+            const ctx = req.context as {
+              authorCache?: Map<number, PublicAuthor | null>
+            }
+            const cache = (ctx.authorCache ??= new Map())
+            if (cache.has(authorId)) return cache.get(authorId) ?? null
+
+            let result: PublicAuthor | null = null
             try {
-              const user = (await req.payload.findByID({
+              // `select` omezí načtená pole (bez `as any` a bez over-fetche); `depth: 1`
+              // zůstává jen kvůli populaci `avatar` (upload) na objekt s `url`.
+              const user = await req.payload.findByID({
                 collection: 'users',
                 id: authorId,
                 depth: 1,
                 overrideAccess: true,
-              })) as any
+                req,
+                select: {
+                  username: true,
+                  firstName: true,
+                  lastName: true,
+                  description: true,
+                  avatar: true,
+                },
+              })
 
-              return {
+              result = {
                 id: user.id,
                 username: user.username ?? null,
                 firstName: user.firstName ?? null,
@@ -212,8 +241,11 @@ export const Articles: CollectionConfig = {
                     : null,
               }
             } catch {
-              return null
+              result = null
             }
+
+            cache.set(authorId, result)
+            return result
           },
         ],
       },

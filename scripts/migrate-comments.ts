@@ -48,7 +48,10 @@ type CommentRow = mysql.RowDataPacket & {
 }
 
 const normalizeSlug = (url: string): string =>
-  url.trim().toLowerCase().replace(/^\/+|\/+$/g, '')
+  url
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+|\/+$/g, '')
 
 const lastSegment = (url: string): string => {
   const parts = normalizeSlug(url).split('/')
@@ -78,6 +81,7 @@ type Payload = Awaited<ReturnType<typeof getPayload>>
 async function fetchAll(
   payload: Payload,
   collection: 'articles' | 'pages' | 'users',
+  select: Record<string, true>,
 ): Promise<Record<string, unknown>[]> {
   const out: Record<string, unknown>[] = []
   let page = 1
@@ -89,6 +93,8 @@ async function fetchAll(
       page,
       overrideAccess: true,
       pagination: true,
+      // Jen pole potřebná pro mapy (id se vrací vždy); ušetří paměť i přenos.
+      select,
     })
     out.push(...(res.docs as Record<string, unknown>[]))
     if (!res.hasNextPage) break
@@ -108,14 +114,21 @@ async function run() {
   console.log('✅ Payload inicializován')
 
   // --- Sestavení mapovacích tabulek ---
-  const articles = await fetchAll(payload, 'articles')
-  const pages = await fetchAll(payload, 'pages')
-  const users = await fetchAll(payload, 'users')
+  const articles = await fetchAll(payload, 'articles', {
+    legacyArticleId: true,
+    slug: true,
+  })
+  const pages = await fetchAll(payload, 'pages', {
+    legacyPageId: true,
+    fullSlug: true,
+  })
+  const users = await fetchAll(payload, 'users', { legacyUserId: true })
 
   const articlesByLegacyId = new Map<number, number>()
   const articlesBySlug = new Map<string, number>()
   for (const a of articles) {
-    if (typeof a.legacyArticleId === 'number') articlesByLegacyId.set(a.legacyArticleId, a.id as number)
+    if (typeof a.legacyArticleId === 'number')
+      articlesByLegacyId.set(a.legacyArticleId, a.id as number)
     if (typeof a.slug === 'string' && !articlesBySlug.has(a.slug))
       articlesBySlug.set(a.slug, a.id as number)
   }
@@ -124,7 +137,8 @@ async function run() {
   const pagesByFullSlug = new Map<string, number>()
   for (const p of pages) {
     if (typeof p.legacyPageId === 'number') pagesByLegacyId.set(p.legacyPageId, p.id as number)
-    if (typeof p.fullSlug === 'string') pagesByFullSlug.set(normalizeSlug(p.fullSlug), p.id as number)
+    if (typeof p.fullSlug === 'string')
+      pagesByFullSlug.set(normalizeSlug(p.fullSlug), p.id as number)
   }
 
   const usersByLegacyId = new Map<number, number>()
@@ -156,6 +170,7 @@ async function run() {
   let updated = 0
   let skippedNoBody = 0
   let skippedNoTarget = 0
+  let skippedBadRating = 0
   let skippedDryRun = 0
   let errors = 0
   let linkedByLegacyId = 0
@@ -213,6 +228,12 @@ async function run() {
     if (authorUserId != null) authorLinked++
 
     const rating = type === 'review' && row.rating != null ? row.rating : undefined
+    // Kolekce vyžaduje u recenze hodnocení 1–5. Řádek s chybějícím/mimo rozsah ratingem
+    // přeskočíme, ať se do kolekce nedostane undefined/0/mimo rozsah.
+    if (type === 'review' && (rating == null || rating < 1 || rating > 5)) {
+      skippedBadRating++
+      continue
+    }
     const commentedAt = row.date_created ? new Date(row.date_created).toISOString() : undefined
 
     const data = {
@@ -276,6 +297,7 @@ async function run() {
   console.log(`   Napojen registr. autor: ${authorLinked}`)
   console.log(`   Přeskočeno (prázdné):   ${skippedNoBody}`)
   console.log(`   Přeskočeno (bez cíle):  ${skippedNoTarget}`)
+  console.log(`   Přeskočeno (rating):    ${skippedBadRating}`)
   console.log(`   Přeskočeno (dry-run):   ${skippedDryRun}`)
   console.log(`   Chyby:                  ${errors}`)
   console.log('══════════════════════════════════════════')

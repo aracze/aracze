@@ -64,12 +64,19 @@ if (limitArg) {
 const idArg = process.argv.find((arg) => arg.startsWith('--id='))
 let onlyLegacyIds: number[] | null = null
 if (idArg) {
-  const parsed = idArg
-    .split('=')[1]
+  const raw = idArg.split('=')[1] ?? ''
+  const parsed = raw
     .split(',')
     .map((s) => parseInt(s.trim(), 10))
     .filter((n) => !isNaN(n) && n > 0)
-  if (parsed.length > 0) onlyLegacyIds = parsed
+  // Neplatné --id nesmí tiše propadnout na null (a spustit tak migraci všech stránek).
+  if (parsed.length === 0) {
+    console.error(
+      `❌ Neplatné --id: "${raw}". Zadej kladná celá čísla oddělená čárkou (např. --id=5153,5154).`,
+    )
+    process.exit(1)
+  }
+  onlyLegacyIds = parsed
 }
 
 type OldRecord = {

@@ -43,21 +43,34 @@ const OLD_DB_CONFIG = {
 const isDryRun = process.argv.includes('--dry-run')
 const isVerbose = process.argv.includes('--verbose')
 
+const ALLOWED_COLLECTIONS = ['all', 'pages', 'articles'] as const
 const collectionArg = process.argv.find((a) => a.startsWith('--collection='))
 const collection = collectionArg ? collectionArg.split('=')[1] : 'all'
+if (!ALLOWED_COLLECTIONS.includes(collection as (typeof ALLOWED_COLLECTIONS)[number])) {
+  console.error(
+    `❌ Neplatná --collection: "${collection}". Povolené: ${ALLOWED_COLLECTIONS.join(', ')}`,
+  )
+  process.exit(1)
+}
 const doPages = collection === 'all' || collection === 'pages'
 const doArticles = collection === 'all' || collection === 'articles'
 
 const limitArg = process.argv.find((a) => a.startsWith('--limit='))
-const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : null
+let limit: number | null = null
+if (limitArg) {
+  const parsed = Number(limitArg.split('=')[1])
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    console.error(`❌ Neplatný --limit: "${limitArg.split('=')[1]}". Musí být kladné celé číslo.`)
+    process.exit(1)
+  }
+  limit = parsed
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Resolver: legacy ara.cz cesta → cílový dokument
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Target =
-  | { kind: 'page'; id: number | string }
-  | { kind: 'article'; url: string }
+type Target = { kind: 'page'; id: number | string } | { kind: 'article'; url: string }
 
 type Candidate = {
   segments: string[]
@@ -114,10 +127,8 @@ function buildResolver(
     if (!article?.slug) continue
     // mainPage je na depth 0 buď ID, nebo (u ručně vytvořených) objekt – ošetříme obojí.
     const mainPage = article.mainPage
-    const mainPageId =
-      mainPage && typeof mainPage === 'object' ? mainPage.id : mainPage
-    const parentSlug =
-      mainPageId != null ? pageFullSlugById.get(String(mainPageId)) || '' : ''
+    const mainPageId = mainPage && typeof mainPage === 'object' ? mainPage.id : mainPage
+    const parentSlug = mainPageId != null ? pageFullSlugById.get(String(mainPageId)) || '' : ''
     if (!parentSlug) continue // bez rodiče nedokážeme sestavit URL článku
     const segments = [...toSegments(parentSlug), String(article.slug)]
     const url = '/' + segments.join('/')
@@ -248,6 +259,8 @@ async function run() {
     limit: 0,
     depth: 0,
     pagination: false,
+    // Jen pole, která resolver a fixer reálně používají (id se vrací vždy).
+    select: { fullSlug: true, legacyPageId: true, title: true, text: true },
   })
   // depth 0 → vztahy v rich-textu (odkazy `doc`, obrázky `upload`) zůstanou jako ID.
   // Při depth > 0 se populují na objekty a zápis zpět skončí chybou validace.
@@ -257,6 +270,13 @@ async function run() {
     limit: 0,
     depth: 0,
     pagination: false,
+    select: {
+      slug: true,
+      mainPage: true,
+      title: true,
+      text: true,
+      attribution: true,
+    },
   })
 
   // Mapa legacy unique_url → payload page id (přes legacy_page_id).
@@ -381,9 +401,7 @@ async function run() {
   console.log(`   Nenamapované (unikát): ${stats.unresolved.size}`)
   if (stats.failed.length > 0) {
     console.log('\n   Dokumenty, které selhaly při ukládání (validace):')
-    stats.failed.forEach((f) =>
-      console.log(`     ${f.coll}#${f.id} "${f.title}" → ${f.reason}`),
-    )
+    stats.failed.forEach((f) => console.log(`     ${f.coll}#${f.id} "${f.title}" → ${f.reason}`))
   }
   if (stats.unresolved.size > 0) {
     const sorted = [...stats.unresolved.entries()].sort((a, b) => b[1] - a[1])
