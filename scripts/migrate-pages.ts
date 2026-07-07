@@ -58,6 +58,27 @@ if (limitArg) {
   }
 }
 
+// Cílená migrace jen vybraných legacy ID (např. --id=5153,5154). Slouží k migraci
+// jednotlivých stránek bez re-migrace všech ostatních. Rodičovská hierarchie a
+// fullSlug se dopočítají z plné tabulky `page`, takže je bezpečné migrovat i podmnožinu.
+const idArg = process.argv.find((arg) => arg.startsWith('--id='))
+let onlyLegacyIds: number[] | null = null
+if (idArg) {
+  const raw = idArg.split('=')[1] ?? ''
+  const parsed = raw
+    .split(',')
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => !isNaN(n) && n > 0)
+  // Neplatné --id nesmí tiše propadnout na null (a spustit tak migraci všech stránek).
+  if (parsed.length === 0) {
+    console.error(
+      `❌ Neplatné --id: "${raw}". Zadej kladná celá čísla oddělená čárkou (např. --id=5153,5154).`,
+    )
+    process.exit(1)
+  }
+  onlyLegacyIds = parsed
+}
+
 type OldRecord = {
   id: number
   title: string
@@ -82,7 +103,7 @@ const categoryMap: Record<string, string> = {
   FOOD_AND_DRINKS: 'Jídlo a pití',
   ACCOMMODATION: 'Ubytování',
   ARTICLE_LIST: 'Články',
-  INSPIRATION: 'Články',
+  INSPIRATION: 'Rubrika',
 }
 
 function shouldSkipRecord(record: OldRecord): boolean {
@@ -294,6 +315,7 @@ function normalizeMetaValue(value: unknown): string {
 
 async function fetchOldRecords(conn: mysql.Connection): Promise<OldRecord[]> {
   const limitClause = limit && Number.isFinite(limit) ? `LIMIT ${limit}` : ''
+  const whereClause = onlyLegacyIds ? `WHERE \`${COL_ID}\` IN (${onlyLegacyIds.join(',')})` : ''
   const query = `
     SELECT 
       \`${COL_ID}\`    AS id,
@@ -329,6 +351,7 @@ async function fetchOldRecords(conn: mysql.Connection): Promise<OldRecord[]> {
       \`practical_information_image_author\`,
       \`status\`
     FROM \`${OLD_TABLE}\`
+    ${whereClause}
     ORDER BY \`${COL_ID}\` ASC
     ${limitClause}
   `

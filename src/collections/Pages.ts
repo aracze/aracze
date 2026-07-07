@@ -51,6 +51,8 @@ export const Pages: CollectionConfig = {
         { label: 'Jídlo a pití', value: 'Jídlo a pití' },
         { label: 'Ubytování', value: 'Ubytování' },
         { label: 'Články', value: 'Články' },
+        { label: 'Rubrika', value: 'Rubrika' },
+        { label: 'Statická stránka', value: 'Statická stránka' },
       ],
       required: true,
       defaultValue: 'Místo k navštívení',
@@ -178,6 +180,12 @@ export const Pages: CollectionConfig = {
         {
           name: 'affiliate',
           label: 'Affiliate',
+          admin: {
+            // Affiliate (booking) odkazy dávají smysl u míst — stejné kategorie jako Detail
+            // (zahrnuje i legacy hodnoty „Turistický cíl" a „Místa", ne jen „Místo k navštívení").
+            condition: (data) =>
+              ['Místo k navštívení', 'Turistický cíl', 'Místa'].includes(data?.category),
+          },
           fields: [
             {
               name: 'toursUrl',
@@ -198,6 +206,24 @@ export const Pages: CollectionConfig = {
               name: 'kiwiIataCode',
               label: 'Kiwi Fly To (IATA kód letiště)',
               type: 'text',
+            },
+          ],
+        },
+        {
+          label: 'Reviews',
+          fields: [
+            {
+              // Reverzní pohled: recenze/komentáře mířící na tuto stránku přes `relatedTo`.
+              name: 'comments',
+              label: false,
+              type: 'join',
+              collection: 'comments',
+              on: 'relatedTo',
+              defaultSort: '-commentedAt',
+              admin: {
+                defaultColumns: ['authorName', 'rating', 'body', 'commentedAt', 'status'],
+                allowCreate: false,
+              },
             },
           ],
         },
@@ -385,6 +411,7 @@ export const Pages: CollectionConfig = {
                 id: authorId,
                 depth: 1,
                 overrideAccess: true,
+                req,
               })) as any
 
               return {

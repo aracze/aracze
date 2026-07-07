@@ -71,6 +71,7 @@ export interface Config {
     media: Media;
     pages: Page;
     articles: Article;
+    comments: Comment;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,9 +79,13 @@ export interface Config {
   };
   collectionsJoins: {
     pages: {
+      comments: 'comments';
       subPages: 'pages';
       primaryArticles: 'articles';
       secondaryArticles: 'articles';
+    };
+    articles: {
+      comments: 'comments';
     };
   };
   collectionsSelect: {
@@ -88,6 +93,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
+    comments: CommentsSelect<false> | CommentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -227,7 +233,9 @@ export interface Page {
     | 'Jazyk a kultura'
     | 'Jídlo a pití'
     | 'Ubytování'
-    | 'Články';
+    | 'Články'
+    | 'Rubrika'
+    | 'Statická stránka';
   featuredImage?: {
     image?: (number | null) | Media;
     featureImageStyleCss?: string | null;
@@ -268,6 +276,11 @@ export interface Page {
     accommodationUrl?: string | null;
     carRentalUrl?: string | null;
     kiwiIataCode?: string | null;
+  };
+  comments?: {
+    docs?: (number | Comment)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
   };
   slug?: string | null;
   legacyPageId?: number | null;
@@ -313,6 +326,44 @@ export interface Page {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments".
+ */
+export interface Comment {
+  id: number;
+  /**
+   * Recenze (na místech) má navíc hvězdičkové hodnocení.
+   */
+  type: 'comment' | 'review';
+  rating?: number | null;
+  body: string;
+  relatedTo:
+    | {
+        relationTo: 'articles';
+        value: number | Article;
+      }
+    | {
+        relationTo: 'pages';
+        value: number | Page;
+      };
+  /**
+   * Vyplňuje každý (registrace se nevyžaduje).
+   */
+  authorName: string;
+  author?: (number | null) | User;
+  /**
+   * Vše se publikuje; spam se označí (skryje z veřejnosti).
+   */
+  status: 'published' | 'spam';
+  /**
+   * Původní datum z legacy webu (u migrovaných dat).
+   */
+  commentedAt?: string | null;
+  legacyCommentId?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "articles".
  */
 export interface Article {
@@ -339,11 +390,36 @@ export interface Article {
     };
     [k: string]: unknown;
   } | null;
+  /**
+   * Zdroj na konci článku (např. "Zdroj: www.example.com"). Zobrazí se zarovnaný vpravo kurzívou.
+   */
+  attribution?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
   meta?: {
     title?: string | null;
     description?: string | null;
   };
+  comments?: {
+    docs?: (number | Comment)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   slug?: string | null;
+  publishedAt?: string | null;
+  legacyArticleId?: number | null;
   createdBy?: (number | null) | User;
   /**
    * Určuje výslednou domovskou URL adresu článku a kanonický odkaz pro Google.
@@ -353,6 +429,15 @@ export interface Article {
    * Vyberte další destinace, ve kterých se má tento článek zobrazit v doporučeném výpisu.
    */
   pages?: (number | Page)[] | null;
+  createdByPublic?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -395,6 +480,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'articles';
         value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'comments';
+        value: number | Comment;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -541,6 +630,7 @@ export interface PagesSelect<T extends boolean = true> {
         carRentalUrl?: T;
         kiwiIataCode?: T;
       };
+  comments?: T;
   slug?: T;
   legacyPageId?: T;
   createdBy?: T;
@@ -578,16 +668,38 @@ export interface ArticlesSelect<T extends boolean = true> {
         cloudinarySetting?: T;
       };
   text?: T;
+  attribution?: T;
   meta?:
     | T
     | {
         title?: T;
         description?: T;
       };
+  comments?: T;
   slug?: T;
+  publishedAt?: T;
+  legacyArticleId?: T;
   createdBy?: T;
   mainPage?: T;
   pages?: T;
+  createdByPublic?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments_select".
+ */
+export interface CommentsSelect<T extends boolean = true> {
+  type?: T;
+  rating?: T;
+  body?: T;
+  relatedTo?: T;
+  authorName?: T;
+  author?: T;
+  status?: T;
+  commentedAt?: T;
+  legacyCommentId?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -862,6 +974,30 @@ export interface DailyCostsBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'dailyCostsBlock';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PromoBlock".
+ */
+export interface PromoBlock {
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'promoBlock';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

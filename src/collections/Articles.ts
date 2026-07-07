@@ -9,6 +9,16 @@ import {
   PreviewField,
 } from '@payloadcms/plugin-seo/fields'
 
+// Veřejná (bezpečná) podmnožina autora pro frontend.
+type PublicAuthor = {
+  id: number
+  username: string | null
+  firstName: string | null
+  lastName: string | null
+  description: string | null
+  avatar: { url: string | null } | null
+}
+
 export const Articles: CollectionConfig = {
   slug: 'articles',
   admin: {
@@ -53,6 +63,15 @@ export const Articles: CollectionConfig = {
               name: 'text',
               type: 'richText',
             },
+            {
+              name: 'attribution',
+              label: 'Zdroj / attribution',
+              type: 'richText',
+              admin: {
+                description:
+                  'Zdroj na konci článku (např. "Zdroj: www.example.com"). Zobrazí se zarovnaný vpravo kurzívou.',
+              },
+            },
           ],
         },
         {
@@ -75,9 +94,53 @@ export const Articles: CollectionConfig = {
             }),
           ],
         },
+        {
+          label: 'Comments',
+          fields: [
+            {
+              // Reverzní pohled: komentáře/recenze mířící na tento článek přes `relatedTo`.
+              name: 'comments',
+              label: false,
+              type: 'join',
+              collection: 'comments',
+              on: 'relatedTo',
+              defaultSort: '-commentedAt',
+              admin: {
+                defaultColumns: ['authorName', 'body', 'commentedAt', 'status'],
+                allowCreate: false,
+              },
+            },
+          ],
+        },
       ],
     },
     slugField(),
+    {
+      name: 'publishedAt',
+      label: 'Datum publikace',
+      type: 'date',
+      admin: {
+        position: 'sidebar',
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+    },
+    {
+      name: 'legacyArticleId',
+      label: 'Legacy Article ID',
+      type: 'number',
+      unique: true,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+      },
+      access: {
+        create: ({ req: { user } }) => Boolean(user?.roles?.includes('admin')),
+        update: ({ req: { user } }) => Boolean(user?.roles?.includes('admin')),
+      },
+    },
     {
       name: 'createdBy',
       label: 'Autor',
@@ -118,6 +181,76 @@ export const Articles: CollectionConfig = {
         position: 'sidebar',
         description:
           'Vyberte další destinace, ve kterých se má tento článek zobrazit v doporučeném výpisu.',
+      },
+    },
+    {
+      // Bezpečná podmnožina autorových údajů pro veřejný frontend (bez e-mailu/rolí).
+      name: 'createdByPublic',
+      type: 'json',
+      virtual: true,
+      hooks: {
+        afterRead: [
+          async ({ data, req }): Promise<PublicAuthor | null> => {
+            const createdBy = data?.createdBy
+            if (!createdBy) return null
+
+            const authorId =
+              typeof createdBy === 'number'
+                ? createdBy
+                : typeof createdBy === 'object' && createdBy && 'id' in createdBy
+                  ? Number(createdBy.id)
+                  : null
+
+            if (!authorId) return null
+
+            // Cache autorů per-request → výpisy nefetchují stejného autora opakovaně.
+            const ctx = req.context as {
+              authorCache?: Map<number, PublicAuthor | null>
+            }
+            const cache = (ctx.authorCache ??= new Map())
+            if (cache.has(authorId)) return cache.get(authorId) ?? null
+
+            let result: PublicAuthor | null = null
+            try {
+              // `select` omezí načtená pole (bez `as any` a bez over-fetche); `depth: 1`
+              // zůstává jen kvůli populaci `avatar` (upload) na objekt s `url`.
+              const user = await req.payload.findByID({
+                collection: 'users',
+                id: authorId,
+                depth: 1,
+                overrideAccess: true,
+                req,
+                select: {
+                  username: true,
+                  firstName: true,
+                  lastName: true,
+                  description: true,
+                  avatar: true,
+                },
+              })
+
+              result = {
+                id: user.id,
+                username: user.username ?? null,
+                firstName: user.firstName ?? null,
+                lastName: user.lastName ?? null,
+                description: user.description ?? null,
+                avatar:
+                  user.avatar && typeof user.avatar === 'object'
+                    ? { url: user.avatar.url ?? null }
+                    : null,
+              }
+            } catch {
+              result = null
+            }
+
+            cache.set(authorId, result)
+            return result
+          },
+        ],
+      },
+      admin: {
+        hidden: true,
       },
     },
   ],

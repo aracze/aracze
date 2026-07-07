@@ -22,11 +22,13 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Articles } from './collections/Articles'
+import { Comments } from './collections/Comments'
 import { ContentImage } from './blocks/ContentImage'
 import { MapBlock } from './blocks/Map'
 import { SeasonalityBlock } from './blocks/Seasonality'
 import { NiceToKnowBlock } from './blocks/NiceToKnow'
 import { DailyCostsBlock } from './blocks/DailyCosts'
+import { PromoBlock } from './blocks/Promo'
 import { Homepage } from './globals/Homepage'
 import { Header } from './globals/Header'
 import { Footer } from './globals/Footer'
@@ -48,7 +50,7 @@ export default buildConfig({
       afterNavLinks: ['/components/DatabaseNav#DatabaseNav'],
     },
   },
-  collections: [Users, Media, Pages, Articles],
+  collections: [Users, Media, Pages, Articles, Comments],
   globals: [Homepage, Header, Footer],
   editor: lexicalEditor({
     features: ({ defaultFeatures }) => [
@@ -82,7 +84,14 @@ export default buildConfig({
       HTMLConverterFeature({}),
       EXPERIMENTAL_TableFeature(),
       BlocksFeature({
-        blocks: [ContentImage, MapBlock, SeasonalityBlock, NiceToKnowBlock, DailyCostsBlock],
+        blocks: [
+          ContentImage,
+          MapBlock,
+          SeasonalityBlock,
+          NiceToKnowBlock,
+          DailyCostsBlock,
+          PromoBlock,
+        ],
       }),
     ],
   }),
