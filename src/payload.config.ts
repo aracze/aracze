@@ -23,6 +23,7 @@ import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Articles } from './collections/Articles'
 import { Comments } from './collections/Comments'
+import { Transactions } from './collections/Transactions'
 import { ContentImage } from './blocks/ContentImage'
 import { MapBlock } from './blocks/Map'
 import { SeasonalityBlock } from './blocks/Seasonality'
@@ -50,7 +51,7 @@ export default buildConfig({
       afterNavLinks: ['/components/DatabaseNav#DatabaseNav'],
     },
   },
-  collections: [Users, Media, Pages, Articles, Comments],
+  collections: [Users, Media, Pages, Articles, Comments, Transactions],
   globals: [Homepage, Header, Footer],
   editor: lexicalEditor({
     features: ({ defaultFeatures }) => [

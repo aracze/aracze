@@ -10,8 +10,8 @@ const isAdmin: Access = ({ req: { user } }) => Boolean(user?.roles?.includes('ad
 export const Comments: CollectionConfig = {
   slug: 'comments',
   admin: {
-    useAsTitle: 'authorName',
-    defaultColumns: ['authorName', 'type', 'rating', 'status', 'commentedAt'],
+    useAsTitle: 'label',
+    defaultColumns: ['relatedTo', 'authorName', 'type', 'rating', 'status', 'commentedAt'],
   },
   access: {
     // Anonym: skrýt spam + recenze na NEpublikované stránky. Články jsou vždy veřejné
@@ -71,6 +71,42 @@ export const Comments: CollectionConfig = {
     delete: isAdmin,
   },
   fields: [
+    {
+      // Titulek (useAsTitle) = název navázaného obsahu (stránka/článek). Ukládá se, aby šel
+      // vykreslit i fulltextově hledat (polymorfní relaci Payload jako titulek/hledání neumí).
+      // Počítá se při ukládání dohledáním titulku cíle. Stejné názvy nevadí – v seznamu/search
+      // se komentáře rozliší dalšími sloupci (autor, typ, datum…).
+      name: 'label',
+      type: 'text',
+      index: true,
+      admin: { readOnly: true, hidden: true },
+      hooks: {
+        beforeChange: [
+          async ({ data, req }) => {
+            const rel = data?.relatedTo as
+              | { relationTo: 'articles' | 'pages'; value: number | { id: number } }
+              | undefined
+            if (rel?.value != null) {
+              const id = typeof rel.value === 'object' ? rel.value.id : rel.value
+              try {
+                const doc = await req.payload.findByID({
+                  collection: rel.relationTo,
+                  id,
+                  depth: 0,
+                  overrideAccess: true,
+                  req,
+                  select: { title: true },
+                })
+                if (doc?.title) return String(doc.title)
+              } catch {
+                /* cíl nedohledán → fallback níže */
+              }
+            }
+            return data?.type === 'review' ? 'Recenze' : 'Komentář'
+          },
+        ],
+      },
+    },
     {
       name: 'type',
       type: 'select',
