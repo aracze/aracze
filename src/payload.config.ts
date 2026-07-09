@@ -18,6 +18,7 @@ import { nestedDocsPlugin } from '@payloadcms/plugin-nested-docs'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { cloudinaryStorage } from 'payload-storage-cloudinary'
 
+import { migrations } from './migrations'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
@@ -105,6 +106,10 @@ export default buildConfig({
       connectionString: process.env.DATABASE_URL || '',
     },
     push: process.env.NODE_ENV !== 'production',
+    // V produkci (push vypnutý) se schéma vytváří/aktualizuje regulérními
+    // migracemi. Payload je při startu automaticky spustí (nespuštěné), takže
+    // po nasazení není potřeba žádný ruční krok ani payload CLI v obrazu.
+    prodMigrations: migrations,
   }),
   sharp,
   endpoints: [
