@@ -12,6 +12,7 @@ export const imageFields: Field[] = [
       {
         name: 'featureImageStyleCss',
         type: 'text',
+        label: 'Zarovnání hero fotky',
         admin: {
           width: '50%',
         },

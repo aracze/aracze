@@ -38,12 +38,14 @@ export const Transactions: CollectionConfig = {
       relationTo: 'users',
       required: true,
       index: true,
+      maxDepth: 1,
     },
     {
       name: 'category',
       label: 'Kategorie',
       type: 'select',
       required: true,
+      index: true,
       options: [
         { label: 'Turistický cíl (odměna)', value: 'tourist_point_reward' },
         { label: 'Místo k navštívení (odměna)', value: 'place_to_visit_reward' },
@@ -71,6 +73,7 @@ export const Transactions: CollectionConfig = {
       type: 'relationship',
       relationTo: ['pages', 'articles', 'comments'],
       index: true,
+      maxDepth: 1,
     },
     {
       name: 'note',
