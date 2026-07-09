@@ -1,8 +1,9 @@
-import type { Access, CollectionConfig, Where } from 'payload'
+import type { CollectionConfig, Where } from 'payload'
+import { isAdmin } from '../access/isAdmin'
+import { populateCommentLabel } from '../hooks/populateCommentLabel'
 
 // Zápis (vkládání/úpravy/mazání) zatím jen pro adminy — stejný vzor jako u Users.
 // Veřejné odesílání z frontendu (jméno + captcha) se doplní později spolu s frontendem.
-const isAdmin: Access = ({ req: { user } }) => Boolean(user?.roles?.includes('admin'))
 
 // Komentáře (na článcích) a recenze (na místech / turistických cílech = Pages).
 // Jediný strukturální rozdíl: recenze má hvězdičkové hodnocení (rating), komentář ne.
@@ -10,8 +11,8 @@ const isAdmin: Access = ({ req: { user } }) => Boolean(user?.roles?.includes('ad
 export const Comments: CollectionConfig = {
   slug: 'comments',
   admin: {
-    useAsTitle: 'authorName',
-    defaultColumns: ['authorName', 'type', 'rating', 'status', 'commentedAt'],
+    useAsTitle: 'label',
+    defaultColumns: ['relatedTo', 'authorName', 'type', 'rating', 'status', 'commentedAt'],
   },
   access: {
     // Anonym: skrýt spam + recenze na NEpublikované stránky. Články jsou vždy veřejné
@@ -71,6 +72,19 @@ export const Comments: CollectionConfig = {
     delete: isAdmin,
   },
   fields: [
+    {
+      // Titulek (useAsTitle) = název navázaného obsahu (stránka/článek). Ukládá se, aby šel
+      // vykreslit i fulltextově hledat (polymorfní relaci Payload jako titulek/hledání neumí).
+      // Počítá se při ukládání dohledáním titulku cíle. Stejné názvy nevadí – v seznamu/search
+      // se komentáře rozliší dalšími sloupci (autor, typ, datum…).
+      name: 'label',
+      type: 'text',
+      index: true,
+      admin: { readOnly: true, hidden: true },
+      hooks: {
+        beforeChange: [populateCommentLabel],
+      },
+    },
     {
       name: 'type',
       type: 'select',

@@ -72,6 +72,7 @@ export interface Config {
     pages: Page;
     articles: Article;
     comments: Comment;
+    transactions: Transaction;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -94,6 +95,7 @@ export interface Config {
     pages: PagesSelect<false> | PagesSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
+    transactions: TransactionsSelect<false> | TransactionsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -260,6 +262,10 @@ export interface Page {
     googleMapsAddress?: string | null;
     latitude?: string | null;
     longitude?: string | null;
+    /**
+     * Oficiální web místa (z praktických informací).
+     */
+    website?: string | null;
     googleMapsZoom?: number | null;
     locative?: string | null;
     genitive?: string | null;
@@ -330,6 +336,7 @@ export interface Page {
  */
 export interface Comment {
   id: number;
+  label?: string | null;
   /**
    * Recenze (na místech) má navíc hvězdičkové hodnocení.
    */
@@ -443,6 +450,49 @@ export interface Article {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transactions".
+ */
+export interface Transaction {
+  id: number;
+  label?: string | null;
+  user: number | User;
+  category:
+    | 'tourist_point_reward'
+    | 'place_to_visit_reward'
+    | 'practical_information_reward'
+    | 'article_reward'
+    | 'review_reward'
+    | 'comment_reward'
+    | 'bonus'
+    | 'withdrawal';
+  /**
+   * Kladné = zisk, záporné = výběr.
+   */
+  amount: number;
+  relatedTo?:
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'articles';
+        value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'comments';
+        value: number | Comment;
+      } | null);
+  note?: string | null;
+  /**
+   * Původní datum z legacy webu.
+   */
+  transactedAt?: string | null;
+  legacyTransactionId?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -484,6 +534,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'comments';
         value: number | Comment;
+      } | null)
+    | ({
+        relationTo: 'transactions';
+        value: number | Transaction;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -609,6 +663,7 @@ export interface PagesSelect<T extends boolean = true> {
         googleMapsAddress?: T;
         latitude?: T;
         longitude?: T;
+        website?: T;
         googleMapsZoom?: T;
         locative?: T;
         genitive?: T;
@@ -691,6 +746,7 @@ export interface ArticlesSelect<T extends boolean = true> {
  * via the `definition` "comments_select".
  */
 export interface CommentsSelect<T extends boolean = true> {
+  label?: T;
   type?: T;
   rating?: T;
   body?: T;
@@ -700,6 +756,22 @@ export interface CommentsSelect<T extends boolean = true> {
   status?: T;
   commentedAt?: T;
   legacyCommentId?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transactions_select".
+ */
+export interface TransactionsSelect<T extends boolean = true> {
+  label?: T;
+  user?: T;
+  category?: T;
+  amount?: T;
+  relatedTo?: T;
+  note?: T;
+  transactedAt?: T;
+  legacyTransactionId?: T;
   updatedAt?: T;
   createdAt?: T;
 }
