@@ -106,10 +106,12 @@ export default buildConfig({
       connectionString: process.env.DATABASE_URL || '',
     },
     push: process.env.NODE_ENV !== 'production',
-    // V produkci (push vypnutý) se schéma vytváří/aktualizuje regulérními
-    // migracemi. Payload je při startu automaticky spustí (nespuštěné), takže
-    // po nasazení není potřeba žádný ruční krok ani payload CLI v obrazu.
-    prodMigrations: migrations,
+    // Schéma v produkci spravujeme importem databázového dumpu z lokálu
+    // (admin dbDump/dbImport). prodMigrations proto standardně NEBĚŽÍ — jinak
+    // by Payload na importovaném (dev-push) schématu detekoval drift a čekal na
+    // interaktivní odpověď, čímž by start zamrzl. Migrace lze zapnout proměnnou
+    // PAYLOAD_RUN_MIGRATIONS=true (např. pro čistý deploy bez dumpu).
+    prodMigrations: process.env.PAYLOAD_RUN_MIGRATIONS === 'true' ? migrations : undefined,
   }),
   sharp,
   endpoints: [
