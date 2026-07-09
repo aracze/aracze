@@ -1,21 +1,10 @@
-import type { Access, CollectionConfig } from 'payload'
+import type { CollectionConfig } from 'payload'
+import { isAdmin } from '../access/isAdmin'
+import { populateTransactionLabel } from '../hooks/populateTransactionLabel'
 
 // Feather („pírka") transakce z legacy webu. Interní účetní záznam → jen pro adminy.
 // Legacy dvojité účetnictví (credit/debit páry) je zploštěné: 1 operace = 1 transakce
 // (bereme jen uživatelskou stranu, systémový offset se zahazuje).
-const isAdmin: Access = ({ req: { user } }) => Boolean(user?.roles?.includes('admin'))
-
-// Krátké názvy kategorií pro titulek.
-const CATEGORY_LABELS: Record<string, string> = {
-  tourist_point_reward: 'Turistický cíl',
-  place_to_visit_reward: 'Místo k navštívení',
-  practical_information_reward: 'Praktické informace',
-  article_reward: 'Článek',
-  review_reward: 'Recenze',
-  comment_reward: 'Komentář',
-  bonus: 'Bonus',
-  withdrawal: 'Výběr',
-}
 
 export const Transactions: CollectionConfig = {
   slug: 'transactions',
@@ -39,35 +28,7 @@ export const Transactions: CollectionConfig = {
       index: true,
       admin: { readOnly: true, hidden: true },
       hooks: {
-        beforeChange: [
-          async ({ data, req }) => {
-            const rel = data?.relatedTo as
-              | {
-                  relationTo: 'articles' | 'pages' | 'comments'
-                  value: number | { id: number }
-                }
-              | undefined
-            if (rel?.value != null) {
-              const id = typeof rel.value === 'object' ? rel.value.id : rel.value
-              const titleField = rel.relationTo === 'comments' ? 'label' : 'title'
-              try {
-                const doc = await req.payload.findByID({
-                  collection: rel.relationTo,
-                  id,
-                  depth: 0,
-                  overrideAccess: true,
-                  req,
-                  select: { [titleField]: true },
-                })
-                const name = (doc as unknown as Record<string, unknown>)?.[titleField]
-                if (name) return String(name)
-              } catch {
-                /* cíl nedohledán → fallback na kategorii */
-              }
-            }
-            return CATEGORY_LABELS[data?.category as string] ?? data?.category ?? '?'
-          },
-        ],
+        beforeChange: [populateTransactionLabel],
       },
     },
     {

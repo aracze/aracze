@@ -262,6 +262,10 @@ export interface Page {
     googleMapsAddress?: string | null;
     latitude?: string | null;
     longitude?: string | null;
+    /**
+     * Oficiální web místa (z praktických informací).
+     */
+    website?: string | null;
     googleMapsZoom?: number | null;
     locative?: string | null;
     genitive?: string | null;
@@ -659,6 +663,7 @@ export interface PagesSelect<T extends boolean = true> {
         googleMapsAddress?: T;
         latitude?: T;
         longitude?: T;
+        website?: T;
         googleMapsZoom?: T;
         locative?: T;
         genitive?: T;

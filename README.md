@@ -20,6 +20,7 @@ To spin up this project locally, follow these steps:
    pnpm payload migrate
    pnpm dev
    ```
+   > **Legacy data migration (optional)**: To import historical content from the old MySQL site, set the `OLD_DB_*` variables (`OLD_DB_HOST`, `OLD_DB_PORT`, `OLD_DB_USER`, `OLD_DB_PASSWORD`, `OLD_DB_NAME`) in `.env` and run the relevant script. The feather ledger is migrated with `pnpm migrate:transactions` — run it **after** `migrate:users`, `migrate:pages`, `migrate:articles`, and `migrate:comments`, since it links transactions to those records. Preview first with `pnpm migrate:transactions -- --dry-run` (or test a subset with `-- --limit=50`).
 5. **Access Admin**: Open `http://localhost:3000/admin` to create your first admin user.
 6. **Promote Admin (Required for DB dumps)**:
    ```bash
@@ -133,6 +134,11 @@ The Payload config is tailored specifically for the project needs in `src/payloa
   - **Veřejný přístup**: Kolekce je nastavena tak, aby byly nahrané soubory veřejně čitelné.
   - **Zpracování obrázků**: Podporuje automatické generování náhledů, ořezy a optimalizaci (poháněno knihovnou Sharp).
   - Podporuje definici fokusu (focal point) pro inteligentní ořezy.
+
+- **Transactions (Feather transakce)**:
+  - Interní účetní záznamy „pírek" (feather) přenesené z původního webu — čtení i správa jsou omezené pouze na administrátory.
+  - Každý záznam nese kategorii (odměny za obsah, bonus, výběr), počet pírek v poli `amount` (**kladné = zisk, záporné = výběr**) a volitelnou vazbu `relatedTo` na stránku, článek nebo komentář.
+  - Data se plní jednorázovým migračním skriptem `pnpm migrate:transactions` z legacy MySQL databáze (viz krok 4 v Quick Startu).
 
 ## Questions
 

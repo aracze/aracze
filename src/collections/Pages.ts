@@ -109,6 +109,14 @@ export const Pages: CollectionConfig = {
               ],
             },
             {
+              name: 'website',
+              label: 'Webová stránka',
+              type: 'text',
+              admin: {
+                description: 'Oficiální web místa (z praktických informací).',
+              },
+            },
+            {
               name: 'googleMapsZoom',
               label: 'Google Maps Zoom Level',
               type: 'number',

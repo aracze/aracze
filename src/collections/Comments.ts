@@ -1,8 +1,9 @@
-import type { Access, CollectionConfig, Where } from 'payload'
+import type { CollectionConfig, Where } from 'payload'
+import { isAdmin } from '../access/isAdmin'
+import { populateCommentLabel } from '../hooks/populateCommentLabel'
 
 // Zápis (vkládání/úpravy/mazání) zatím jen pro adminy — stejný vzor jako u Users.
 // Veřejné odesílání z frontendu (jméno + captcha) se doplní později spolu s frontendem.
-const isAdmin: Access = ({ req: { user } }) => Boolean(user?.roles?.includes('admin'))
 
 // Komentáře (na článcích) a recenze (na místech / turistických cílech = Pages).
 // Jediný strukturální rozdíl: recenze má hvězdičkové hodnocení (rating), komentář ne.
@@ -81,30 +82,7 @@ export const Comments: CollectionConfig = {
       index: true,
       admin: { readOnly: true, hidden: true },
       hooks: {
-        beforeChange: [
-          async ({ data, req }) => {
-            const rel = data?.relatedTo as
-              | { relationTo: 'articles' | 'pages'; value: number | { id: number } }
-              | undefined
-            if (rel?.value != null) {
-              const id = typeof rel.value === 'object' ? rel.value.id : rel.value
-              try {
-                const doc = await req.payload.findByID({
-                  collection: rel.relationTo,
-                  id,
-                  depth: 0,
-                  overrideAccess: true,
-                  req,
-                  select: { title: true },
-                })
-                if (doc?.title) return String(doc.title)
-              } catch {
-                /* cíl nedohledán → fallback níže */
-              }
-            }
-            return data?.type === 'review' ? 'Recenze' : 'Komentář'
-          },
-        ],
+        beforeChange: [populateCommentLabel],
       },
     },
     {

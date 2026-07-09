@@ -113,7 +113,10 @@ const MANUAL_RELATED_URL: Record<string, string> = {
 }
 
 const normalizeSlug = (url: string): string =>
-  url.trim().toLowerCase().replace(/^\/+|\/+$/g, '')
+  url
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+|\/+$/g, '')
 
 const lastSegment = (url: string): string => {
   const parts = normalizeSlug(url).split('/')
@@ -181,7 +184,8 @@ async function run() {
   // Koncový slug → kandidáti (s fullSlug segmenty pro rozlišení duplicit přes překryv rodičů).
   const pagesBySlug = new Map<string, { id: number; segments: string[] }[]>()
   for (const p of pages) {
-    if (typeof p.fullSlug === 'string') pagesByFullSlug.set(normalizeSlug(p.fullSlug), p.id as number)
+    if (typeof p.fullSlug === 'string')
+      pagesByFullSlug.set(normalizeSlug(p.fullSlug), p.id as number)
     if (typeof p.legacyPageId === 'number') pageIdByLegacyId.set(p.legacyPageId, p.id as number)
     if (typeof p.slug === 'string' && typeof p.fullSlug === 'string') {
       const arr = pagesBySlug.get(p.slug) ?? []
@@ -289,8 +293,8 @@ async function run() {
     SELECT t.id AS tx_id, a.user_id, t.cash_amount, t.category, t.date_created,
            t.txn_info_related_url AS related_url, t.txn_info_txn_text AS txn_text,
            t.txn_info_admin_note AS admin_note
-    FROM transaction t
-    JOIN account a ON a.id = t.account_id
+    FROM \`transaction\` t
+    JOIN \`account\` a ON a.id = t.account_id
     WHERE a.user_id IS NOT NULL AND t.state = 'APPROVED'
     ORDER BY t.id
     ${limitClause}
@@ -369,14 +373,17 @@ async function run() {
       (typeof row.txn_text === 'string' && row.txn_text.trim()) ||
       (typeof row.admin_note === 'string' && row.admin_note.trim()) ||
       undefined
-    const transactedAt = row.date_created
-      ? new Date(row.date_created).toISOString()
-      : undefined
+    const transactedAt = row.date_created ? new Date(row.date_created).toISOString() : undefined
+
+    // Legacy cash_amount je vždy kladné; směr operace nesl postingType (CREDIT/DEBIT).
+    // V novém modelu je znaménko přímo v `amount` → withdrawal musí být záporné.
+    const rawAmount = Math.abs(Number(row.cash_amount ?? 0))
+    const amount = category === 'withdrawal' ? -rawAmount : rawAmount
 
     const data = {
       user: userId,
       category,
-      amount: Number(row.cash_amount ?? 0),
+      amount,
       relatedTo: relatedTo ?? null,
       note,
       transactedAt,
@@ -389,6 +396,7 @@ async function run() {
       depth: 0,
       limit: 1,
       overrideAccess: true,
+      select: { id: true },
     })
 
     if (isDryRun) {
