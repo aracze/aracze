@@ -6,8 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
-    "predev": "mkdir -p .next/browser && cp node_modules/jsdom/lib/jsdom/browser/default-stylesheet.css .next/browser/ 2>/dev/null || true",
-    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev --webpack",
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
     "devsafe": "rm -rf .next && cross-env NODE_OPTIONS=--no-deprecation next dev",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
