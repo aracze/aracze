@@ -1,4 +1,4 @@
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
@@ -18,7 +18,7 @@ import type {
 // skripty) ho tiše přeskočíme, aby nespadl např. generate:types.
 const safeRevalidate = (tags: string[]) => {
   try {
-    for (const tag of tags) revalidateTag(tag, 'max')
+    for (const tag of tags) updateTag(tag)
   } catch {
     /* mimo Next runtime */
   }
