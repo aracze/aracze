@@ -7,7 +7,16 @@ const nextConfig = {
   // soubory relativne k __dirname (ENOENT na default-stylesheet.css),
   // (2) zabaleny v dev rezimu je extremne pomaly - stranky s rich textem
   // pak trvaji desitky sekund. Externalizovany bezi nativne z node_modules.
-  serverExternalPackages: ['jsdom', 'isomorphic-dompurify'],
+  serverExternalPackages: [
+    'jsdom',
+    'isomorphic-dompurify',
+    // Databázová/serverová vrstva Payloadu MUSÍ běžet nativně z node_modules.
+    // Zabalená Turbopackem v dev je extrémně pomalá (dotaz 222 ms → 29 s v RSC).
+    'payload',
+    '@payloadcms/db-postgres',
+    'drizzle-orm',
+    'pg',
+  ],
   images: {
     // Zmenšování obrázků dělá Cloudinary (viz loader), ne Next server —
     // funguje to tak i se standalone outputem bez další zátěže.

@@ -30,7 +30,16 @@ import { isProduction } from './utils'
  * vracel url: null a obrázky by zmizely (ověřeno dřív na REST).
  */
 
-const getDb = (): Promise<Payload> => getPayload({ config })
+// Globální singleton Payload instance. getPayload má vlastní cache, ale v dev
+// s Turbopackem se moduly izolují a init se opakoval při každém požadavku
+// (schema pull + connect = desítky sekund). Držíme instanci na globalThis.
+const __g = globalThis as unknown as { __araPayload?: Promise<Payload> }
+const getDb = (): Promise<Payload> => {
+  if (!__g.__araPayload) {
+    __g.__araPayload = getPayload({ config })
+  }
+  return __g.__araPayload
+}
 
 /** Obal: v produkci cache s tagy (revalidace hooky), ve vývoji přímé volání. */
 function cached<A extends unknown[], R>(
