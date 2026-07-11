@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { revalidatePageAfterChange, revalidatePageAfterDelete } from '../hooks/revalidation'
 import { imageFields } from '../fields/image'
 import { slugField } from '../fields/slug'
 import {
@@ -10,7 +11,10 @@ import {
 
 export const Pages: CollectionConfig = {
   slug: 'pages',
-  hooks: {},
+  hooks: {
+    afterChange: [revalidatePageAfterChange],
+    afterDelete: [revalidatePageAfterDelete],
+  },
   versions: {
     drafts: true,
   },

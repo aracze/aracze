@@ -1,0 +1,789 @@
+@import 'tailwindcss';
+@plugin "tailwindcss-animate";
+
+@theme inline {
+  --font-sans:
+    var(--font-open-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: var(--font-poppins), var(--font-sans);
+  --font-opensans: var(--font-open-sans);
+  --font-poppins: var(--font-poppins);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-white text-[#353535] font-sans;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-heading tracking-tight;
+  }
+
+  /* Core typography based on ara.cz */
+  .prose p {
+    font-size: 18px;
+    line-height: 2; /* 200% for standard text readability */
+    color: #353535;
+    margin-bottom: 20px;
+    margin-top: 0;
+    letter-spacing: 0.01rem;
+    font-weight: 400;
+  }
+
+  /* Lead paragraph: only the article/text first top-level paragraph,
+     not paragraphs nested in blockquotes, figures, etc. */
+  .prose > p:first-of-type {
+    font-size: 20px;
+    line-height: 1.8; /* 180% for lead paragraphs */
+    color: #5b666e;
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+
+  /* Headings inside prose content */
+  .prose h1 {
+    font-size: 36px;
+    line-height: 1.05;
+    margin-top: 10px;
+    margin-bottom: 25px;
+    @apply font-heading font-bold;
+  }
+
+  .prose h2 {
+    font-size: 22px;
+    line-height: 1.9;
+    color: #005580;
+    margin-top: 25px;
+    margin-bottom: 12px;
+    @apply font-heading font-bold;
+  }
+
+  .prose h2 a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .prose h3 {
+    font-size: 21px;
+    line-height: 1.5;
+    color: #005580;
+    margin-top: 33px;
+    margin-bottom: 13px;
+    @apply font-heading font-semibold;
+  }
+
+  .prose h4 {
+    font-size: 18px;
+    line-height: 1.5;
+    color: #212529;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    @apply font-heading font-semibold;
+  }
+
+  /* List styles precisely matching ara.cz */
+  .prose ul {
+    list-style-type: disc;
+    padding-left: 0;
+    margin-left: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .prose ul ul {
+    list-style-type: circle;
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .prose ol {
+    list-style-type: decimal;
+    padding-left: 0;
+    margin-left: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .prose li {
+    font-size: 17px;
+    margin-bottom: 0.5rem;
+    line-height: 1.7;
+    letter-spacing: 0.01rem;
+  }
+
+  .prose li::marker {
+    color: #353535;
+  }
+
+  /* Visual fix for double bullets when a list is nested inside a list item */
+  @supports selector(li:has(> ul)) {
+    .prose li:has(> ul),
+    .prose li:has(> ol) {
+      list-style-type: none;
+    }
+  }
+
+  /* Link styling to match original site */
+  .prose a {
+    color: #115194;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .prose a:hover {
+    text-decoration: underline;
+  }
+
+  /* Emphasis (legacy used font-weight:600 / semibold, not the browser-default 700). */
+  .prose strong,
+  .prose b {
+    font-weight: 600;
+  }
+
+  /* Highlighted quote/callout block (legacy .article-content__highlights) */
+  .prose blockquote {
+    margin: 20px 0;
+    padding: 10px 0 10px 20px;
+    border-left: 3px solid #1f518e;
+    font-style: italic;
+    font-size: 18px;
+    color: #76818a;
+  }
+
+  .prose blockquote p {
+    margin: 0;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  /* Content images (from Payload contentImage block) */
+  .prose .image-wrapper {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+
+  /* Article body: narrower text column for comfortable reading (~70 chars/line),
+     while images and maps break back out to the full column width. */
+  @media (min-width: 1024px) {
+    .prose.article-prose {
+      padding-left: 64px;
+      padding-right: 64px;
+    }
+
+    .prose.article-prose .image-wrapper,
+    .prose.article-prose .rich-text-map-container {
+      margin-left: -64px;
+      margin-right: -64px;
+    }
+  }
+
+  .prose .image-wrapper > a {
+    display: block;
+  }
+
+  .prose .image-wrapper img {
+    max-width: 100%;
+    width: 100%;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .prose .image-wrapper figcaption {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    text-align: center;
+    font-style: normal;
+    font-size: 13px;
+    margin-top: 6px;
+    color: #4b5563;
+    position: relative;
+  }
+
+  .prose .image-wrapper .image-caption {
+    display: inline;
+    font-style: italic;
+  }
+
+  .prose .image-wrapper .image-attribution-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .prose .image-wrapper .image-attribution-trigger {
+    border: 0;
+    background: transparent;
+    color: #9ca3af;
+    line-height: 1;
+    cursor: help;
+    padding: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .prose .image-wrapper .image-attribution-trigger svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+  }
+
+  .prose .image-wrapper .image-attribution-trigger:hover,
+  .prose .image-wrapper .image-attribution-trigger:focus-visible {
+    color: #6b7280;
+    outline: none;
+    background: #f3f4f6;
+  }
+
+  .prose .image-wrapper .image-attribution-content {
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 8px);
+    transform: translateX(-50%);
+    width: max-content;
+    min-width: 0;
+    max-width: min(92vw, 640px);
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #6b7280;
+    font-size: 11px;
+    font-style: normal;
+    line-height: 1.4;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+    z-index: 20;
+  }
+
+  .prose .image-wrapper .image-attribution-tooltip:hover .image-attribution-content,
+  .prose .image-wrapper .image-attribution-tooltip:focus-within .image-attribution-content {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .prose .image-wrapper .image-attribution-content a {
+    display: inline;
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+  }
+
+  .prose .image-wrapper .image-attribution-content a:hover {
+    color: #6b7280;
+  }
+  /* Table styling within rich text (1:1 with production) */
+  .prose .rich-text-table-container {
+    @apply overflow-x-auto mb-10;
+
+    & + .rich-text-table-container {
+      @apply mt-10;
+    }
+
+    & .rich-text-table {
+      @apply w-full border-collapse bg-white m-0 text-[14px] text-[#212529] border-b border-[#dddddd];
+      line-height: 1.4;
+
+      & .rich-text-table-row {
+        @apply transition-colors duration-200 hover:bg-[#f5f5f5];
+      }
+
+      & .rich-text-table-cell {
+        @apply p-[10px_8px] border-t border-[#dddddd] text-center;
+
+        &:first-child {
+          @apply text-left pl-4;
+        }
+
+        &:not(:first-child) {
+          @apply border-l border-[#dddddd];
+        }
+
+        &.is-header {
+          @apply bg-[#297bbb] font-semibold pt-3 pb-3 border-t-0 border-l border-[rgba(255,255,255,0.2)];
+
+          &:first-child {
+            @apply border-l-0;
+          }
+
+          & p {
+            @apply text-white font-semibold;
+          }
+        }
+
+        /* Reset p tags inserted by Lexical - more specific selector to avoid !important */
+        & p {
+          margin: 0;
+          line-height: inherit;
+          color: inherit;
+          font-size: inherit;
+        }
+      }
+    }
+  }
+
+  /* Kurzívní poznámka těsně pod tabulkou (např. "Pozn.: …") patří k tabulce,
+     takže velkou spodní mezeru (mb-10 = 40px) zúžíme, ať pod ní nevisí odtržená. */
+  .prose .rich-text-table-container:has(+ p > em:only-child) {
+    margin-bottom: 0.75rem;
+  }
+
+  /* Map styling within rich text */
+  .prose .rich-text-map-container {
+    @apply my-10;
+  }
+
+  .prose .rich-text-map-iframe-wrapper {
+    @apply relative w-full h-[300px] md:h-[360px] overflow-hidden rounded-xl shadow-md border border-gray-200;
+  }
+
+  .prose .rich-text-map-caption {
+    @apply text-sm text-gray-500 italic mt-3 text-center;
+  }
+
+  /* Propagační / reklamní box (legacy .article-rek) — tenká linka nahoře i dole */
+  .prose .article-promo {
+    border-top: 1px solid #dbe6ec;
+    border-bottom: 1px solid #dbe6ec;
+    margin: 20px 0;
+    padding: 10px 0;
+  }
+
+  .prose .article-promo p {
+    font-size: 18px;
+    padding: 10px;
+    margin-bottom: 0;
+  }
+
+  /* Seasonality (Calendar) styling - ARA.CZ Original Match */
+  .prose .rich-text-seasonality-container {
+    @apply my-8 w-full overflow-hidden font-sans;
+  }
+
+  .prose .seasonality-title {
+    @apply text-xl font-bold text-[#0c5c87] mb-4 border-none pb-0;
+  }
+
+  .prose .seasonality-ideal-text {
+    @apply text-[15px] text-[#4c4c4c] mb-5 leading-normal font-normal;
+    margin-top: 0 !important;
+  }
+
+  .prose .seasonality-grid {
+    @apply flex w-full mb-8;
+  }
+
+  .prose .seasonality-month {
+    @apply flex-1 flex flex-col text-center;
+  }
+
+  .prose .month-num {
+    @apply h-[46px] flex items-center justify-center text-[17px] font-normal text-white transition-all border-l border-white/40;
+  }
+
+  .prose .seasonality-month:first-child .month-num {
+    @apply rounded-l-[4px] border-l-0;
+  }
+
+  .prose .seasonality-month:last-child .month-num {
+    @apply rounded-r-[4px];
+  }
+
+  .prose .month-label {
+    @apply text-[12px] font-bold text-[#99a9b3] mt-3 tracking-normal;
+  }
+
+  /* Colors based on status */
+  .prose .seasonality-month.status-off .month-num {
+    @apply bg-[#d6e0ec];
+  }
+
+  .prose .seasonality-month.status-mid .month-num {
+    @apply bg-[#287bbb];
+  }
+
+  .prose .seasonality-month.status-peak .month-num {
+    @apply bg-[#3bba9c];
+  }
+
+  /* Legend */
+  .prose .seasonality-legend {
+    @apply flex flex-wrap justify-center gap-x-6 gap-y-3 mt-8 text-[11px];
+  }
+
+  .prose .legend-item {
+    @apply flex items-center gap-2 text-[#2d2d2d];
+  }
+
+  .prose .legend-dot {
+    @apply w-3 h-3 rounded-[4px];
+  }
+
+  .prose .legend-item.status-off .legend-dot {
+    @apply bg-[#d6e0ec];
+  }
+  .prose .legend-item.status-mid .legend-dot {
+    @apply bg-[#287bbb];
+  }
+  .prose .legend-item.status-peak .legend-dot {
+    @apply bg-[#3bba9c];
+  }
+
+  .prose .legend-label {
+    @apply font-bold text-[#2d2d2d] text-[12px];
+  }
+
+  .prose .legend-time {
+    @apply font-normal text-[#2d2d2d];
+  }
+
+  /* ─── Nice to Know (Praktické informace) ─── */
+
+  .prose .nice-to-know {
+    @apply w-full my-8;
+  }
+
+  .prose .nice-to-know__wrap {
+    @apply flex flex-wrap justify-between;
+    padding: 27px 0 44px;
+    margin-left: -15px;
+    margin-right: -15px;
+  }
+
+  .prose .nice-to-know-item {
+    flex: 1 1 calc(20% - 30px);
+    text-align: center;
+    padding: 0 15px;
+  }
+
+  @media (max-width: 991px) {
+    .prose .nice-to-know-item {
+      flex: 1 1 calc(50% - 30px);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .prose .nice-to-know-item {
+      flex: 100%;
+    }
+  }
+
+  .prose .nice-to-know-item__content__header {
+    height: 63px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .prose .nice-to-know-item__body {
+    margin-top: 24px;
+  }
+
+  .prose .nice-to-know-item__title {
+    color: #99a9b3;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: -6px;
+    display: block;
+    line-height: 1.2;
+  }
+
+  .prose .nice-to-know-item__body span {
+    color: rgb(59, 68, 79);
+    font-size: 16px;
+    display: block;
+    margin-top: 4px;
+  }
+
+  /* Language bubble */
+  .prose .language-bubble {
+    padding: 11px 0;
+    border-radius: 40px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: #3b444f;
+    width: 150px;
+    height: 63px;
+    line-height: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .prose .language-bubble span {
+    font-size: 11px;
+    font-weight: normal;
+    color: #ffffff;
+  }
+
+  /* Electricity icon */
+  .prose .electricity-icon {
+    font-size: 48px;
+    color: #67747c;
+    line-height: 1;
+    border: 2px solid #67747c;
+    border-radius: 8px;
+    padding: 2px 10px;
+  }
+
+  /* Weather icon */
+  .prose .weather-icon {
+    font-size: 48px;
+    color: #67747c;
+    line-height: 1;
+  }
+
+  /* Currency */
+  .prose .nice-to-know-item__content__header--currency {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 5px;
+    font-size: 20px;
+    font-weight: bold;
+    line-height: 20px;
+  }
+
+  .prose .nice-to-know-item__content__header--currency > span {
+    display: inline-block;
+    padding: 3px 0 0;
+    line-height: 32px;
+    font-size: 24px;
+    font-weight: bold;
+    color: rgb(59, 68, 79);
+  }
+
+  .prose .nice-to-know-item__content__header--foreign {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: rgb(59, 68, 79);
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .prose .circleArrow {
+    border: 3px solid transparent;
+    border-top-color: black;
+    border-left-color: black;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    position: relative;
+    transform: rotate(-45deg);
+    display: inline-block;
+    vertical-align: bottom;
+    margin-left: 8px;
+  }
+
+  .prose .circleArrow:before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 80%;
+    height: 0;
+    width: 0;
+    border-left: 5px solid black;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    transform: rotate(45deg);
+  }
+
+  /* Time */
+  .prose .nice-to-know__item--time-header {
+    background: #2c3643;
+    border-radius: 3px;
+    color: white;
+    width: 110px;
+    margin: 0 auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 80px;
+    justify-content: center;
+    padding-bottom: 5px;
+  }
+
+  .prose .nice-to-know__item--time-header:after {
+    border-top: 1px solid #505a60;
+    top: 40%;
+    width: 30%;
+    content: '';
+    display: block;
+    position: absolute;
+    margin: 0 auto;
+    left: 35%;
+  }
+
+  .prose .nice-to-know-item__day {
+    display: block;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding-top: 4px;
+    color: white;
+  }
+
+  .prose .nice-to-know-item__time {
+    display: block;
+    font-size: 27px;
+    padding: 6px 0 0px;
+    color: white;
+    line-height: 1;
+    margin-bottom: 5px;
+  }
+
+  .prose .nice-to-know-item__value-wrap {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: baseline;
+    gap: 4px;
+    color: rgb(59, 68, 79);
+    font-size: 16px;
+    margin-top: 4px;
+    width: 100%;
+  }
+
+  .prose .nice-to-know-item__value-wrap span {
+    display: inline;
+    margin-top: 0;
+  }
+
+  .prose .nice-to-know-item__time-diff {
+    font-weight: normal;
+  }
+
+  /* Denni naklady (Mena a ceny) */
+  .prose .pi-budget {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .prose .pi-budget__heading {
+    flex: 100%;
+    color: #005580;
+    font-size: 19px;
+    line-height: 1.7;
+    margin-top: 3px;
+    margin-bottom: 13px;
+    font-weight: 600;
+  }
+
+  .prose .pi-budget-container {
+    flex: calc(100% / 3);
+    padding-left: 10px;
+  }
+
+  .prose .pi-budget-container:first-of-type {
+    padding-left: 0;
+  }
+
+  .prose .pi-budget-container__title {
+    border-bottom-style: solid;
+    border-bottom-width: 3px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    position: relative;
+  }
+
+  .prose .pi-budget-container__title::after {
+    height: 12px;
+    width: 12px;
+    background: #fff;
+    border-radius: 6px;
+    border-style: solid;
+    border-width: 3px;
+    position: absolute;
+    display: block;
+    bottom: -8px;
+    left: 0;
+    content: '';
+  }
+
+  .prose .pi-budget-container__title--budget,
+  .prose .pi-budget-container__title--budget::after {
+    border-color: #3bba9c;
+  }
+
+  .prose .pi-budget-container__title--midrange,
+  .prose .pi-budget-container__title--midrange::after {
+    border-color: #287bbb;
+  }
+
+  .prose .pi-budget-container__title--top,
+  .prose .pi-budget-container__title--top::after {
+    border-color: #ba9a3b;
+  }
+
+  .prose .pi-budget-container__range h5 {
+    color: #99a9b3;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0;
+    display: block;
+    line-height: 1.35;
+  }
+
+  .prose .pi-budget-container__price {
+    font-size: 20px;
+    color: #212529;
+    margin: 10px 0;
+    overflow-wrap: break-word;
+  }
+
+  .prose ul.pi-budget-container__list {
+    margin-left: 21px;
+    margin-bottom: 0;
+    padding-left: 0;
+    list-style-type: disc;
+  }
+
+  .prose .pi-budget-container__list__item {
+    margin-bottom: 10px;
+    line-height: 1.5;
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+
+  @media (max-width: 767px) {
+    .prose .pi-budget-container {
+      flex: 100%;
+      padding-left: 0;
+      padding-right: 0;
+      padding-bottom: 22px;
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import type { GlobalConfig } from 'payload'
+import { revalidateGlobalsAfterChange } from '../hooks/revalidation'
 import { lexicalEditor, LinkFeature } from '@payloadcms/richtext-lexical'
 import { imageLinkFields } from '../fields/imageLink'
 
@@ -6,6 +7,9 @@ export const Footer: GlobalConfig = {
   slug: 'footer',
   access: {
     read: () => true,
+  },
+  hooks: {
+    afterChange: [revalidateGlobalsAfterChange],
   },
   fields: [
     {

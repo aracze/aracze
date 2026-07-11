@@ -3,7 +3,12 @@ import { withPayload } from '@payloadcms/next/withPayload'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  // Your Next.js config here
+  images: {
+    // Zmenšování obrázků dělá Cloudinary (viz loader), ne Next server —
+    // funguje to tak i se standalone outputem bez další zátěže.
+    loader: 'custom',
+    loaderFile: './src/lib/cloudinary-loader.ts',
+  },
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {
       '.cjs': ['.cts', '.cjs'],

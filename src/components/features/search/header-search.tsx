@@ -1,0 +1,115 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
+import { ResultList } from "./resultlist/resultlist";
+import { useSearch } from "./use-search";
+import { SearchGraphic } from "./search-graphic";
+
+export function HeaderSearch() {
+  const { query, setQuery, results, clearSearch } = useSearch();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleClear = useCallback(() => {
+    clearSearch();
+    setIsExpanded(false);
+  }, [clearSearch]);
+
+  // Focus management
+  useEffect(() => {
+    if (isExpanded && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isExpanded]);
+
+  // Scroll lock
+  useEffect(() => {
+    if (isExpanded) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isExpanded]);
+
+  // Escape key to close
+  useEffect(() => {
+    const handleEscapeKeyup = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        handleClear();
+      }
+    };
+    document.addEventListener("keyup", handleEscapeKeyup);
+    return () => {
+      document.removeEventListener("keyup", handleEscapeKeyup);
+    };
+  }, [handleClear]);
+
+  return (
+    <div className="flex items-center">
+      <button
+        onClick={() => setIsExpanded(true)}
+        className="p-3 text-white/90 hover:text-white hover:bg-white/10 rounded-full transition-all duration-300"
+        aria-label="Otevřít vyhledávání"
+      >
+        <SearchGraphic className="w-5 h-5" strokeWidth={3} />
+      </button>
+
+      {isExpanded &&
+        createPortal(
+          <div className="fixed inset-0 z-[300] animate-in fade-in duration-200">
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={handleClear}
+            />
+            <div className="relative bg-white shadow-2xl animate-in slide-in-from-top-4 duration-300">
+              <div className="max-w-7xl mx-auto px-4 md:px-12 py-4 flex items-center gap-4">
+                <SearchGraphic
+                  className="w-6 h-6 text-gray-400 shrink-0"
+                  strokeWidth={2.5}
+                />
+                <input
+                  ref={inputRef}
+                  placeholder="Hledat..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="flex-1 bg-transparent border-none outline-none text-xl font-normal text-gray-800 placeholder:text-gray-400 py-1"
+                />
+                <div className="hidden md:flex items-center gap-4 border-l border-gray-100 pl-6">
+                  <button
+                    onClick={() => {}}
+                    className="text-xs font-bold text-gray-400 hover:text-[#215491] transition-colors uppercase tracking-widest"
+                  >
+                    Hledat vše
+                  </button>
+                  <button
+                    onClick={handleClear}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-6 h-6" strokeWidth={2.5} />
+                  </button>
+                </div>
+                <button
+                  onClick={handleClear}
+                  className="md:hidden p-2 text-gray-400"
+                >
+                  <X className="w-6 h-6" strokeWidth={2.5} />
+                </button>
+              </div>
+              {(query.length > 0 || results.length > 0) && (
+                <div className="max-w-7xl mx-auto px-4 md:px-12 pb-8">
+                  <ResultList
+                    results={results}
+                    handleLinkClicked={handleClear}
+                  />
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
+}

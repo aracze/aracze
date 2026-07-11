@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { revalidateArticleAfterChange, revalidateArticleAfterDelete } from '../hooks/revalidation'
 import { imageFields } from '../fields/image'
 import { slugField } from '../fields/slug'
 
@@ -27,6 +28,10 @@ export const Articles: CollectionConfig = {
   },
   access: {
     read: () => true,
+  },
+  hooks: {
+    afterChange: [revalidateArticleAfterChange],
+    afterDelete: [revalidateArticleAfterDelete],
   },
   fields: [
     {

@@ -1,10 +1,14 @@
 import type { GlobalConfig } from 'payload'
+import { revalidateGlobalsAfterChange } from '../hooks/revalidation'
 import { imageLinkFields } from '../fields/imageLink'
 
 export const Header: GlobalConfig = {
   slug: 'header',
   access: {
     read: () => true,
+  },
+  hooks: {
+    afterChange: [revalidateGlobalsAfterChange],
   },
   fields: [
     {
