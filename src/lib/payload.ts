@@ -160,6 +160,7 @@ function normalizePages(pages: RawPayloadPage[]): Page[] {
 async function fetchAllPagesPayload(): Promise<RawPayloadPage[]> {
   const payload = await getDb()
   const res = await payload.find({
+    overrideAccess: false,
     collection: 'pages',
     limit: DEFAULT_LIMIT,
     depth: 1,
@@ -179,6 +180,7 @@ async function fetchRootPagesUncached(): Promise<PagesResponse> {
   const [rootRes, headerRes, homepageRes] = await Promise.all([
     payload
       .find({
+        overrideAccess: false,
         collection: 'pages',
         where: { parent: { exists: false } },
         limit: DEFAULT_LIMIT,
@@ -188,8 +190,8 @@ async function fetchRootPagesUncached(): Promise<PagesResponse> {
       })
       .then((r) => r.docs as unknown as RawPayloadPage[])
       .catch(() => fetchAllPagesPayload()),
-    payload.findGlobal({ slug: 'header' }).catch(() => null),
-    payload.findGlobal({ slug: 'homepage' }).catch(() => null),
+    payload.findGlobal({ slug: 'header', overrideAccess: false }).catch(() => null),
+    payload.findGlobal({ slug: 'homepage', overrideAccess: false }).catch(() => null),
   ])
 
   const header = headerRes as Record<string, unknown> | null
@@ -274,6 +276,7 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
   // Selhání DB propadá ven (nesmí se uložit do cache) — fallback řeší export.
   const [pageRes, childrenRes, articlesRes] = (await Promise.all([
     payload.find({
+      overrideAccess: false,
       collection: 'pages',
       where: { fullSlug: { equals: fullSlug } },
       limit: 1,
@@ -283,6 +286,7 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
     }) as unknown as Promise<PayloadDocsResponse<RawPayloadPage>>,
     payload
       .find({
+        overrideAccess: false,
         collection: 'pages',
         where: { 'parent.fullSlug': { equals: fullSlug } },
         limit: 100,
@@ -292,6 +296,7 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
       .catch(() => ({ docs: [] })) as unknown as Promise<PayloadDocsResponse<PageChild>>,
     payload
       .find({
+        overrideAccess: false,
         collection: 'articles',
         where: {
           or: [
@@ -346,6 +351,7 @@ async function fetchArticleBySlugUncached(
 ): Promise<{ data: { articles: Article[] } }> {
   const payload = await getDb()
   const res = await payload.find({
+    overrideAccess: false,
     collection: 'articles',
     where: { slug: { equals: slug } },
     limit: 1,
@@ -396,6 +402,7 @@ async function fetchPageLightByFullSlugUncached(
 ): Promise<{ data: { pages: Page[] } }> {
   const payload = await getDb()
   const res = await payload.find({
+    overrideAccess: false,
     collection: 'pages',
     where: { fullSlug: { equals: fullSlug } },
     limit: 1,
@@ -429,6 +436,7 @@ export const fetchPageLightByFullSlug = cache(async (slug: string) => {
 async function pageHasArticlesBySlugUncached(fullSlug: string): Promise<boolean> {
   const payload = await getDb()
   const res = await payload.count({
+    overrideAccess: false,
     collection: 'articles',
     where: { 'mainPage.fullSlug': { equals: fullSlug } },
   })
@@ -453,6 +461,7 @@ export const pageHasArticles = cache(async (pageId: number | string): Promise<bo
   try {
     const payload = await getDb()
     const res = await payload.count({
+      overrideAccess: false,
       collection: 'articles',
       where: { mainPage: { equals: pageId } },
     })
@@ -464,7 +473,10 @@ export const pageHasArticles = cache(async (pageId: number | string): Promise<bo
 
 async function fetchFooterUncached(): Promise<GlobalFooter | null> {
   const payload = await getDb()
-  const data = (await payload.findGlobal({ slug: 'footer' })) as unknown as Record<string, unknown>
+  const data = (await payload.findGlobal({
+    slug: 'footer',
+    overrideAccess: false,
+  })) as unknown as Record<string, unknown>
   return {
     logo: (data.logo as GlobalFooter['logo']) ?? null,
     navItems: (data.navItems as GlobalFooter['navItems']) ?? [],
@@ -493,6 +505,7 @@ export async function fetchMediaUrlsByIds(ids: number[]): Promise<Map<number, st
   try {
     const payload = await getDb()
     const res = await payload.find({
+      overrideAccess: false,
       collection: 'media',
       where: { id: { in: ids } },
       limit: ids.length,
@@ -526,6 +539,7 @@ async function fetchSitemapEntriesUncached(): Promise<{
   const payload = await getDb()
   const [p, a] = await Promise.all([
     payload.find({
+      overrideAccess: false,
       collection: 'pages',
       limit: 0,
       pagination: false,
@@ -533,6 +547,7 @@ async function fetchSitemapEntriesUncached(): Promise<{
       select: { fullSlug: true, updatedAt: true },
     }),
     payload.find({
+      overrideAccess: false,
       collection: 'articles',
       limit: 0,
       pagination: false,

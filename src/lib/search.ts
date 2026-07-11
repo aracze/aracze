@@ -16,6 +16,7 @@ import type { SearchItem } from '@/types/search'
 async function loadSearchDataUncached(): Promise<SearchItem[]> {
   const payload = await getPayload({ config })
   const res = await payload.find({
+    overrideAccess: false,
     collection: 'pages',
     limit: 200,
     depth: 0,
