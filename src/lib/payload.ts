@@ -395,20 +395,58 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
   }
 }
 
+// Detail článku — jen pole, která článek kreslí (titulek, text, hero obrázek,
+// autor, atribuce); mainPage jako id, rodič se dohledá zvlášť.
+const ARTICLE_DETAIL_SELECT = {
+  title: true,
+  slug: true,
+  documentId: true,
+  text: true,
+  attribution: true,
+  featuredImage: true,
+  mainPage: true,
+  createdBy: true,
+  createdByPublic: true,
+} as const
+
 async function fetchArticleBySlugUncached(
   slug: string,
 ): Promise<{ data: { articles: Article[] } }> {
   const payload = await getDb()
+  // depth 0 + select + joins:false: dřívější depth 2 bez selectu populoval
+  // mainPage/pages jako celé pages dokumenty včetně vyhodnocení JEJICH joinů
+  // (v dev ~24 s na dotaz). fullSlug rodiče a URL obrázku doplní mini-dotazy.
   const res = await payload.find({
     overrideAccess: false,
     collection: 'articles',
     where: { slug: { equals: slug } },
     limit: 1,
-    depth: 2,
+    depth: 0,
+    select: ARTICLE_DETAIL_SELECT,
+    joins: false,
   })
-  return {
-    data: { articles: (res.docs || []) as unknown as Article[] },
-  }
+  const raw = res.docs?.[0] as unknown as (Article & { mainPage?: unknown }) | undefined
+  if (!raw) return { data: { articles: [] } }
+
+  const mainPageId = relationId(raw.mainPage)
+  const [enriched, mainPageDoc] = await Promise.all([
+    enrichFeaturedImages([raw]),
+    mainPageId != null
+      ? payload
+          .findByID({
+            collection: 'pages',
+            id: mainPageId,
+            depth: 0,
+            select: { title: true, fullSlug: true },
+            joins: false,
+            overrideAccess: false,
+          })
+          .catch(() => null)
+      : Promise.resolve(null),
+  ])
+
+  const article = { ...enriched[0], mainPage: mainPageDoc ?? null } as unknown as Article
+  return { data: { articles: [article] } }
 }
 
 const ensureCorrectFullSlug = (fullSlug: string) => {
@@ -597,11 +635,11 @@ async function fetchSitemapEntriesUncached(): Promise<{
   pages: { path: string; lastModified: string }[]
   articles: { path: string; lastModified: string }[]
 }> {
-  type SitemapPage = { fullSlug?: string | null; updatedAt?: string | null }
+  type SitemapPage = { id: number | string; fullSlug?: string | null; updatedAt?: string | null }
   type SitemapArticle = {
     slug?: string | null
     updatedAt?: string | null
-    mainPage?: { fullSlug?: string | null } | number | null
+    mainPage?: unknown
   }
 
   const payload = await getDb()
@@ -613,21 +651,30 @@ async function fetchSitemapEntriesUncached(): Promise<{
       pagination: false,
       depth: 0,
       select: { fullSlug: true, updatedAt: true },
+      joins: false,
     }),
     payload.find({
       overrideAccess: false,
       collection: 'articles',
       limit: 0,
       pagination: false,
-      depth: 1,
+      // depth 0: populace mainPage by vyhodnocovala joiny pages dokumentu za
+      // každý článek; fullSlug rodiče se bere z mapy už načtených stránek.
+      depth: 0,
       select: { slug: true, updatedAt: true, mainPage: true },
-      populate: { pages: { fullSlug: true } },
+      joins: false,
     }),
   ])
   const pagesDocs = p.docs as unknown as SitemapPage[]
   const articlesDocs = a.docs as unknown as SitemapArticle[]
 
   const now = new Date().toISOString()
+
+  // fullSlug rodičů článků z už načtených stránek (id → fullSlug)
+  const slugById = new Map<number | string, string>()
+  for (const doc of pagesDocs) {
+    if (typeof doc.fullSlug === 'string' && doc.fullSlug) slugById.set(doc.id, doc.fullSlug)
+  }
 
   const pages = pagesDocs
     .filter((p) => typeof p.fullSlug === 'string' && p.fullSlug)
@@ -638,9 +685,8 @@ async function fetchSitemapEntriesUncached(): Promise<{
 
   const articles = articlesDocs
     .map((a) => {
-      const mp = a.mainPage
-      const parent =
-        mp && typeof mp === 'object' && typeof mp.fullSlug === 'string' ? mp.fullSlug : null
+      const parentId = relationId(a.mainPage)
+      const parent = parentId != null ? (slugById.get(parentId) ?? null) : null
       if (!parent || !a.slug) return null
       return {
         path: `${parent.replace(/\/$/, '')}/${a.slug}`,

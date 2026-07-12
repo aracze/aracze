@@ -21,6 +21,9 @@ async function loadSearchDataUncached(): Promise<SearchItem[]> {
     limit: 200,
     depth: 0,
     select: { title: true, text: true, slug: true, fullSlug: true },
+    // Bez joinů — jejich vyhodnocení stojí stovky ms za KAŽDÝ dokument
+    // (viz komentář u MENU_SELECT v lib/payload.ts).
+    joins: false,
   })
   return (res.docs || []).map((p) => {
     const doc = p as unknown as {
