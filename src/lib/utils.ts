@@ -33,6 +33,15 @@ const CC_ICON_SVG =
 
 const allowedHeadingTags = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
 
+function headingIdFromHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/ /g, '-')
+    .replace(/[^\p{L}\p{M}\p{N}\p{Pc}\-]/gu, '')
+}
+
 /**
  * Convert a Lexical rich text JSON tree to an HTML string.
  * Falls back to returning the value as-is if it's already a string.
@@ -106,7 +115,9 @@ function richTextToHtmlInternal(value: unknown, context: RichTextRenderContext =
     case 'heading': {
       const rawTag = String((node.tag as string | undefined) || 'h2').toLowerCase()
       const tag = allowedHeadingTags.has(rawTag) ? rawTag : 'h2'
-      return `<${tag}>${children}</${tag}>`
+      const id = headingIdFromHtml(children)
+      const idAttr = id ? ` id="${id}"` : ''
+      return `<${tag}${idAttr}>${children}</${tag}>`
     }
     case 'quote':
       return `<blockquote>${children}</blockquote>`

@@ -1,52 +1,50 @@
-"use client";
+'use client'
 
-import React, { useEffect, useRef, useCallback, useState } from "react";
+import React, { useEffect, useRef, useCallback, useState } from 'react'
 
 export interface MapMarker {
-  id: string | number;
-  title: string;
-  fullSlug: string;
-  lat: number;
-  lng: number;
-  imageUrl?: string | null;
+  id: string | number
+  title: string
+  fullSlug: string
+  lat: number
+  lng: number
+  imageUrl?: string | null
 }
 
 interface GoogleMapProps {
-  markers: MapMarker[];
-  centerLat: number;
-  centerLng: number;
-  zoom: number;
+  markers: MapMarker[]
+  centerLat: number
+  centerLng: number
+  zoom: number
 }
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-const MARKER_SIZE = 44;
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+const MARKER_SIZE = 44
 
 function escapeHtml(value: string): string {
   return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function toCloudinaryVariant(url: string, transform: string): string {
-  return url.includes("cloudinary.com")
-    ? url.replace("/upload/", `/upload/${transform}/`)
-    : url;
+  return url.includes('cloudinary.com') ? url.replace('/upload/', `/upload/${transform}/`) : url
 }
 
 function buildInfoWindowContent(marker: MapMarker): string {
-  const safeTitle = escapeHtml(marker.title);
-  const safeLink = marker.fullSlug;
+  const safeTitle = escapeHtml(marker.title)
+  const safeLink = marker.fullSlug
 
   const image = marker.imageUrl
     ? `<img
-         src="${toCloudinaryVariant(marker.imageUrl, "w_220,h_126,c_fill,g_auto,f_auto,q_auto")}" 
+         src="${toCloudinaryVariant(marker.imageUrl, 'w_220,h_126,c_fill,g_auto,f_auto,q_auto')}" 
          alt="${safeTitle}"
          style="display:block;width:100%;height:126px;object-fit:cover;"
        />`
-    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:126px;background:linear-gradient(135deg,#d9e6f5,#f2f7fd);color:#6f89aa;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Bez náhledu</div>`;
+    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:126px;background:linear-gradient(135deg,#d9e6f5,#f2f7fd);color:#6f89aa;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Bez náhledu</div>`
 
   return `<div style="width:220px;">
     <a href="${safeLink}" style="text-decoration:none;color:inherit;display:block;">
@@ -62,41 +60,41 @@ function buildInfoWindowContent(marker: MapMarker): string {
         </div>
       </div>
     </a>
-  </div>`;
+  </div>`
 }
 
 // Minimální typování `window.google.maps` pro bootstrap/loader (bez @types/google.maps).
 // Index signatura pokrývá dynamický `callback` klíč, který si Google na `maps` zapisuje.
 interface GoogleMapsApi {
-  importLibrary?: (name: string) => Promise<Record<string, unknown>>;
-  [key: string]: unknown;
+  importLibrary?: (name: string) => Promise<Record<string, unknown>>
+  [key: string]: unknown
 }
 interface WindowWithGoogle extends Window {
-  google?: { maps?: GoogleMapsApi };
+  google?: { maps?: GoogleMapsApi }
 }
-const getWindowWithGoogle = (): WindowWithGoogle => window as WindowWithGoogle;
+const getWindowWithGoogle = (): WindowWithGoogle => window as WindowWithGoogle
 
 // Jednorázový (singleton) loader Maps JS API. Skript se vloží do stránky nejvýš
 // jednou a případné další mounty (včetně React StrictMode double-mountu ve vývoji)
 // čekají na tentýž Promise — tím odpadá souběh, kdy „vyhrála" odmountovaná closure
 // a mapa se nikdy nevykreslila.
-let mapsReadyPromise: Promise<void> | null = null;
+let mapsReadyPromise: Promise<void> | null = null
 
 // Nainstaluje oficiální Google „bootstrap loader": definuje `google.maps.importLibrary`
 // SYNCHRONNĚ jako stub, který si sám (jednou) dotáhne skript API přes `callback`.
 // Prosté `<script src=…loading=async>` + čekání na `load` totiž nezaručuje, že už je
 // `importLibrary` k dispozici (proto se mapa občas vůbec nenačetla).
 function installMapsBootstrap(key: string): void {
-  const win = getWindowWithGoogle();
-  const google = win.google ?? {};
-  win.google = google;
-  const maps: GoogleMapsApi = google.maps ?? {};
-  google.maps = maps;
-  if (maps.importLibrary) return;
+  const win = getWindowWithGoogle()
+  const google = win.google ?? {}
+  win.google = google
+  const maps: GoogleMapsApi = google.maps ?? {}
+  google.maps = maps
+  if (maps.importLibrary) return
 
-  const requested = new Set<string>();
-  const CALLBACK = "__ib__";
-  let scriptLoad: Promise<void> | null = null;
+  const requested = new Set<string>()
+  const CALLBACK = '__ib__'
+  let scriptLoad: Promise<void> | null = null
 
   const ensureScript = () =>
     (scriptLoad ??= new Promise<void>((resolve, reject) => {
@@ -105,83 +103,74 @@ function installMapsBootstrap(key: string): void {
       Promise.resolve().then(() => {
         const params = new URLSearchParams({
           key,
-          v: "weekly",
-          libraries: [...requested].join(","),
+          v: 'weekly',
+          libraries: [...requested].join(','),
           callback: `google.maps.${CALLBACK}`,
-          loading: "async",
-        });
-        maps[CALLBACK] = resolve;
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?${params}`;
-        script.nonce =
-          document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ??
-          "";
+          loading: 'async',
+        })
+        maps[CALLBACK] = resolve
+        const script = document.createElement('script')
+        script.src = `https://maps.googleapis.com/maps/api/js?${params}`
+        script.nonce = document.querySelector<HTMLScriptElement>('script[nonce]')?.nonce ?? ''
         script.onerror = () => {
           // Vynulujeme cache i vložený tag, ať `ensureScript()` při dalším pokusu
           // (po resetu mapsReadyPromise) skript znovu vloží a recovery projde.
-          scriptLoad = null;
-          script.remove();
-          reject(new Error("Google Maps script se nepodařilo načíst"));
-        };
-        document.head.append(script);
-      });
-    }));
+          scriptLoad = null
+          script.remove()
+          reject(new Error('Google Maps script se nepodařilo načíst'))
+        }
+        document.head.append(script)
+      })
+    }))
 
   // Po načtení API stub přepíše sám Google skutečnou implementací → `then` níže
   // pak volá tu pravou `importLibrary`.
   maps.importLibrary = (name: string) => {
-    requested.add(name);
+    requested.add(name)
     // Po načtení API Google přepíše `maps.importLibrary` skutečnou implementací.
-    return ensureScript().then(() => maps.importLibrary!(name));
-  };
+    return ensureScript().then(() => maps.importLibrary!(name))
+  }
 }
 
 function loadGoogleMaps(): Promise<void> {
-  if (mapsReadyPromise) return mapsReadyPromise;
+  if (mapsReadyPromise) return mapsReadyPromise
 
   mapsReadyPromise = (async () => {
     if (!getWindowWithGoogle().google?.maps?.importLibrary) {
       if (!GOOGLE_MAPS_API_KEY) {
-        throw new Error("Google Maps API key is not set");
+        throw new Error('Google Maps API key is not set')
       }
-      installMapsBootstrap(GOOGLE_MAPS_API_KEY);
+      installMapsBootstrap(GOOGLE_MAPS_API_KEY)
     }
     // S `loading=async` je nutné knihovny doimportovat, teprve pak jsou
     // google.maps.Map / Marker / enumy (MapTypeControlStyle…) k dispozici.
-    const maps = getWindowWithGoogle().google?.maps;
+    const maps = getWindowWithGoogle().google?.maps
     if (!maps?.importLibrary) {
-      throw new Error("Google Maps: importLibrary není k dispozici");
+      throw new Error('Google Maps: importLibrary není k dispozici')
     }
-    await Promise.all([
-      maps.importLibrary("maps"),
-      maps.importLibrary("marker"),
-    ]);
-  })();
+    await Promise.all([maps.importLibrary('maps'), maps.importLibrary('marker')])
+  })()
 
   // Po chybě umožníme příští pokus (transientní výpadek sítě apod.).
   mapsReadyPromise.catch(() => {
-    mapsReadyPromise = null;
-  });
+    mapsReadyPromise = null
+  })
 
-  return mapsReadyPromise;
+  return mapsReadyPromise
 }
 
-export const GoogleMap: React.FC<GoogleMapProps> = ({
-  markers,
-  centerLat,
-  centerLng,
-  zoom,
-}) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const infoWindowRef = useRef<any>(null);
-  const [loaded, setLoaded] = useState(false);
+export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, centerLng, zoom }) => {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<any>(null)
+  const markersRef = useRef<any[]>([])
+  const infoWindowRef = useRef<any>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const initMap = useCallback(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
-    const googleApi = (window as { google?: any }).google;
-    if (!googleApi?.maps) return;
+    if (!mapRef.current || mapInstanceRef.current) return
+    const googleApi = (window as { google?: any }).google
+    if (!googleApi?.maps) return
 
     const map = new googleApi.maps.Map(mapRef.current, {
       zoom,
@@ -193,16 +182,16 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({
       },
       fullscreenControl: true,
       streetViewControl: false,
-    });
-    mapInstanceRef.current = map;
+    })
+    mapInstanceRef.current = map
 
-    const infoWindow = new googleApi.maps.InfoWindow({ maxWidth: 224 });
-    infoWindowRef.current = infoWindow;
+    const infoWindow = new googleApi.maps.InfoWindow({ maxWidth: 224 })
+    infoWindowRef.current = infoWindow
 
     // Inject CSS to override Google Maps InfoWindow defaults (inline styles can't beat GM's specificity)
-    if (!document.getElementById("gm-iw-overrides")) {
-      const style = document.createElement("style");
-      style.id = "gm-iw-overrides";
+    if (!document.getElementById('gm-iw-overrides')) {
+      const style = document.createElement('style')
+      style.id = 'gm-iw-overrides'
       style.textContent = `
         .gm-style-iw-c { padding: 0 !important; box-shadow: 0 10px 28px rgba(20,43,74,.22) !important; border-radius: 12px !important; border: none !important; }
         .gm-style-iw-d { overflow: hidden !important; padding: 0 !important; max-height: none !important; }
@@ -253,23 +242,21 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({
           height: 16px !important;
           display: block !important;
         }
-      `;
-      document.head.appendChild(style);
+      `
+      document.head.appendChild(style)
     }
 
-    googleApi.maps.event.addListener(infoWindow, "domready", () => {
+    googleApi.maps.event.addListener(infoWindow, 'domready', () => {
       // Apply box-shadow on the container directly (can't be done via injected CSS easily)
-      const iwContainer = document.querySelector(
-        ".gm-style-iw-c",
-      ) as HTMLElement | null;
+      const iwContainer = document.querySelector('.gm-style-iw-c') as HTMLElement | null
       if (iwContainer) {
-        iwContainer.style.boxShadow = "0 10px 28px rgba(20,43,74,.25)";
+        iwContainer.style.boxShadow = '0 10px 28px rgba(20,43,74,.25)'
       }
-    });
+    })
 
-    map.addListener("click", () => {
-      infoWindow.close();
-    });
+    map.addListener('click', () => {
+      infoWindow.close()
+    })
 
     // Create markers
     for (const m of markers) {
@@ -277,106 +264,137 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({
         position: { lat: m.lat, lng: m.lng },
         map,
         title: m.title,
-      };
+      }
 
       // Use circular image icon if available
       if (m.imageUrl) {
         markerOptions.icon = {
-          url: m.imageUrl.includes("cloudinary.com")
+          url: m.imageUrl.includes('cloudinary.com')
             ? m.imageUrl.replace(
-                "/upload/",
-                "/upload/w_44,h_44,c_fill,g_auto,r_max,bo_3px_solid_white,f_png/",
+                '/upload/',
+                '/upload/w_44,h_44,c_fill,g_auto,r_max,bo_3px_solid_white,f_png/',
               )
             : m.imageUrl,
           scaledSize: new googleApi.maps.Size(MARKER_SIZE, MARKER_SIZE),
-        };
+        }
       }
 
-      const marker = new googleApi.maps.Marker(markerOptions);
+      const marker = new googleApi.maps.Marker(markerOptions)
 
-      marker.addListener("click", () => {
-        const content = buildInfoWindowContent(m);
-        infoWindow.setContent(content);
-        infoWindow.open(map, marker);
-      });
+      marker.addListener('click', () => {
+        const content = buildInfoWindowContent(m)
+        infoWindow.setContent(content)
+        infoWindow.open(map, marker)
+      })
 
-      markersRef.current.push(marker);
+      markersRef.current.push(marker)
     }
-  }, [markers, centerLat, centerLng, zoom]);
+  }, [markers, centerLat, centerLng, zoom])
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
     loadGoogleMaps()
       .then(() => {
-        if (!cancelled) setLoaded(true);
+        if (!cancelled) {
+          setLoadError(null)
+          setLoaded(true)
+        }
       })
-      .catch((err) =>
-        console.warn("[GoogleMap] load error:", err?.message ?? err),
-      );
+      .catch((err) => {
+        const message = typeof err?.message === 'string' ? err.message : 'Mapu se nepodařilo načíst'
+        if (!cancelled) {
+          setLoadError(message)
+          setLoaded(false)
+        }
+        console.warn('[GoogleMap] load error:', message)
+      })
     return () => {
-      cancelled = true;
-    };
-  }, []);
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (loaded) {
-      initMap();
+      initMap()
     }
-  }, [loaded, initMap]);
+  }, [loaded, initMap])
 
   // Add hover events for poi-article elements
   useEffect(() => {
-    if (!loaded || markersRef.current.length === 0) return;
+    if (!loaded || markersRef.current.length === 0) return
 
-    const articles = document.querySelectorAll("[data-poiid]");
-    const markerMap = new Map<string, any>();
-    const markerDataMap = new Map<string, MapMarker>();
+    const articles = document.querySelectorAll('[data-poiid]')
+    const markerMap = new Map<string, any>()
+    const markerDataMap = new Map<string, MapMarker>()
 
     markers.forEach((m, i) => {
-      markerMap.set(String(m.id), markersRef.current[i]);
-      markerDataMap.set(String(m.id), m);
-    });
+      markerMap.set(String(m.id), markersRef.current[i])
+      markerDataMap.set(String(m.id), m)
+    })
 
     const handlers: Array<{
-      el: Element;
-      type: string;
-      fn: EventListener;
-    }> = [];
+      el: Element
+      type: string
+      fn: EventListener
+    }> = []
 
     articles.forEach((article) => {
-      const poiId = (article as HTMLElement).dataset.poiid;
-      if (!poiId) return;
-      const marker = markerMap.get(poiId);
-      const data = markerDataMap.get(poiId);
-      if (!marker || !data) return;
+      const poiId = (article as HTMLElement).dataset.poiid
+      if (!poiId) return
+      const marker = markerMap.get(poiId)
+      const data = markerDataMap.get(poiId)
+      if (!marker || !data) return
 
       const handleMouseOver = () => {
-        const content = buildInfoWindowContent(data);
-        infoWindowRef.current?.setContent(content);
-        infoWindowRef.current?.open(mapInstanceRef.current!, marker);
-      };
+        const content = buildInfoWindowContent(data)
+        infoWindowRef.current?.setContent(content)
+        infoWindowRef.current?.open(mapInstanceRef.current!, marker)
+      }
       const handleMouseOut = () => {
-        infoWindowRef.current?.close();
-      };
+        infoWindowRef.current?.close()
+      }
 
-      article.addEventListener("mouseover", handleMouseOver);
-      article.addEventListener("mouseout", handleMouseOut);
+      article.addEventListener('mouseover', handleMouseOver)
+      article.addEventListener('mouseout', handleMouseOut)
       handlers.push(
-        { el: article, type: "mouseover", fn: handleMouseOver },
-        { el: article, type: "mouseout", fn: handleMouseOut },
-      );
-    });
+        { el: article, type: 'mouseover', fn: handleMouseOver },
+        { el: article, type: 'mouseout', fn: handleMouseOut },
+      )
+    })
 
     return () => {
-      handlers.forEach(({ el, type, fn }) => el.removeEventListener(type, fn));
-    };
-  }, [loaded, markers]);
+      handlers.forEach(({ el, type, fn }) => el.removeEventListener(type, fn))
+    }
+  }, [loaded, markers])
+
+  if (loadError) {
+    return (
+      <div
+        className="w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]"
+        style={{ height: 'calc(100vh - 40px)', minHeight: '400px' }}
+      >
+        <p className="font-semibold text-[#1a3f6c] mb-2">Mapa není dostupná</p>
+        <p>{loadError}</p>
+      </div>
+    )
+  }
+
+  if (!loaded) {
+    return (
+      <div
+        className="w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]"
+        style={{ height: 'calc(100vh - 40px)', minHeight: '400px' }}
+      >
+        <p className="font-semibold text-[#1a3f6c]">Načítám mapu…</p>
+      </div>
+    )
+  }
 
   return (
     <div
       ref={mapRef}
       className="w-full rounded-lg"
-      style={{ height: "calc(100vh - 40px)", minHeight: "400px" }}
+      style={{ height: 'calc(100vh - 40px)', minHeight: '400px' }}
     />
-  );
-};
+  )
+}

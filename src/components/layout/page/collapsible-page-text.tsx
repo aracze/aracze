@@ -1,70 +1,63 @@
-"use client";
+'use client'
 
-import { useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import rehypeRaw from "rehype-raw";
-import rehypeSlug from "rehype-slug";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
-const DEFAULT_AVATAR = "/assets/avatar-white.jpg";
+const DEFAULT_AVATAR = '/assets/avatar-white.jpg'
 
 function getPreviewHtml(html: string): {
-  previewHtml: string;
-  shouldCollapse: boolean;
+  previewHtml: string
+  shouldCollapse: boolean
 } {
-  const matches = [...html.matchAll(/<p\b[^>]*>[\s\S]*?<\/p>/gi)];
+  const matches = [...html.matchAll(/<p\b[^>]*>[\s\S]*?<\/p>/gi)]
   if (matches.length <= 2) {
-    return { previewHtml: html, shouldCollapse: false };
+    return { previewHtml: html, shouldCollapse: false }
   }
 
-  const secondParagraph = matches[1];
-  const secondParagraphEnd =
-    (secondParagraph.index ?? 0) + secondParagraph[0].length;
+  const secondParagraph = matches[1]
+  const secondParagraphEnd = (secondParagraph.index ?? 0) + secondParagraph[0].length
 
   return {
     previewHtml: html.slice(0, secondParagraphEnd),
     shouldCollapse: true,
-  };
+  }
 }
 
 type Contributor = {
-  name?: string | null;
-  profileHref?: string | null;
-  avatarUrl?: string | null;
-};
+  name?: string | null
+  profileHref?: string | null
+  avatarUrl?: string | null
+}
 
 export function CollapsiblePageTextWithContributor({
   textHtml,
   contributor,
   collapsible = true,
 }: {
-  textHtml: string;
-  contributor?: Contributor | null;
+  textHtml: string
+  contributor?: Contributor | null
   /** Sbalování textu + „zobrazit více" — jen na stránkách „Místo k navštívení". */
-  collapsible?: boolean;
+  collapsible?: boolean
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [avatarSrc, setAvatarSrc] = useState(
-    contributor?.avatarUrl || DEFAULT_AVATAR,
-  );
-  const { shouldCollapse: canCollapse } = useMemo(
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [avatarSrc, setAvatarSrc] = useState(contributor?.avatarUrl || DEFAULT_AVATAR)
+  const { previewHtml, shouldCollapse: canCollapse } = useMemo(
     () => getPreviewHtml(textHtml),
     [textHtml],
-  );
-  const shouldCollapse = collapsible && canCollapse;
+  )
+  const shouldCollapse = collapsible && canCollapse
+  const displayedHtml = !isExpanded && shouldCollapse ? previewHtml : textHtml
 
   return (
     <div className="relative">
       <div
         className={cn(
-          "relative prose max-w-none prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline",
-          !isExpanded && shouldCollapse && "max-h-[250px] overflow-hidden",
+          'relative prose max-w-none prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline',
+          !isExpanded && shouldCollapse && 'max-h-[250px] overflow-hidden',
         )}
       >
-        <ReactMarkdown rehypePlugins={[rehypeRaw, rehypeSlug]}>
-          {textHtml}
-        </ReactMarkdown>
+        <div dangerouslySetInnerHTML={{ __html: displayedHtml }} />
         {/* Text mizí do bílé — naznačuje, že pokračuje dál. */}
         {shouldCollapse && !isExpanded && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[50px] bg-gradient-to-b from-transparent to-white" />
@@ -197,5 +190,5 @@ export function CollapsiblePageTextWithContributor({
         </div>
       )}
     </div>
-  );
+  )
 }

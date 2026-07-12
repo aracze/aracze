@@ -28,6 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // 1. Try fetching as a Page
   const { data: pageData } = await fetchPageByFullSlug(fullSlug)
+
   if (pageData?.pages.length > 0) {
     const page = pageData.pages[0]
 
@@ -92,6 +93,7 @@ export default async function PageRoute({ params }: Props) {
 
   // 1. Try fetching as a Page
   const { data: pageData } = await fetchPageByFullSlug(fullSlug)
+
   if (pageData?.pages.length > 0) {
     return <Page page={pageData?.pages[0]} />
   }

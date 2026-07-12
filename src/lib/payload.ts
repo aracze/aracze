@@ -98,11 +98,6 @@ const PAGE_SCALAR_SELECT = {
   detail: true,
   featuredImage: true,
   createdBy: true,
-  createdByPublic: true,
-} as const
-
-const PAGE_SCALAR_POPULATE = {
-  users: { username: true, firstName: true, lastName: true },
 } as const
 
 const PAGE_CHILDREN_SELECT = {
@@ -305,64 +300,106 @@ function relationId(value: unknown): number | string | null {
   return null
 }
 
+async function resolvePageAuthorPublic(
+  payload: Payload,
+  createdBy: unknown,
+): Promise<Page['createdByPublic']> {
+  const authorId = relationId(createdBy)
+  if (authorId == null) return null
+
+  try {
+    const user = (await payload.findByID({
+      collection: 'users',
+      id: authorId,
+      depth: 0,
+      joins: false,
+      overrideAccess: false,
+      select: { username: true, firstName: true, lastName: true, avatar: true },
+    })) as unknown as {
+      id: number | string
+      username?: string | null
+      firstName?: string | null
+      lastName?: string | null
+      avatar?: unknown
+    }
+
+    const avatarId = relationId(user.avatar)
+    const avatarUrl =
+      typeof avatarId === 'number'
+        ? ((await fetchMediaUrlsByIds([avatarId])).get(avatarId) ?? null)
+        : null
+
+    return {
+      id: Number(user.id),
+      username: user.username ?? null,
+      firstName: user.firstName ?? null,
+      lastName: user.lastName ?? null,
+      avatar: avatarUrl ? { url: avatarUrl, alternativeText: null } : null,
+    }
+  } catch {
+    return null
+  }
+}
+
 async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { pages: Page[] } }> {
   const payload = await getDb()
 
-  // Tři nezávislé dotazy paralelně — viz komentář u *_SELECT konstant.
-  // Selhání DB propadá ven (nesmí se uložit do cache) — fallback řeší export.
-  const [pageRes, childrenRes, articlesRes] = (await Promise.all([
-    payload.find({
+  // Nejdřív načteme stránku + děti. Články dotahujeme až po nalezení stránky
+  // a filtrujeme přes id relace (`mainPage`/`pages`) místo `*.fullSlug`.
+  // Dotaz přes `mainPage.fullSlug` byl na některých stránkách výrazně pomalý.
+  const pagePromise = payload
+    .find({
       overrideAccess: false,
       collection: 'pages',
       where: { fullSlug: { equals: fullSlug } },
       limit: 1,
-      depth: 1,
+      depth: 0,
       select: PAGE_SCALAR_SELECT,
-      populate: PAGE_SCALAR_POPULATE,
       joins: false,
-    }) as unknown as Promise<PayloadDocsResponse<RawPayloadPage>>,
-    payload
-      .find({
-        overrideAccess: false,
-        collection: 'pages',
-        where: { 'parent.fullSlug': { equals: fullSlug } },
-        limit: 100,
-        // depth 0: obrázky karet dořeší enrichFeaturedImages hromadně — depth 1
-        // by populoval media dokument za KAŽDÉ dítě zvlášť (v dev ~0,35 s/kus).
-        depth: 0,
-        select: PAGE_CHILDREN_SELECT,
-        joins: false,
-      })
-      .catch(() => ({ docs: [] })) as unknown as Promise<PayloadDocsResponse<PageChild>>,
-    payload
-      .find({
-        overrideAccess: false,
-        collection: 'articles',
-        where: {
-          or: [
-            { 'mainPage.fullSlug': { equals: fullSlug } },
-            { 'pages.fullSlug': { equals: fullSlug } },
-          ],
-        },
-        limit: 100,
-        // depth 0: mainPage stačí jako id (třídění přes relationId) a obrázky
-        // karet dořeší enrichArticleImages. depth 1 by populoval mainPage jako
-        // celé pages dokumenty VČETNĚ vyhodnocení jejich joinů (sekundy navíc).
-        depth: 0,
-        select: PAGE_ARTICLES_SELECT,
-        joins: false,
-      })
-      .catch(() => ({ docs: [] })) as unknown as Promise<PayloadDocsResponse<Article>>,
-  ])) as unknown as [
+    })
+    .then((res) => res as unknown as PayloadDocsResponse<RawPayloadPage>)
+
+  const childrenPromise = payload
+    .find({
+      overrideAccess: false,
+      collection: 'pages',
+      where: { 'parent.fullSlug': { equals: fullSlug } },
+      limit: 100,
+      // depth 0: obrázky karet dořeší enrichFeaturedImages hromadně — depth 1
+      // by populoval media dokument za KAŽDÉ dítě zvlášť (v dev ~0,35 s/kus).
+      depth: 0,
+      select: PAGE_CHILDREN_SELECT,
+      joins: false,
+    })
+    .then((res) => res as unknown as PayloadDocsResponse<PageChild>)
+    .catch(() => ({ docs: [] }) as PayloadDocsResponse<PageChild>)
+
+  const [pageRes, childrenRes] = (await Promise.all([pagePromise, childrenPromise])) as [
     PayloadDocsResponse<RawPayloadPage>,
     PayloadDocsResponse<PageChild>,
-    PayloadDocsResponse<Article>,
   ]
 
   const raw = pageRes.docs?.[0]
   if (!raw) {
     return { data: { pages: [] } }
   }
+
+  const articlesRes = (await payload
+    .find({
+      overrideAccess: false,
+      collection: 'articles',
+      where: {
+        or: [{ mainPage: { equals: raw.id } }, { pages: { in: [raw.id] } }],
+      },
+      limit: 100,
+      // depth 0: mainPage stačí jako id (třídění přes relationId) a obrázky
+      // karet dořeší enrichFeaturedImages. depth 1 by populoval mainPage jako
+      // celé pages dokumenty VČETNĚ vyhodnocení jejich joinů (sekundy navíc).
+      depth: 0,
+      select: PAGE_ARTICLES_SELECT,
+      joins: false,
+    })
+    .catch(() => ({ docs: [] }))) as unknown as PayloadDocsResponse<Article>
 
   // Roztřídění článků: primární (mainPage = tato stránka) první — stejné
   // pořadí jako primaryArticles/secondaryArticles joiny.
@@ -381,16 +418,23 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
     secondaryArticles: { docs: secondary },
   })
 
-  const [enrichedArticles, enrichedChildren] = await Promise.all([
+  const [enrichedPageArr, enrichedArticles, enrichedChildren, createdByPublic] = await Promise.all([
+    enrichFeaturedImages([match]),
     enrichFeaturedImages(match.articles),
     enrichFeaturedImages(match.children.docs),
+    resolvePageAuthorPublic(payload, (raw as { createdBy?: unknown }).createdBy),
   ])
-  match.articles = enrichedArticles
-  match.children = { docs: enrichedChildren }
+
+  const enrichedPage = enrichedPageArr[0] as Page
+  enrichedPage.articles = enrichedArticles
+  enrichedPage.children = { docs: enrichedChildren }
+  if (createdByPublic) {
+    enrichedPage.createdByPublic = createdByPublic
+  }
 
   return {
     data: {
-      pages: [match],
+      pages: [enrichedPage],
     },
   }
 }

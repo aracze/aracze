@@ -1,27 +1,26 @@
-"use client";
+'use client'
 
-import { useEffect, useRef } from "react";
-import Script from "next/script";
+import { useEffect, useRef } from 'react'
+import Script from 'next/script'
 
 // Same Google AdSense publisher/slots as the legacy site (article side ads).
 // Overridable via env so units can be swapped without code changes.
-const ADSENSE_CLIENT =
-  process.env.NEXT_PUBLIC_ADSENSE_CLIENT || "ca-pub-6877162966881430";
+const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || 'ca-pub-6877162966881430'
 
 const AD_VARIANTS = {
   // "Highlights 300x600" – top ad
   primary: {
-    slot: process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT || "8587359355",
+    slot: process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT || '8587359355',
     width: 300,
     height: 600,
   },
   // "Wide Skyscraper 160x600" – takes over in the lower half
   secondary: {
-    slot: process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT_2 || "4777192500",
+    slot: process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT_2 || '4777192500',
     width: 160,
     height: 600,
   },
-} as const;
+} as const
 
 /**
  * AdSense loader script. Render exactly ONCE per page (the article layout renders
@@ -33,11 +32,11 @@ export function AdSenseScript() {
     <Script
       id="adsbygoogle-js"
       async
-      strategy="afterInteractive"
+      strategy="lazyOnload"
       crossOrigin="anonymous"
       src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
     />
-  );
+  )
 }
 
 /**
@@ -47,35 +46,35 @@ export function AdSenseScript() {
  * Requires `<AdSenseScript />` to be rendered once elsewhere on the page.
  */
 export function ArticleAd({
-  variant = "primary",
-  className = "",
+  variant = 'primary',
+  className = '',
 }: {
-  variant?: keyof typeof AD_VARIANTS;
-  className?: string;
+  variant?: keyof typeof AD_VARIANTS
+  className?: string
 }) {
-  const { slot, width, height } = AD_VARIANTS[variant];
-  const pushedRef = useRef(false);
+  const { slot, width, height } = AD_VARIANTS[variant]
+  const pushedRef = useRef(false)
 
   useEffect(() => {
     // Guard against React Strict Mode double-invocation (would log a duplicate-ad warning).
-    if (pushedRef.current) return;
-    pushedRef.current = true;
+    if (pushedRef.current) return
+    pushedRef.current = true
     try {
-      const w = window as unknown as { adsbygoogle?: unknown[] };
-      (w.adsbygoogle = w.adsbygoogle || []).push({});
+      const w = window as unknown as { adsbygoogle?: unknown[] }
+      ;(w.adsbygoogle = w.adsbygoogle || []).push({})
     } catch {
       // AdSense not available (e.g. blocked) — leave the empty placeholder box.
     }
-  }, []);
+  }, [])
 
   return (
     <div className={`rounded-[15px] bg-[#f6f6f6] p-5 ${className}`}>
       <ins
         className="adsbygoogle mx-auto block"
-        style={{ display: "block", width, height }}
+        style={{ display: 'block', width, height }}
         data-ad-client={ADSENSE_CLIENT}
         data-ad-slot={slot}
       />
     </div>
-  );
+  )
 }
