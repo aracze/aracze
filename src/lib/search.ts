@@ -1,7 +1,6 @@
 import Fuse from 'fuse.js'
-import { getPayload } from 'payload'
-import config from '@payload-config'
 import { unstable_cache } from 'next/cache'
+import { getDb } from './db'
 import { isProduction, richTextToPlainText } from './utils'
 import type { SearchItem } from '@/types/search'
 
@@ -10,11 +9,14 @@ import type { SearchItem } from '@/types/search'
  * ze souborů, což vyžadovalo běžící CMS při buildu a index zastarával).
  * Data se cachují s tagy — publikace stránky index okamžitě obnoví
  * (revalidateTag v hoocích). Fuse index nad ~200 položkami se staví za ~ms.
+ *
+ * Payload instance se sdílí přes stejný singleton (getDb) jako datová vrstva —
+ * /api/search se volá při psaní často, vlastní init by byl zbytečná režie.
  */
 // Selhání DB NESMÍ vracet prázdno uvnitř cache (uložilo by se) — chyba propadá
 // ven z unstable_cache a fallback řeší až getFuse.
 async function loadSearchDataUncached(): Promise<SearchItem[]> {
-  const payload = await getPayload({ config })
+  const payload = await getDb()
   const res = await payload.find({
     overrideAccess: false,
     collection: 'pages',

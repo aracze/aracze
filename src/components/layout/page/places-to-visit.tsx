@@ -16,21 +16,22 @@ interface PlacesToVisitProps {
   parentLocative?: string | null
 }
 
-/** Extract first N characters of plain text from rich text for preview */
-function getPreviewText(text: string | RichTextRoot | null | undefined, maxLength = 280): string {
-  if (!text) return ''
-  const html = typeof text === 'string' ? text : richTextToHtml(text)
-  const plain = html
-    .replace(/<[^>]+>/g, '')
-    .replace(/&[^;]+;/g, ' ')
-    .trim()
-  if (plain.length <= maxLength) return plain
-  return plain.slice(0, maxLength).replace(/\s+\S*$/, '') + '...'
-}
-
 function getFullHtml(text: string | RichTextRoot | null | undefined): string {
   if (!text) return ''
   return typeof text === 'string' ? text : richTextToHtml(text)
+}
+
+/** Plain-text náhled odvozený z už vyrenderovaného HTML (bez dalšího renderu). */
+function htmlToPlain(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&[^;]+;/g, ' ')
+    .trim()
+}
+
+function toPreviewText(plain: string, maxLength = 280): string {
+  if (plain.length <= maxLength) return plain
+  return plain.slice(0, maxLength).replace(/\s+\S*$/, '') + '...'
 }
 
 export const PlacesToVisit: React.FC<PlacesToVisitProps> = ({
@@ -194,12 +195,10 @@ function TouristPointList({
     <div className="divide-y divide-gray-100">
       {places.map((place, index) => {
         const imageUrl = imageUrlMap?.get(place.id) ?? null
+        // richTextToHtml voláme jen jednou; náhled i délku odvodíme z výsledku.
         const fullHtml = getFullHtml(place.text)
-        const previewText = getPreviewText(place.text)
-        const plainFull = fullHtml
-          .replace(/<[^>]+>/g, '')
-          .replace(/&[^;]+;/g, ' ')
-          .trim()
+        const plainFull = htmlToPlain(fullHtml)
+        const previewText = toPreviewText(plainFull)
         const hasMoreContent = plainFull.length > 280
 
         return (

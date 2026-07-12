@@ -34,13 +34,32 @@ function toCloudinaryVariant(url: string, transform: string): string {
   return url.includes('cloudinary.com') ? url.replace('/upload/', `/upload/${transform}/`) : url
 }
 
+// Obsah info okna se skládá jako HTML řetězec a předává do setContent, takže
+// KAŽDÁ hodnota v atributu (href, src) musí být ověřená + escapovaná — jinak by
+// šlo přes fullSlug/imageUrl vloženého markeru vypadnout z atributu (XSS).
+
+// href míří na interní stránku: musí začínat '/' a neobsahovat whitespace,
+// uvozovky ani lomené závorky (blokuje javascript:, data: i únik z atributu).
+function toSafeInternalHref(slug: string | null | undefined): string {
+  if (!slug || typeof slug !== 'string') return '#'
+  const normalized = slug.startsWith('/') ? slug : `/${slug}`
+  return /^\/[^\s"'<>]*$/.test(normalized) ? normalized : '#'
+}
+
+// Do <img src> pustíme jen absolutní http(s) URL (Cloudinary / vlastní CDN).
+function toSafeImageUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== 'string') return null
+  return /^https?:\/\//i.test(url.trim()) ? url : null
+}
+
 function buildInfoWindowContent(marker: MapMarker): string {
   const safeTitle = escapeHtml(marker.title)
-  const safeLink = marker.fullSlug
+  const safeLink = escapeHtml(toSafeInternalHref(marker.fullSlug))
 
-  const image = marker.imageUrl
+  const validImageUrl = toSafeImageUrl(marker.imageUrl)
+  const image = validImageUrl
     ? `<img
-         src="${toCloudinaryVariant(marker.imageUrl, 'w_220,h_126,c_fill,g_auto,f_auto,q_auto')}" 
+         src="${escapeHtml(toCloudinaryVariant(validImageUrl, 'w_220,h_126,c_fill,g_auto,f_auto,q_auto'))}"
          alt="${safeTitle}"
          style="display:block;width:100%;height:126px;object-fit:cover;"
        />`

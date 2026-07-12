@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import Image from "next/image";
-import { cloudinaryVariant, isCloudinary } from "@/lib/cloudinary-loader";
+import Image from 'next/image'
+import { cloudinaryVariant, isCloudinary } from '@/lib/cloudinary-loader'
 
 /**
  * Obrázek karty místa s ořezem podle zařízení (art direction).
@@ -21,32 +21,27 @@ import { cloudinaryVariant, isCloudinary } from "@/lib/cloudinary-loader";
  * aby `next/image` nenabízel duplicitní srcset kandidáty se stejnou URL.
  */
 
-const BASE = "f_auto,q_auto";
+const BASE = 'f_auto,q_auto'
 
 /** `next/image` loader s pevným Cloudinary ořezem (poměr stran dle varianty). */
 function cropLoader(crop: string) {
   return ({ src, width }: { src: string; width: number }) =>
-    cloudinaryVariant(src, `${BASE},${crop},w_${width}`);
+    cloudinaryVariant(src, `${BASE},${crop},w_${width}`)
 }
 
 interface PlaceCardImageProps {
-  src: string;
-  alt: string;
-  className?: string;
+  src: string
+  alt: string
+  className?: string
   /** true = karta vedle mapy (3 sloupce, na výšku); false = 4 sloupce, skoro čtverec */
-  hasMap?: boolean;
+  hasMap?: boolean
 }
 
-export function PlaceCardImage({
-  src,
-  alt,
-  className,
-  hasMap = false,
-}: PlaceCardImageProps) {
+export function PlaceCardImage({ src, alt, className, hasMap = false }: PlaceCardImageProps) {
   // Desktop: vedle mapy portrét (~207×280 → 5:7), jinak skoro čtverec (~278×280 → 1:1)
-  const desktopAr = hasMap ? "5:7" : "1:1";
-  const desktopSizes = hasMap ? "210px" : "280px";
-  const unoptimized = !isCloudinary(src);
+  const desktopAr = hasMap ? '5:7' : '1:1'
+  const desktopSizes = hasMap ? '210px' : '280px'
+  const unoptimized = !isCloudinary(src)
 
   return (
     <>
@@ -58,18 +53,18 @@ export function PlaceCardImage({
         loader={cropLoader(`c_fill,g_auto,ar_${desktopAr}`)}
         sizes={desktopSizes}
         unoptimized={unoptimized}
-        className={`hidden lg:block ${className ?? ""}`}
+        className={`hidden lg:block ${className ?? ''}`}
       />
       {/* Mobil + tablet (<1024 px): karta je na šířku */}
       <Image
         src={src}
         alt={alt}
         fill
-        loader={cropLoader("c_fill,g_auto,ar_3:2")}
+        loader={cropLoader('c_fill,g_auto,ar_3:2')}
         sizes="(min-width: 640px) 50vw, 100vw"
         unoptimized={unoptimized}
-        className={`lg:hidden ${className ?? ""}`}
+        className={`lg:hidden ${className ?? ''}`}
       />
     </>
-  );
+  )
 }

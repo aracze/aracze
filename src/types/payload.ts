@@ -1,3 +1,17 @@
+/**
+ * Frontendové view-modely — normalizovaný tvar dat, který web kreslí.
+ *
+ * NEJSOU to náhrady generovaných typů. Surové kolekce/globaly žijí v
+ * `@/payload-types` (generuje `pnpm generate:types`); datová vrstva
+ * (src/lib/payload.ts) z nich skládá tenhle normalizovaný tvar (children.docs,
+ * articles[], populovaný featuredImage.image, sloučené primary/secondary…).
+ *
+ * Části, které jen kopírují schéma (kategorie, `detail`), jsou proto ODVOZENÉ
+ * z generovaných typů, aby změna schématu shodila `tsc` a typy nezastaraly
+ * (žádný tichý drift).
+ */
+import type { Page as GeneratedPage, Article as GeneratedArticle } from '@/payload-types'
+
 export interface StrapiMedia {
   url: string
   alternativeText: string | null
@@ -47,12 +61,8 @@ export interface PageChild {
   children?: {
     docs: PageChild[]
   }
-  detail?: {
-    latitude?: string | null
-    longitude?: string | null
-    googleMapsZoom?: number | null
-    googleMapsAddress?: string | null
-  } | null
+  // Odvozeno ze schématu (superset — web čte jen latitude/longitude/zoom/adresu).
+  detail?: GeneratedPage['detail']
 }
 
 export interface RichTextRoot {
@@ -90,7 +100,7 @@ export interface Article {
   slug: string
   text: string | RichTextRoot
   attribution?: string | RichTextRoot | null
-  category: string
+  category: GeneratedArticle['category']
   publishedAt: string
   featuredImage: ArticleFeaturedImage | null
   mainPage?: ArticleMainPage | null
@@ -109,16 +119,8 @@ export interface Page {
     docs: PageChild[]
   }
   articles: Article[]
-  detail?: {
-    timezone?: string | null
-    currencyCode?: string | null
-    locative?: string | null
-    genitive?: string | null
-    latitude?: string | null
-    longitude?: string | null
-    googleMapsZoom?: number | null
-    googleMapsAddress?: string | null
-  } | null
+  // Odvozeno ze schématu (payload-types.ts) — nebude se rozcházet s CMS.
+  detail?: GeneratedPage['detail']
   createdBy?:
     | {
         username?: string | null
@@ -147,45 +149,6 @@ export interface PagesResponse {
   }
 }
 
-export interface StrapiEvent {
-  event: string
-  createdAt: string
-  model: string
-  uid: string
-  entry: PageEntry
-}
-
-interface PageEntry {
-  id: number
-  documentId: string
-  title: string
-  slug: string
-  category: string
-  text: string
-  createdAt: string
-  updatedAt: string
-  publishedAt: string
-  fullSlug: string
-  includeInChildUrlPaths: null
-  parent: PageParent
-  children: unknown[] // Array of page-like objects (incomplete structure)
-  featuredImage: null
-}
-
-interface PageParent {
-  id: number
-  documentId: string
-  title: string
-  slug: string
-  category: string
-  text: string
-  createdAt: string
-  updatedAt: string
-  publishedAt: string
-  fullSlug: string
-  includeInChildUrlPaths: boolean | null
-}
-
 export enum PageCategory {
   Misto_k_navstiveni = 'Místo k navštívení',
   Turisticky_cil = 'Turistický cíl',
@@ -204,6 +167,14 @@ export enum PageCategory {
   Rubrika = 'Rubrika',
   Staticka_stranka = 'Statická stránka',
 }
+
+// Anchor: hodnoty PageCategory MUSÍ existovat v generovaném schématu
+// (Page['category'] z payload-types.ts). Když se v CMS kategorie přejmenuje nebo
+// odebere, výraz se vyhodnotí jako `false` a `_AssertTrue<false>` shodí `tsc`.
+type _AssertTrue<T extends true> = T
+export type _PageCategoryMatchesSchema = _AssertTrue<
+  `${PageCategory}` extends GeneratedPage['category'] ? true : false
+>
 
 export interface FooterNavItem {
   label: string

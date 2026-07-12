@@ -47,6 +47,9 @@ export default buildConfig({
     user: Users.slug,
     importMap: {
       baseDir: path.resolve(dirname),
+      // Generovaný import map držíme jako .ts (pravidlo: zdroje Payloadu pod src
+      // jsou TypeScript). `payload generate:importmap` zapisuje na tuto cestu.
+      importMapFile: path.resolve(dirname, 'app/(payload)/admin/importMap.ts'),
     },
     components: {
       afterNavLinks: ['/components/DatabaseNav#DatabaseNav'],

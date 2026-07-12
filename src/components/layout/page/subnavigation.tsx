@@ -1,10 +1,7 @@
-import Link from "next/link";
-import { PageChild, PageCategory } from "@/types/payload";
+import Link from 'next/link'
+import { PageChild, PageCategory } from '@/types/payload'
 
-const hiddenCategories: string[] = [
-  PageCategory.Misto_k_navstiveni,
-  PageCategory.Turisticky_cil,
-];
+const hiddenCategories: string[] = [PageCategory.Misto_k_navstiveni, PageCategory.Turisticky_cil]
 
 // Categories considered as practical info for active-state highlighting.
 const practicalInfoCategories: string[] = [
@@ -16,7 +13,7 @@ const practicalInfoCategories: string[] = [
   PageCategory.Jazyk_a_kultura,
   PageCategory.Jidlo_a_pit,
   PageCategory.Ubytovani,
-];
+]
 
 const legacyMenuOrder: PageCategory[] = [
   PageCategory.Mista,
@@ -31,14 +28,14 @@ const legacyMenuOrder: PageCategory[] = [
   PageCategory.Clanky,
   PageCategory.Prakticke_informace,
   PageCategory.Ubytovani,
-];
+]
 
 const getLegacyMenuRank = (pageChild: PageChild): number => {
-  if (!pageChild.category) return Number.MAX_SAFE_INTEGER;
+  if (!pageChild.category) return Number.MAX_SAFE_INTEGER
 
-  const index = legacyMenuOrder.indexOf(pageChild.category as PageCategory);
-  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
-};
+  const index = legacyMenuOrder.indexOf(pageChild.category as PageCategory)
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index
+}
 
 export const Subnavigation = ({
   contextTitle,
@@ -52,107 +49,99 @@ export const Subnavigation = ({
   hasArticles,
   activeSection,
 }: {
-  contextTitle: string;
-  contextFullSlug: string;
-  pageChildren: PageChild[];
-  rootChildren: PageChild[];
-  currentPageFullSlug: string;
-  currentPageCategory?: PageCategory;
-  isSubPlace: boolean;
-  hasPlaces?: boolean;
-  hasArticles?: boolean;
+  contextTitle: string
+  contextFullSlug: string
+  pageChildren: PageChild[]
+  rootChildren: PageChild[]
+  currentPageFullSlug: string
+  currentPageCategory?: PageCategory
+  isSubPlace: boolean
+  hasPlaces?: boolean
+  hasArticles?: boolean
   /** Zvýrazní kotevní položku „Místa"/„Články" místo kontextu — použito na stránce článku. */
-  activeSection?: "mista" | "clanky";
+  activeSection?: 'mista' | 'clanky'
 }) => {
   // Když jsme na článku (activeSection nastaveno), nezvýrazňujeme kontext (Chorvatsko),
   // ale příslušnou sekci („Články").
-  const isContextActive =
-    !activeSection && currentPageFullSlug === contextFullSlug;
+  const isContextActive = !activeSection && currentPageFullSlug === contextFullSlug
 
   // "Místa"/"Články" scroll to sections that live on the context page. When we're on a
   // sub-page (e.g. Vstupní podmínky), link to the context page + hash so it navigates
   // to the Place (e.g. Chorvatsko) and scrolls to the section.
   const sectionHref = (hash: string) =>
-    isContextActive ? `#${hash}` : `${contextFullSlug}#${hash}`;
+    isContextActive ? `#${hash}` : `${contextFullSlug}#${hash}`
   const itemClass = (active: boolean) =>
     `px-3 py-4 tracking-wide transition-colors border-b-2 ${
       active
-        ? "text-[#287bbb] border-[#287bbb] font-bold"
-        : "text-gray-800 border-transparent hover:text-[#287bbb]"
-    }`;
+        ? 'text-[#287bbb] border-[#287bbb] font-bold'
+        : 'text-gray-800 border-transparent hover:text-[#287bbb]'
+    }`
 
   // Filter out hidden categories (Places, Tourist destinations) from menu
   const visibleChildren = pageChildren?.filter((child) => {
     if (child.category && hiddenCategories.includes(child.category)) {
-      return false;
+      return false
     }
     // If the context has its own "Praktické informace" child page,
     // we keep it out of the secondary menu.
     if (child.category === PageCategory.Prakticke_informace) {
-      return false;
+      return false
     }
-    return true;
-  });
+    // "Články" se zobrazují jako samostatná kotva (viz hasArticles níže) — dětskou
+    // stránku kategorie Články pak z menu skryjeme, ať se položka nezdvojí.
+    if (hasArticles && child.category === PageCategory.Clanky) {
+      return false
+    }
+    return true
+  })
 
   const sortedChildren = [...(visibleChildren || [])]
     .map((child, originalIndex) => ({ child, originalIndex }))
     .sort((a, b) => {
-      const rankDiff = getLegacyMenuRank(a.child) - getLegacyMenuRank(b.child);
-      if (rankDiff !== 0) return rankDiff;
+      const rankDiff = getLegacyMenuRank(a.child) - getLegacyMenuRank(b.child)
+      if (rankDiff !== 0) return rankDiff
 
-      return a.originalIndex - b.originalIndex;
+      return a.originalIndex - b.originalIndex
     })
-    .map(({ child }) => child);
+    .map(({ child }) => child)
 
   // If the current menu context already has its own "Praktické informace"
   // child page, we do not need to inject the ancestor/root fallback link.
   const hasOwnPracticalInfoChild = (pageChildren || []).some(
     (child) => child.category === PageCategory.Prakticke_informace,
-  );
+  )
 
   // On sub-places (like Dubrovník), find the root's "Praktické informace" page
   // to show as a single collapsed link instead of individual pages.
   const practicalInfoPage =
     isSubPlace && !hasOwnPracticalInfoChild
-      ? rootChildren?.find(
-          (child) => child.category === PageCategory.Prakticke_informace,
-        )
-      : null;
+      ? rootChildren?.find((child) => child.category === PageCategory.Prakticke_informace)
+      : null
 
   // Determine if the current page falls under "practical info" (for highlighting)
   const isCurrentPagePracticalInfo =
     isSubPlace &&
     currentPageCategory &&
     (practicalInfoCategories.includes(currentPageCategory) ||
-      currentPageCategory === PageCategory.Prakticke_informace);
+      currentPageCategory === PageCategory.Prakticke_informace)
 
   return (
     <div className="bg-white border-b border-gray-100 relative z-30 overflow-x-auto whitespace-nowrap">
       <div className="max-w-7xl mx-auto px-4 md:px-12">
         <div className="flex gap-0 justify-center text-xs md:text-base font-semibold font-heading">
           {/* Context page (the Place that owns this menu) */}
-          <Link
-            href={contextFullSlug}
-            className={`px-3 py-4 tracking-wide transition-colors border-b-2 ${
-              isContextActive
-                ? "text-[#287bbb] border-[#287bbb] font-bold"
-                : "text-gray-800 border-transparent hover:text-[#287bbb]"
-            }`}
-          >
+          <Link href={contextFullSlug} className={itemClass(isContextActive)}>
             {contextTitle}
           </Link>
 
           {/* Anchor to the context place's "Co vidět" section (on the context page). */}
           {hasPlaces &&
             (isContextActive ? (
-              <a href="#mista" className={itemClass(activeSection === "mista")}>
+              <a href="#mista" className={itemClass(activeSection === 'mista')}>
                 Místa
               </a>
             ) : (
-              <Link
-                href={sectionHref("mista")}
-                className={itemClass(activeSection === "mista")}
-              >
+              <Link href={sectionHref('mista')} className={itemClass(activeSection === 'mista')}>
                 Místa
               </Link>
             ))}
@@ -161,31 +150,19 @@ export const Subnavigation = ({
           {sortedChildren.map((pageChild) => {
             const isActive =
               currentPageFullSlug === pageChild.fullSlug ||
-              currentPageFullSlug.startsWith(pageChild.fullSlug + "/");
+              currentPageFullSlug.startsWith(pageChild.fullSlug + '/')
             return (
-              <Link
-                key={pageChild.id}
-                href={pageChild.fullSlug}
-                className={`px-3 py-4 tracking-wide transition-colors border-b-2 ${
-                  isActive
-                    ? "text-[#287bbb] border-[#287bbb] font-bold"
-                    : "text-gray-800 border-transparent hover:text-[#287bbb]"
-                }`}
-              >
+              <Link key={pageChild.id} href={pageChild.fullSlug} className={itemClass(isActive)}>
                 {pageChild.title}
               </Link>
-            );
+            )
           })}
 
           {/* On sub-places, show a single "Praktické informace" link from the root */}
           {isSubPlace && practicalInfoPage && (
             <Link
               href={practicalInfoPage.fullSlug}
-              className={`px-3 py-4 tracking-wide transition-colors border-b-2 ${
-                isCurrentPagePracticalInfo
-                  ? "text-[#287bbb] border-[#287bbb] font-bold"
-                  : "text-gray-800 border-transparent hover:text-[#287bbb]"
-              }`}
+              className={itemClass(!!isCurrentPagePracticalInfo)}
             >
               Praktické informace
             </Link>
@@ -195,22 +172,16 @@ export const Subnavigation = ({
               only if the context place has articles. */}
           {hasArticles &&
             (isContextActive ? (
-              <a
-                href="#clanky"
-                className={itemClass(activeSection === "clanky")}
-              >
+              <a href="#clanky" className={itemClass(activeSection === 'clanky')}>
                 Články
               </a>
             ) : (
-              <Link
-                href={sectionHref("clanky")}
-                className={itemClass(activeSection === "clanky")}
-              >
+              <Link href={sectionHref('clanky')} className={itemClass(activeSection === 'clanky')}>
                 Články
               </Link>
             ))}
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

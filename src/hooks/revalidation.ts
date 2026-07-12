@@ -1,4 +1,4 @@
-import { updateTag } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
@@ -18,7 +18,9 @@ import type {
 // skripty) ho tiše přeskočíme, aby nespadl např. generate:types.
 const safeRevalidate = (tags: string[]) => {
   try {
-    for (const tag of tags) updateTag(tag)
+    // expire: 0 → tag se zneplatní okamžitě. (updateTag je v Next 16 jen pro
+    // Server Actions; z Payload hooku by vyhodil chybu a invalidace by se ztratila.)
+    for (const tag of tags) revalidateTag(tag, { expire: 0 })
   } catch {
     /* mimo Next runtime */
   }

@@ -116,6 +116,71 @@ To build and run the production-optimized Docker image:
 
 ---
 
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in the values. Besides the database and
+storage credentials, the following variables drive user-visible features:
+
+| Variable                                                                                               | Required    | Used for                                                                            |
+| ------------------------------------------------------------------------------------------------------ | ----------- | ----------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`                                                                      | For maps    | Google Maps on place pages (public — ships to the browser).                         |
+| `OPENWEATHER_API_KEY`                                                                                  | For weather | Server-side key for the `/api/weather` endpoint (never exposed to the browser).     |
+| `NEXT_PUBLIC_SITE_URL`                                                                                 | Recommended | Public site URL for the sitemap and canonical links (default `https://www.ara.cz`). |
+| `PAYLOAD_BASE_API_URL`                                                                                 | Recommended | Base URL used to build absolute image URLs.                                         |
+| `NEXT_PUBLIC_PAYLOAD_BASE_URL`                                                                         | Recommended | Base URL used by header/footer logo images.                                         |
+| `NEXT_PUBLIC_ADSENSE_CLIENT`, `NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT`, `NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT_2` | Optional    | Google AdSense units in article listings.                                           |
+
+> `NEXT_PUBLIC_*` variables are inlined into the client bundle at build time and
+> are therefore public. Keep secrets (e.g. `OPENWEATHER_API_KEY`, `PAYLOAD_SECRET`)
+> **without** the `NEXT_PUBLIC_` prefix so they stay server-only.
+
+---
+
+## API Endpoints
+
+The app exposes a few JSON/utility routes under `/api` (in addition to Payload's
+own REST/GraphQL API under `/api/[...slug]` and `/api/graphql`).
+
+### `GET /api/health`
+
+Liveness probe for containers / uptime checks. Returns `200` with an empty body
+when the app is running (`503` on failure). No parameters.
+
+```bash
+curl -i http://localhost:3000/api/health
+```
+
+### `GET /api/search`
+
+Full-text search over page titles and text. The index is built at runtime from
+the Local API and cached with tags (see `src/lib/search.ts`); matching uses
+[Fuse.js](https://fusejs.io/).
+
+- Query param `q` — the search term (empty `q` returns no matches).
+- Response: `{ "success": true, "message": [ /* Fuse results */ ] }`.
+
+```bash
+curl 'http://localhost:3000/api/search?q=chorvatsko'
+```
+
+### `PUT /api/weather`
+
+Proxies the OpenWeather _One Call_ API for a given coordinate (keeps the API key
+server-side). Requires `OPENWEATHER_API_KEY`.
+
+- JSON body: `{ "lat": <number -90..90>, "lng": <number -180..180> }`.
+- Returns the upstream OpenWeather JSON (metric units, `minutely`/`alerts`
+  excluded). Responds `400` for invalid coordinates and `500` if the key is
+  missing or the upstream call fails.
+
+```bash
+curl -X PUT http://localhost:3000/api/weather \
+  -H 'Content-Type: application/json' \
+  -d '{"lat": 45.81, "lng": 15.98}'
+```
+
+---
+
 ## How it works
 
 The Payload config is tailored specifically for the project needs in `src/payload.config.ts`.

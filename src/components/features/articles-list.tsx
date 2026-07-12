@@ -1,36 +1,29 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { Article } from "@/types/payload";
-import { getArticleHref, getArticleKey } from "@/lib/utils";
-import { ArticleCard } from "./article-card";
+import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { Article } from '@/types/payload'
+import { getArticleHref, getArticleKey } from '@/lib/utils'
+import { ArticleCard } from './article-card'
 
 // Kolik článků přibude na první zobrazení i po každém kliknutí na „Zobrazit další".
 // Mřížka se používá pro rubriky → 8 = dvě plné řady čtyřsloupcové mřížky.
-const ARTICLES_STEP = 8;
+const ARTICLES_STEP = 8
 
 interface ArticlesProps {
-  articles: Article[];
-  parentFullSlug?: string;
+  articles: Article[]
+  parentFullSlug?: string
 }
 
-export const ArticlesList = ({
-  articles: articlesProp,
-  parentFullSlug,
-}: ArticlesProps) => {
-  const [visibleCount, setVisibleCount] = useState(ARTICLES_STEP);
+export const ArticlesList = ({ articles: articlesProp, parentFullSlug }: ArticlesProps) => {
+  const [visibleCount, setVisibleCount] = useState(ARTICLES_STEP)
 
   // Ensure we have an array even if Payload returns a single object (due to relation type)
-  const articles = Array.isArray(articlesProp)
-    ? articlesProp
-    : articlesProp
-      ? [articlesProp]
-      : [];
+  const articles = Array.isArray(articlesProp) ? articlesProp : articlesProp ? [articlesProp] : []
 
-  if (articles.length === 0) return null;
+  if (articles.length === 0) return null
 
-  const hasMore = visibleCount < articles.length;
+  const hasMore = visibleCount < articles.length
 
   // Nadpis/podtitulek zde nejsou — mřížka se používá na stránkách rubrik,
   // kde stránka sama je „Reportáže a cestopisy" apod., takže by byly redundantní.
@@ -47,9 +40,9 @@ export const ArticlesList = ({
                 key={getArticleKey(article, index)}
                 article={article}
                 href={getArticleHref(article, parentFullSlug)}
-                className={index >= visibleCount ? "hidden" : undefined}
+                className={index >= visibleCount ? 'hidden' : undefined}
               />
-            );
+            )
           })}
         </div>
 
@@ -67,5 +60,5 @@ export const ArticlesList = ({
         )}
       </div>
     </section>
-  );
-};
+  )
+}

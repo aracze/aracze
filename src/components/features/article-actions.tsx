@@ -1,25 +1,21 @@
-"use client";
+'use client'
 
-import { MessageCircle, Facebook } from "lucide-react";
+import { MessageCircle, Facebook } from 'lucide-react'
 
 /**
  * Comment count + "Vložit komentář" + "Sdílet" action row at the end of an article.
  * Mirrors the legacy `.article-action` bar. Comments are not wired up yet — the
  * comment items are static placeholders (no navigation); sharing opens the FB dialog.
  */
-export function ArticleActions({
-  commentCount = 0,
-}: {
-  commentCount?: number;
-}) {
+export function ArticleActions({ commentCount = 0 }: { commentCount?: number }) {
   const share = () => {
-    const url = encodeURIComponent(window.location.href);
+    const url = encodeURIComponent(window.location.href)
     window.open(
       `https://www.facebook.com/sharer/sharer.php?u=${url}`,
-      "_blank",
-      "noopener,noreferrer,width=626,height=436",
-    );
-  };
+      '_blank',
+      'noopener,noreferrer,width=626,height=436',
+    )
+  }
 
   return (
     <div className="mt-6 flex items-center justify-between border-y border-[#2c3643] py-2.5">
@@ -29,16 +25,18 @@ export function ArticleActions({
           <MessageCircle className="h-5 w-5" strokeWidth={1.5} />
           <span className="text-black">{commentCount}</span>
         </span>
-        <span className="text-xs font-bold uppercase tracking-wide text-black/70 opacity-80">
+        <button
+          type="button"
+          disabled
+          className="text-xs font-bold uppercase tracking-wide text-black/70 opacity-80"
+        >
           Vložit komentář
-        </span>
+        </button>
       </div>
 
       {/* Share */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-wide text-[#99a9b3]">
-          Sdílet
-        </span>
+        <span className="text-xs font-bold uppercase tracking-wide text-[#99a9b3]">Sdílet</span>
         <button
           type="button"
           onClick={share}
@@ -49,5 +47,5 @@ export function ArticleActions({
         </button>
       </div>
     </div>
-  );
+  )
 }

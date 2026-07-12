@@ -7,10 +7,10 @@ import {
   Homepage,
   GlobalFooter,
 } from '@/types/payload'
-import { getPayload, type Payload } from 'payload'
-import config from '@payload-config'
+import { type Payload } from 'payload'
 import { unstable_cache } from 'next/cache'
 import { cache } from 'react'
+import { getDb } from './db'
 import { isProduction } from './utils'
 
 /**
@@ -25,21 +25,12 @@ import { isProduction } from './utils'
  * invaliduje okamžitě přes revalidateTag v afterChange hoocích (viz
  * src/hooks/revalidation.ts). Ve vývoji se cache obchází (čerstvá data).
  *
+ * Payload instance se sdílí přes singleton getDb (viz src/lib/db.ts).
+ *
  * Pozn.: media dokumenty se NIKDY neořezávají přes select/populate — cloudinary
  * plugin počítá `url` v afterRead hooku z ostatních polí; s ořezanými poli by
  * vracel url: null a obrázky by zmizely (ověřeno dřív na REST).
  */
-
-// Globální singleton Payload instance. getPayload má vlastní cache, ale v dev
-// s Turbopackem se moduly izolují a init se opakoval při každém požadavku
-// (schema pull + connect = desítky sekund). Držíme instanci na globalThis.
-const __g = globalThis as unknown as { __araPayload?: Promise<Payload> }
-const getDb = (): Promise<Payload> => {
-  if (!__g.__araPayload) {
-    __g.__araPayload = getPayload({ config })
-  }
-  return __g.__araPayload
-}
 
 /** Obal: v produkci cache s tagy (revalidace hooky), ve vývoji přímé volání. */
 function cached<A extends unknown[], R>(
@@ -188,8 +179,10 @@ async function fetchRootPagesUncached(): Promise<PagesResponse> {
         joins: false,
       })
       .then((r) => r.docs as unknown as RawPayloadPage[]),
-    payload.findGlobal({ slug: 'header', overrideAccess: false }).catch(() => null),
-    payload.findGlobal({ slug: 'homepage', overrideAccess: false }).catch(() => null),
+    // Bez .catch — případná chyba DB musí propadnout ven z cache (viz komentář
+    // výše), jinak by se do cache zapekl null header/homepage.
+    payload.findGlobal({ slug: 'header', overrideAccess: false }),
+    payload.findGlobal({ slug: 'homepage', overrideAccess: false }),
   ])
 
   // Děti kořenových stránek (rozbalovací menu) jedním hromadným dotazem —
@@ -197,18 +190,16 @@ async function fetchRootPagesUncached(): Promise<PagesResponse> {
   const childrenByParent = new Map<number | string, PageChild[]>()
   const rootIds = rootRes.map((p) => p.id).filter((id) => id != null)
   if (rootIds.length > 0) {
-    const kids = await payload
-      .find({
-        overrideAccess: false,
-        collection: 'pages',
-        where: { parent: { in: rootIds } },
-        limit: 0,
-        pagination: false,
-        depth: 0,
-        select: MENU_CHILD_SELECT,
-        joins: false,
-      })
-      .catch(() => ({ docs: [] }))
+    const kids = await payload.find({
+      overrideAccess: false,
+      collection: 'pages',
+      where: { parent: { in: rootIds } },
+      limit: 0,
+      pagination: false,
+      depth: 0,
+      select: MENU_CHILD_SELECT,
+      joins: false,
+    })
     for (const doc of kids.docs as unknown as Array<PageChild & { parent?: unknown }>) {
       const pid = relationId(doc.parent)
       if (pid == null) continue
@@ -223,8 +214,8 @@ async function fetchRootPagesUncached(): Promise<PagesResponse> {
     subPages: { docs: childrenByParent.get(p.id) ?? [] },
   }))
 
-  const header = headerRes as Record<string, unknown> | null
-  const homepage = homepageRes as Record<string, unknown> | null
+  const header = headerRes as unknown as Record<string, unknown> | null
+  const homepage = homepageRes as unknown as Record<string, unknown> | null
 
   return {
     data: {
@@ -291,6 +282,59 @@ async function enrichFeaturedImages<T extends { featuredImage?: { image?: unknow
   })
 }
 
+/**
+ * Dopopuluje obrázky v `contentImage` blocích rich-textu. Detail se tahá s
+ * `depth: 0` (kvůli výkonu), takže upload relace UVNITŘ textu zůstávají jako
+ * pouhá ID a `richTextToHtml` je zahodí (`if (!image?.url) return ''`). Stejně
+ * jako u featuredImage je tedy dohledáme hromadně jedním dotazem a vložíme zpět
+ * celý media dokument (kvůli url + alt + atribuci; media se NESMÍ ořezávat
+ * selectem, jinak cloudinary plugin vrátí url: null).
+ */
+async function enrichRichTextImages<T>(text: T): Promise<T> {
+  if (!text || typeof text !== 'object') return text
+
+  const ids = new Set<number>()
+  const collect = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      node.forEach(collect)
+      return
+    }
+    if (node && typeof node === 'object') {
+      const fields = (node as Record<string, unknown>).fields as Record<string, unknown> | undefined
+      if (fields?.blockType === 'contentImage' && typeof fields.image === 'number') {
+        ids.add(fields.image)
+      }
+      for (const value of Object.values(node as Record<string, unknown>)) collect(value)
+    }
+  }
+  collect(text)
+  if (ids.size === 0) return text
+
+  const mediaMap = await fetchMediaByIds([...ids])
+  if (mediaMap.size === 0) return text
+
+  const rebuild = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(rebuild)
+    if (node && typeof node === 'object') {
+      const out: Record<string, unknown> = {}
+      for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+        out[key] = rebuild(value)
+      }
+      const fields = out.fields as Record<string, unknown> | undefined
+      if (
+        fields?.blockType === 'contentImage' &&
+        typeof fields.image === 'number' &&
+        mediaMap.has(fields.image)
+      ) {
+        out.fields = { ...fields, image: mediaMap.get(fields.image) }
+      }
+      return out
+    }
+    return node
+  }
+  return rebuild(text) as T
+}
+
 /** Id z relace, která může být číslo nebo populovaný objekt. */
 function relationId(value: unknown): number | string | null {
   if (typeof value === 'number' || typeof value === 'string') return value
@@ -312,7 +356,6 @@ async function resolvePageAuthorPublic(
       collection: 'users',
       id: authorId,
       depth: 0,
-      joins: false,
       overrideAccess: false,
       select: { username: true, firstName: true, lastName: true, avatar: true },
     })) as unknown as {
@@ -372,7 +415,6 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
       joins: false,
     })
     .then((res) => res as unknown as PayloadDocsResponse<PageChild>)
-    .catch(() => ({ docs: [] }) as PayloadDocsResponse<PageChild>)
 
   const [pageRes, childrenRes] = (await Promise.all([pagePromise, childrenPromise])) as [
     PayloadDocsResponse<RawPayloadPage>,
@@ -384,22 +426,20 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
     return { data: { pages: [] } }
   }
 
-  const articlesRes = (await payload
-    .find({
-      overrideAccess: false,
-      collection: 'articles',
-      where: {
-        or: [{ mainPage: { equals: raw.id } }, { pages: { in: [raw.id] } }],
-      },
-      limit: 100,
-      // depth 0: mainPage stačí jako id (třídění přes relationId) a obrázky
-      // karet dořeší enrichFeaturedImages. depth 1 by populoval mainPage jako
-      // celé pages dokumenty VČETNĚ vyhodnocení jejich joinů (sekundy navíc).
-      depth: 0,
-      select: PAGE_ARTICLES_SELECT,
-      joins: false,
-    })
-    .catch(() => ({ docs: [] }))) as unknown as PayloadDocsResponse<Article>
+  const articlesRes = (await payload.find({
+    overrideAccess: false,
+    collection: 'articles',
+    where: {
+      or: [{ mainPage: { equals: raw.id } }, { pages: { in: [raw.id] } }],
+    },
+    limit: 100,
+    // depth 0: mainPage stačí jako id (třídění přes relationId) a obrázky
+    // karet dořeší enrichFeaturedImages. depth 1 by populoval mainPage jako
+    // celé pages dokumenty VČETNĚ vyhodnocení jejich joinů (sekundy navíc).
+    depth: 0,
+    select: PAGE_ARTICLES_SELECT,
+    joins: false,
+  })) as unknown as PayloadDocsResponse<Article>
 
   // Roztřídění článků: primární (mainPage = tato stránka) první — stejné
   // pořadí jako primaryArticles/secondaryArticles joiny.
@@ -418,16 +458,20 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
     secondaryArticles: { docs: secondary },
   })
 
-  const [enrichedPageArr, enrichedArticles, enrichedChildren, createdByPublic] = await Promise.all([
-    enrichFeaturedImages([match]),
-    enrichFeaturedImages(match.articles),
-    enrichFeaturedImages(match.children.docs),
-    resolvePageAuthorPublic(payload, (raw as { createdBy?: unknown }).createdBy),
-  ])
+  const [enrichedPageArr, enrichedArticles, enrichedChildren, createdByPublic, enrichedText] =
+    await Promise.all([
+      enrichFeaturedImages([match]),
+      enrichFeaturedImages(match.articles),
+      enrichFeaturedImages(match.children.docs),
+      resolvePageAuthorPublic(payload, (raw as { createdBy?: unknown }).createdBy),
+      // Obrázky v těle stránky (contentImage bloky) — depth 0 je nepopuluje.
+      enrichRichTextImages((match as { text?: unknown }).text),
+    ])
 
   const enrichedPage = enrichedPageArr[0] as Page
   enrichedPage.articles = enrichedArticles
   enrichedPage.children = { docs: enrichedChildren }
+  ;(enrichedPage as { text?: unknown }).text = enrichedText
   if (createdByPublic) {
     enrichedPage.createdByPublic = createdByPublic
   }
@@ -473,7 +517,7 @@ async function fetchArticleBySlugUncached(
   if (!raw) return { data: { articles: [] } }
 
   const mainPageId = relationId(raw.mainPage)
-  const [enriched, mainPageDoc] = await Promise.all([
+  const [enriched, mainPageDoc, enrichedText] = await Promise.all([
     enrichFeaturedImages([raw]),
     mainPageId != null
       ? payload
@@ -487,9 +531,15 @@ async function fetchArticleBySlugUncached(
           })
           .catch(() => null)
       : Promise.resolve(null),
+    // Obrázky v těle (contentImage bloky) — depth 0 je nepopuluje, dohledáme je.
+    enrichRichTextImages(raw.text),
   ])
 
-  const article = { ...enriched[0], mainPage: mainPageDoc ?? null } as unknown as Article
+  const article = {
+    ...enriched[0],
+    text: enrichedText,
+    mainPage: mainPageDoc ?? null,
+  } as unknown as Article
   return { data: { articles: [article] } }
 }
 
@@ -543,17 +593,15 @@ async function fetchPageLightByFullSlugUncached(
       select: ANCESTOR_SELECT,
       joins: false,
     }),
-    payload
-      .find({
-        overrideAccess: false,
-        collection: 'pages',
-        where: { 'parent.fullSlug': { equals: fullSlug } },
-        limit: 100,
-        depth: 0,
-        select: MENU_SELECT,
-        joins: false,
-      })
-      .catch(() => ({ docs: [] })),
+    payload.find({
+      overrideAccess: false,
+      collection: 'pages',
+      where: { 'parent.fullSlug': { equals: fullSlug } },
+      limit: 100,
+      depth: 0,
+      select: MENU_SELECT,
+      joins: false,
+    }),
   ])
   const raw = res.docs?.[0] as unknown as RawPayloadPage | undefined
   const match = raw
@@ -601,7 +649,9 @@ const pageHasArticlesBySlugCached = cached(
 
 export const pageHasArticlesBySlug = cache(async (fullSlug: string): Promise<boolean> => {
   try {
-    return await pageHasArticlesBySlugCached(fullSlug)
+    // Normalizace na vedoucí lomítko — cache tag `page_<slug>_articles` musí
+    // odpovídat tomu, který invaliduje revalidace (doc.fullSlug s lomítkem).
+    return await pageHasArticlesBySlugCached(ensureCorrectFullSlug(fullSlug))
   } catch {
     return false
   }
@@ -667,6 +717,34 @@ export async function fetchMediaUrlsByIds(ids: number[]): Promise<Map<number, st
     }
   } catch {
     // bez URL — karty zobrazí placeholder
+  }
+  return map
+}
+
+/**
+ * Jako `fetchMediaUrlsByIds`, ale vrací CELÉ media dokumenty (url + alt +
+ * atribuce). Používá `enrichRichTextImages` pro obrázky v těle článku, kde
+ * `richTextToHtml` potřebuje víc než jen url. Bez `select` (ořez by cloudinary
+ * pluginu shodil url na null).
+ */
+async function fetchMediaByIds(ids: number[]): Promise<Map<number, Record<string, unknown>>> {
+  const map = new Map<number, Record<string, unknown>>()
+  if (ids.length === 0) return map
+  try {
+    const payload = await getDb()
+    const res = await payload.find({
+      overrideAccess: false,
+      collection: 'media',
+      where: { id: { in: ids } },
+      limit: ids.length,
+      depth: 0,
+    })
+    for (const doc of res.docs || []) {
+      const d = doc as unknown as { id: number; url?: string | null }
+      if (d.url) map.set(d.id, d as Record<string, unknown>)
+    }
+  } catch {
+    // bez médií — obrázky se prostě nevykreslí (jako dosud)
   }
   return map
 }

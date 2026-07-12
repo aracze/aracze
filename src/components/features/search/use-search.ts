@@ -1,36 +1,45 @@
-import { useState, useEffect } from "react";
-import type { FuseResult } from "fuse.js";
-import type { SearchItem } from "@/types/search";
+import { useState, useEffect } from 'react'
+import type { FuseResult } from 'fuse.js'
+import type { SearchItem } from '@/types/search'
 
 export function useSearch() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<FuseResult<SearchItem>[]>([]);
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<FuseResult<SearchItem>[]>([])
 
   useEffect(() => {
+    // Zrušíme rozběhnutý požadavek při změně dotazu / odmountování — jinak by
+    // opožděná (zastaralá) odpověď mohla přepsat výsledky novějšího dotazu.
+    const controller = new AbortController()
     const fetchResults = async () => {
       if (query.length > 0) {
         try {
-          const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-          const data = await res.json();
+          const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+            signal: controller.signal,
+          })
+          const data = await res.json()
           if (data.success) {
-            setResults(data.message);
+            setResults(data.message)
           }
         } catch (error) {
-          console.error("Search fetch error:", error);
+          if ((error as Error)?.name === 'AbortError') return
+          console.error('Search fetch error:', error)
         }
       } else {
-        setResults([]);
+        setResults([])
       }
-    };
+    }
 
-    const timer = setTimeout(fetchResults, 300);
-    return () => clearTimeout(timer);
-  }, [query]);
+    const timer = setTimeout(fetchResults, 300)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [query])
 
   const clearSearch = () => {
-    setQuery("");
-    setResults([]);
-  };
+    setQuery('')
+    setResults([])
+  }
 
-  return { query, setQuery, results, setResults, clearSearch };
+  return { query, setQuery, results, setResults, clearSearch }
 }

@@ -1,51 +1,51 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
-import { X } from "lucide-react";
-import { ResultList } from "./resultlist/resultlist";
-import { useSearch } from "./use-search";
-import { SearchGraphic } from "./search-graphic";
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import { X } from 'lucide-react'
+import { ResultList } from './resultlist/resultlist'
+import { useSearch } from './use-search'
+import { SearchGraphic } from './search-graphic'
 
 export function HeaderSearch() {
-  const { query, setQuery, results, clearSearch } = useSearch();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const { query, setQuery, results, clearSearch } = useSearch()
+  const [isExpanded, setIsExpanded] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const handleClear = useCallback(() => {
-    clearSearch();
-    setIsExpanded(false);
-  }, [clearSearch]);
+    clearSearch()
+    setIsExpanded(false)
+  }, [clearSearch])
 
   // Focus management
   useEffect(() => {
     if (isExpanded && inputRef.current) {
-      inputRef.current.focus();
+      inputRef.current.focus()
     }
-  }, [isExpanded]);
+  }, [isExpanded])
 
   // Scroll lock
   useEffect(() => {
     if (isExpanded) {
-      document.body.style.overflow = "hidden";
+      document.body.style.overflow = 'hidden'
     } else {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = 'unset'
     }
     return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isExpanded]);
+      document.body.style.overflow = 'unset'
+    }
+  }, [isExpanded])
 
   // Escape key to close
   useEffect(() => {
     const handleEscapeKeyup = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        handleClear();
+      if (event.key === 'Escape') {
+        handleClear()
       }
-    };
-    document.addEventListener("keyup", handleEscapeKeyup);
+    }
+    document.addEventListener('keyup', handleEscapeKeyup)
     return () => {
-      document.removeEventListener("keyup", handleEscapeKeyup);
-    };
-  }, [handleClear]);
+      document.removeEventListener('keyup', handleEscapeKeyup)
+    }
+  }, [handleClear])
 
   return (
     <div className="flex items-center">
@@ -60,18 +60,13 @@ export function HeaderSearch() {
       {isExpanded &&
         createPortal(
           <div className="fixed inset-0 z-[300] animate-in fade-in duration-200">
-            <div
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-              onClick={handleClear}
-            />
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClear} />
             <div className="relative bg-white shadow-2xl animate-in slide-in-from-top-4 duration-300">
               <div className="max-w-7xl mx-auto px-4 md:px-12 py-4 flex items-center gap-4">
-                <SearchGraphic
-                  className="w-6 h-6 text-gray-400 shrink-0"
-                  strokeWidth={2.5}
-                />
+                <SearchGraphic className="w-6 h-6 text-gray-400 shrink-0" strokeWidth={2.5} />
                 <input
                   ref={inputRef}
+                  aria-label="Hledat"
                   placeholder="Hledat..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -79,31 +74,20 @@ export function HeaderSearch() {
                 />
                 <div className="hidden md:flex items-center gap-4 border-l border-gray-100 pl-6">
                   <button
-                    onClick={() => {}}
-                    className="text-xs font-bold text-gray-400 hover:text-[#215491] transition-colors uppercase tracking-widest"
-                  >
-                    Hledat vše
-                  </button>
-                  <button
                     onClick={handleClear}
+                    aria-label="Zavřít vyhledávání"
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
                   >
                     <X className="w-6 h-6" strokeWidth={2.5} />
                   </button>
                 </div>
-                <button
-                  onClick={handleClear}
-                  className="md:hidden p-2 text-gray-400"
-                >
+                <button onClick={handleClear} className="md:hidden p-2 text-gray-400">
                   <X className="w-6 h-6" strokeWidth={2.5} />
                 </button>
               </div>
               {(query.length > 0 || results.length > 0) && (
                 <div className="max-w-7xl mx-auto px-4 md:px-12 pb-8">
-                  <ResultList
-                    results={results}
-                    handleLinkClicked={handleClear}
-                  />
+                  <ResultList results={results} handleLinkClicked={handleClear} />
                 </div>
               )}
             </div>
@@ -111,5 +95,5 @@ export function HeaderSearch() {
           document.body,
         )}
     </div>
-  );
+  )
 }

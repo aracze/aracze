@@ -1,8 +1,8 @@
-import Image from "next/image";
+import Image from 'next/image'
 
 interface StaticHeroImageProps {
-  imageUrl: string | null;
-  styleCss?: string;
+  imageUrl: string | null
+  styleCss?: string
 }
 
 /**
@@ -11,22 +11,19 @@ interface StaticHeroImageProps {
  * i holé `50% 42%`. Prázdné / nerozpoznané → střed.
  */
 function parseObjectPosition(styleCss?: string): string {
-  if (!styleCss) return "50% 50%";
+  if (!styleCss) return '50% 50%'
   const pos = styleCss
-    .replace(/(?:background|object)-position\s*:\s*/i, "")
-    .replace(/;/g, "")
-    .trim();
+    .replace(/(?:background|object)-position\s*:\s*/i, '')
+    .replace(/;/g, '')
+    .trim()
   // Zbyla-li dvojtečka, šlo o jinou/nevalidní vlastnost → radši střed.
-  if (!pos || pos.includes(":")) return "50% 50%";
-  return pos;
+  if (!pos || pos.includes(':')) return '50% 50%'
+  return pos
 }
 
-export const StaticHeroImage = ({
-  imageUrl,
-  styleCss,
-}: StaticHeroImageProps) => {
+export const StaticHeroImage = ({ imageUrl, styleCss }: StaticHeroImageProps) => {
   // Bez obrázku necháme prosvítat tmavé pozadí sekce (bg-[#3b444f]).
-  if (!imageUrl) return null;
+  if (!imageUrl) return null
 
   return (
     <Image
@@ -40,5 +37,5 @@ export const StaticHeroImage = ({
       className="object-cover transition-transform duration-[10000ms] hover:scale-105"
       style={{ objectPosition: parseObjectPosition(styleCss) }}
     />
-  );
-};
+  )
+}

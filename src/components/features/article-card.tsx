@@ -1,9 +1,9 @@
-import React from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { Article } from "@/types/payload";
-import { cn, getArticleExcerpt, getArticleImageUrl } from "@/lib/utils";
-import { isCloudinary } from "@/lib/cloudinary-loader";
+import React from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Article } from '@/types/payload'
+import { cn, getArticleExcerpt, getArticleImageUrl } from '@/lib/utils'
+import { isCloudinary } from '@/lib/cloudinary-loader'
 
 /** Single article card used in listings (recommended articles, rubric pages). */
 export function ArticleCard({
@@ -11,18 +11,18 @@ export function ArticleCard({
   href,
   className,
 }: {
-  article: Article;
-  href: string;
-  className?: string;
+  article: Article
+  href: string
+  className?: string
 }) {
-  const articleText = getArticleExcerpt(article);
-  const imageUrl = getArticleImageUrl(article);
+  const articleText = getArticleExcerpt(article)
+  const imageUrl = getArticleImageUrl(article)
 
   return (
     <Link
       href={href}
       className={cn(
-        "group flex flex-col bg-white rounded-3xl overflow-hidden border border-gray-100/50 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] transition-all duration-500 transform hover:-translate-y-2",
+        'group flex flex-col bg-white rounded-3xl overflow-hidden border border-gray-100/50 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] transition-all duration-500 transform hover:-translate-y-2',
         className,
       )}
     >
@@ -71,5 +71,5 @@ export function ArticleCard({
         </div>
       </div>
     </Link>
-  );
+  )
 }

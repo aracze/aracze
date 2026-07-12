@@ -35,6 +35,11 @@ export function CollapsiblePageTextWithContributor({
   contributor,
   collapsible = true,
 }: {
+  /**
+   * BEZPEČNOST: HTML se vkládá přes dangerouslySetInnerHTML. Volající MUSÍ předat
+   * už sanitizovaný HTML (typicky z `richTextToHtml`, který volá DOMPurify).
+   * Nikdy sem neposílej neošetřený vstup od uživatele.
+   */
   textHtml: string
   contributor?: Contributor | null
   /** Sbalování textu + „zobrazit více" — jen na stránkách „Místo k navštívení". */

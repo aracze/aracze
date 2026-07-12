@@ -1,31 +1,31 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { Article } from "@/types/payload";
+import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Article } from '@/types/payload'
 import {
   cn,
   getArticleExcerpt,
   getArticleHref,
   getArticleImageUrl,
   getArticleKey,
-} from "@/lib/utils";
-import { isCloudinary } from "@/lib/cloudinary-loader";
-import { ArticleAd, AdSenseScript } from "./article-ad";
+} from '@/lib/utils'
+import { isCloudinary } from '@/lib/cloudinary-loader'
+import { ArticleAd, AdSenseScript } from './article-ad'
 
 // Klasický (vertikální) layout článků — podobný původnímu webu: články pod sebou
 // (titulek + perex vlevo, náhled vpravo), vedle nich reklamní sloupec.
 // Moderní prvky (zoom náhledu, zakulacení) zachovány. Existuje vedle mřížkové
 // varianty `ArticlesList` pro porovnání.
-const ARTICLES_STEP = 3;
+const ARTICLES_STEP = 3
 
 interface ArticlesProps {
-  articles: Article[];
-  parentFullSlug?: string;
+  articles: Article[]
+  parentFullSlug?: string
   /** Lokativ destinace z `page.detail.locative` (např. „v Chorvatsku", „na Slovensku"). */
-  destinationLocative?: string | null;
+  destinationLocative?: string | null
 }
 
 export const ArticlesListClassic = ({
@@ -33,22 +33,18 @@ export const ArticlesListClassic = ({
   parentFullSlug,
   destinationLocative,
 }: ArticlesProps) => {
-  const [visibleCount, setVisibleCount] = useState(ARTICLES_STEP);
+  const [visibleCount, setVisibleCount] = useState(ARTICLES_STEP)
 
-  const articles = Array.isArray(articlesProp)
-    ? articlesProp
-    : articlesProp
-      ? [articlesProp]
-      : [];
+  const articles = Array.isArray(articlesProp) ? articlesProp : articlesProp ? [articlesProp] : []
 
-  if (articles.length === 0) return null;
+  if (articles.length === 0) return null
 
-  const hasMore = visibleCount < articles.length;
+  const hasMore = visibleCount < articles.length
 
-  const place = destinationLocative?.replace(/^(ve?|na)\s+/i, "").trim();
+  const place = destinationLocative?.replace(/^(ve?|na)\s+/i, '').trim()
   const subtitle = place
     ? `Zážitky, tipy a inspirace z cestování po ${place}.`
-    : "Zážitky, tipy a inspirace z cestování.";
+    : 'Zážitky, tipy a inspirace z cestování.'
 
   return (
     <section id="clanky" className="w-full py-16 bg-white">
@@ -58,9 +54,7 @@ export const ArticlesListClassic = ({
             Články a cestopisy
           </h2>
           <div className="w-[30px] h-[1px] bg-[#215491] rounded-full mb-5"></div>
-          <p className="text-[17px] text-gray-400 max-w-xl leading-relaxed">
-            {subtitle}
-          </p>
+          <p className="text-[17px] text-gray-400 max-w-xl leading-relaxed">{subtitle}</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-16">
@@ -68,17 +62,17 @@ export const ArticlesListClassic = ({
               přebytek schováme přes `hidden` (obrázky se načtou až po „zobrazit další"). */}
           <div className="flex-1 flex flex-col gap-8">
             {articles.map((article, index) => {
-              const href = getArticleHref(article, parentFullSlug);
-              const excerpt = getArticleExcerpt(article);
-              const imageUrl = getArticleImageUrl(article);
+              const href = getArticleHref(article, parentFullSlug)
+              const excerpt = getArticleExcerpt(article)
+              const imageUrl = getArticleImageUrl(article)
 
               return (
                 <Link
                   key={getArticleKey(article, index)}
                   href={href}
                   className={cn(
-                    "group flex flex-col sm:flex-row gap-6 items-stretch bg-white rounded-3xl border border-gray-100/50 p-5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] transition-all duration-500 transform hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)]",
-                    index >= visibleCount && "hidden",
+                    'group flex flex-col sm:flex-row gap-6 items-stretch bg-white rounded-3xl border border-gray-100/50 p-5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] transition-all duration-500 transform hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)]',
+                    index >= visibleCount && 'hidden',
                   )}
                 >
                   <div className="flex-1 order-2 sm:order-1 flex flex-col justify-center">
@@ -112,7 +106,7 @@ export const ArticlesListClassic = ({
                     )}
                   </div>
                 </Link>
-              );
+              )
             })}
           </div>
 
@@ -137,5 +131,5 @@ export const ArticlesListClassic = ({
         )}
       </div>
     </section>
-  );
-};
+  )
+}

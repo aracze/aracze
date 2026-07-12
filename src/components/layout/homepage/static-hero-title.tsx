@@ -1,4 +1,4 @@
-import Search from "@/components/features/search/search";
+import Search from '@/components/features/search/search'
 
 export const StaticHeroTitle = ({ title }: { title: string }) => {
   return (
@@ -12,5 +12,5 @@ export const StaticHeroTitle = ({ title }: { title: string }) => {
         <Search variant="homepage" />
       </div>
     </div>
-  );
-};
+  )
+}

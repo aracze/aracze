@@ -11,7 +11,11 @@
  */
 export default function LoadingSlugPage() {
   return (
-    <div className="flex flex-col bg-white animate-pulse">
+    <div
+      role="status"
+      aria-label="Načítání stránky"
+      className="flex flex-col bg-white animate-pulse"
+    >
       {/* Hero (stejná výška jako HeroSection) */}
       <div className="relative w-full h-[315px] bg-[#3b444f]/80">
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">

@@ -1,18 +1,18 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { isCloudinary } from "@/lib/cloudinary-loader";
+import React, { useState } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { isCloudinary } from '@/lib/cloudinary-loader'
 
 interface ExpandableTouristPointProps {
-  id: string | number;
-  title: string;
-  fullSlug: string;
-  imageUrl: string | null;
-  previewText: string;
-  fullHtml: string;
-  hasMoreContent: boolean;
+  id: string | number
+  title: string
+  fullSlug: string
+  imageUrl: string | null
+  previewText: string
+  fullHtml: string
+  hasMoreContent: boolean
 }
 
 export function ExpandableTouristPoint({
@@ -24,7 +24,7 @@ export function ExpandableTouristPoint({
   fullHtml,
   hasMoreContent,
 }: ExpandableTouristPointProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false)
 
   return (
     <article data-poiid={id} className="poi-article group">
@@ -70,22 +70,19 @@ export function ExpandableTouristPoint({
         <div className="flex items-center gap-4 flex-wrap">
           {hasMoreContent && (
             <button
+              type="button"
               onClick={() => setExpanded((v) => !v)}
               className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#1a3f6c] hover:text-[#d45145] transition-colors"
             >
-              {expanded ? "Zobrazit méně" : "Zobrazit více"}
+              {expanded ? 'Zobrazit méně' : 'Zobrazit více'}
               <svg
-                className={`w-4 h-4 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                className={`w-4 h-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
                 strokeWidth={2}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 9l-7 7-7-7"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
           )}
@@ -112,5 +109,5 @@ export function ExpandableTouristPoint({
         </div>
       </div>
     </article>
-  );
+  )
 }

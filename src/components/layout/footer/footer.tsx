@@ -1,21 +1,21 @@
-import Link from "next/link";
-import Image from "next/image";
-import { fetchFooter } from "@/lib/payload";
-import { ImageLink } from "@/types/payload";
-import { richTextToHtml } from "@/lib/utils";
-import { isCloudinary } from "@/lib/cloudinary-loader";
+import Link from 'next/link'
+import Image from 'next/image'
+import { fetchFooter } from '@/lib/payload'
+import { ImageLink } from '@/types/payload'
+import { richTextToHtml } from '@/lib/utils'
+import { isCloudinary } from '@/lib/cloudinary-loader'
 
-import DOMPurify from "isomorphic-dompurify";
+import DOMPurify from 'isomorphic-dompurify'
 
 function FooterLogo({ logo }: { logo: ImageLink }) {
   if (logo.svgCode) {
     const sanitizedSvg = DOMPurify.sanitize(logo.svgCode, {
       USE_PROFILES: { svg: true },
-    });
+    })
 
     return (
       <Link
-        href={logo.link?.href ?? "/"}
+        href={logo.link?.href ?? '/'}
         className="flex items-center shrink-0"
         aria-label="Ara.cz – Cestovní průvodce po světě"
       >
@@ -24,41 +24,41 @@ function FooterLogo({ logo }: { logo: ImageLink }) {
           dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
         />
       </Link>
-    );
+    )
   }
 
   if (logo.image?.url) {
-    const logoUrl = String(logo.image.url);
+    const rawUrl = String(logo.image.url)
+    // Relativní cesty z médií doplníme o base URL Payloadu (stejně jako header).
+    const logoUrl = rawUrl.startsWith('/')
+      ? new URL(
+          rawUrl,
+          process.env.NEXT_PUBLIC_PAYLOAD_BASE_URL || 'http://localhost:3000',
+        ).toString()
+      : rawUrl
     return (
-      <Link
-        href={logo.link?.href ?? "/"}
-        className="flex items-center shrink-0"
-      >
+      <Link href={logo.link?.href ?? '/'} className="flex items-center shrink-0">
         <Image
           src={logoUrl}
-          alt={
-            logo.image.alternativeText ?? "Ara.cz – Cestovní průvodce po světě"
-          }
+          alt={logo.image.alternativeText ?? 'Ara.cz – Cestovní průvodce po světě'}
           height={23}
           width={80}
           className="h-[23px] w-auto object-contain"
           unoptimized={!isCloudinary(logoUrl)}
         />
       </Link>
-    );
+    )
   }
 
-  return null;
+  return null
 }
 
 export async function Footer() {
-  const footer = await fetchFooter();
+  const footer = await fetchFooter()
 
-  const navItems = footer?.navItems ?? [];
-  const copyrightHtml = footer?.copyrightText
-    ? richTextToHtml(footer.copyrightText)
-    : "";
-  const logo = footer?.logo ?? null;
+  const navItems = footer?.navItems ?? []
+  const copyrightHtml = footer?.copyrightText ? richTextToHtml(footer.copyrightText) : ''
+  const logo = footer?.logo ?? null
 
   return (
     <footer className="bg-[#dddddd] w-full z-10">
@@ -106,5 +106,5 @@ export async function Footer() {
         />
       </div>
     </footer>
-  );
+  )
 }

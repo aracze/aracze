@@ -1,17 +1,11 @@
 interface StaticHeroOverlayProps {
-  filterId?: string;
+  filterId?: string
 }
 
-export const StaticHeroOverlay = ({
-  filterId = "blurFilter",
-}: StaticHeroOverlayProps) => {
+export const StaticHeroOverlay = ({ filterId = 'blurFilter' }: StaticHeroOverlayProps) => {
   return (
     <div className="absolute top-0 left-0 right-0 mx-auto w-full max-w-[800px] h-full opacity-30 z-[100] flex items-center justify-center pointer-events-none overflow-hidden">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 80.34 40.73"
-        className="w-full h-auto"
-      >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80.34 40.73" className="w-full h-auto">
         <defs>
           <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="5" />
@@ -24,5 +18,5 @@ export const StaticHeroOverlay = ({
         />
       </svg>
     </div>
-  );
-};
+  )
+}

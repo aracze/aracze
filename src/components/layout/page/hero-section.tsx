@@ -1,19 +1,19 @@
-import Link from "next/link";
-import { StaticHeroOverlay } from "@/components/features/static-hero-overlay";
-import { StaticHeroWave } from "@/components/features/static-hero-wave";
-import { StaticHeroImage } from "@/components/features/static-hero-image";
+import Link from 'next/link'
+import { StaticHeroOverlay } from '@/components/features/static-hero-overlay'
+import { StaticHeroWave } from '@/components/features/static-hero-wave'
+import { StaticHeroImage } from '@/components/features/static-hero-image'
 
 interface Breadcrumb {
-  title: string;
-  href: string;
+  title: string
+  href: string
 }
 
 interface HeroSectionProps {
-  title: string;
-  imageUrl: string | null;
-  styleCss?: string;
-  filterId?: string;
-  breadcrumbs?: Breadcrumb[];
+  title: string
+  imageUrl: string | null
+  styleCss?: string
+  filterId?: string
+  breadcrumbs?: Breadcrumb[]
 }
 
 export const HeroSection = ({
@@ -39,29 +39,24 @@ export const HeroSection = ({
           >
             <ol className="flex items-center gap-1.5 list-none p-0 m-0">
               {breadcrumbs.map((bc, idx) => {
-                const isLast = idx === breadcrumbs.length - 1;
+                const isLast = idx === breadcrumbs.length - 1
                 return (
-                  <li key={idx} className="flex items-center gap-1.5">
+                  <li key={bc.href} className="flex items-center gap-1.5">
                     <Link
                       href={bc.href}
                       className={`text-[14px] tracking-wide transition-colors duration-200 hover:text-[#1a3f6c] ${
-                        isLast
-                          ? "text-gray-700 font-bold"
-                          : "text-gray-500 font-medium"
+                        isLast ? 'text-gray-700 font-bold' : 'text-gray-500 font-medium'
                       }`}
                     >
                       {bc.title}
                     </Link>
                     {!isLast && (
-                      <span
-                        className="text-gray-300 text-[12px] px-0.5"
-                        aria-hidden="true"
-                      >
+                      <span className="text-gray-300 text-[12px] px-0.5" aria-hidden="true">
                         /
                       </span>
                     )}
                   </li>
-                );
+                )
               })}
             </ol>
           </nav>
@@ -76,5 +71,5 @@ export const HeroSection = ({
 
       <StaticHeroWave />
     </section>
-  );
-};
+  )
+}

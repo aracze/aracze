@@ -257,7 +257,7 @@ function richTextToHtmlInternal(value: unknown, context: RichTextRenderContext =
           'Pro',
         ]
 
-        let html =
+        const html =
           `<div class="rich-text-seasonality-container">${idealText || prefixText ? `<div class="seasonality-ideal-text">${escapeHtml(prefixText)} <strong>${escapeHtml(idealText)}</strong></div>` : ''}<div class="seasonality-grid">` +
           months
             .map(
