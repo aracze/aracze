@@ -59,16 +59,24 @@ const DEFAULT_LIMIT = 200
 
 // Pole potřebná pro hlavní menu (header): jen názvy/odkazy stránek a jejich
 // dětí — bez selectu by se tahaly i texty, články a média (~3 MB místo ~8 KB).
+// DŮLEŽITÉ: web NIKDY nečte JOIN pole (subPages, primaryArticles, comments…)
+// přes joiny — Payload je vyhodnocuje za KAŽDÝ vrácený dokument i když nejsou
+// v selectu, což stojí stovky ms za dokument (v dev režimu ještě řádově víc).
+// Všechny webové dotazy proto mají `joins: false` a děti/články tahají
+// samostatné přímé dotazy přes `parent`/`mainPage`. Joiny zůstávají jen
+// pro admin rozhraní.
 const MENU_SELECT = {
   title: true,
   slug: true,
   fullSlug: true,
   category: true,
-  subPages: true,
 } as const
 
-const MENU_POPULATE = {
-  pages: { title: true, slug: true, fullSlug: true, category: true },
+// Děti pro menu — hromadný dotaz přes `parent`; parent v selectu kvůli
+// seskupení dětí ke správnému rodiči.
+const MENU_CHILD_SELECT = {
+  ...MENU_SELECT,
+  parent: true,
 } as const
 
 // Pro předky (breadcrumbs, menu kontext, kořen): navíc detail + featuredImage —
@@ -166,19 +174,6 @@ function normalizePages(pages: RawPayloadPage[]): Page[] {
   return pages.map(normalizePage)
 }
 
-async function fetchAllPagesPayload(): Promise<RawPayloadPage[]> {
-  const payload = await getDb()
-  const res = await payload.find({
-    overrideAccess: false,
-    collection: 'pages',
-    limit: DEFAULT_LIMIT,
-    depth: 1,
-    select: MENU_SELECT,
-    populate: MENU_POPULATE,
-  })
-  return res.docs as unknown as RawPayloadPage[]
-}
-
 // DŮLEŽITÉ: uvnitř cached() funkcí se selhání DB NESMÍ polykat — unstable_cache
 // by prázdný výsledek uložil (při buildu bez DB by se zapekl přímo do buildu
 // a runtime by ho pak servíroval). Chyba musí propadnout VEN z cache (neuloží
@@ -193,22 +188,52 @@ async function fetchRootPagesUncached(): Promise<PagesResponse> {
         collection: 'pages',
         where: { parent: { exists: false } },
         limit: DEFAULT_LIMIT,
-        depth: 1,
+        depth: 0,
         select: MENU_SELECT,
-        populate: MENU_POPULATE,
+        joins: false,
       })
-      .then((r) => r.docs as unknown as RawPayloadPage[])
-      .catch(() => fetchAllPagesPayload()),
+      .then((r) => r.docs as unknown as RawPayloadPage[]),
     payload.findGlobal({ slug: 'header', overrideAccess: false }).catch(() => null),
     payload.findGlobal({ slug: 'homepage', overrideAccess: false }).catch(() => null),
   ])
+
+  // Děti kořenových stránek (rozbalovací menu) jedním hromadným dotazem —
+  // dřív je nosil subPages join, který stál sekundy za každý kořen.
+  const childrenByParent = new Map<number | string, PageChild[]>()
+  const rootIds = rootRes.map((p) => p.id).filter((id) => id != null)
+  if (rootIds.length > 0) {
+    const kids = await payload
+      .find({
+        overrideAccess: false,
+        collection: 'pages',
+        where: { parent: { in: rootIds } },
+        limit: 0,
+        pagination: false,
+        depth: 0,
+        select: MENU_CHILD_SELECT,
+        joins: false,
+      })
+      .catch(() => ({ docs: [] }))
+    for (const doc of kids.docs as unknown as Array<PageChild & { parent?: unknown }>) {
+      const pid = relationId(doc.parent)
+      if (pid == null) continue
+      const list = childrenByParent.get(pid) ?? []
+      list.push(doc)
+      childrenByParent.set(pid, list)
+    }
+  }
+
+  const rootsWithChildren = rootRes.map((p) => ({
+    ...p,
+    subPages: { docs: childrenByParent.get(p.id) ?? [] },
+  }))
 
   const header = headerRes as Record<string, unknown> | null
   const homepage = homepageRes as Record<string, unknown> | null
 
   return {
     data: {
-      pages: normalizePages(rootRes),
+      pages: normalizePages(rootsWithChildren),
       global: header
         ? {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -239,33 +264,35 @@ export const fetchRootPages = cache(async (): Promise<PagesResponse> => {
 })
 
 /**
- * Article cards come from joins where `featuredImage.image` may be a numeric id.
- * Resolve those ids to URLs so listing cards show thumbnails. (S depth 1 už
- * obvykle přichází celé media objekty a tohle je no-op.)
+ * Karty (články i podstránky) se tahají s depth 0, takže `featuredImage.image`
+ * je číselné id. Tady se ids hromadně přeloží na URL jedním dotazem — populace
+ * přes depth 1 by stála stovky ms za KAŽDÝ dokument (v dev ještě víc).
  */
-async function enrichArticleImages(articles: Article[]): Promise<Article[]> {
-  if (!articles?.length) return articles ?? []
+async function enrichFeaturedImages<T extends { featuredImage?: { image?: unknown } | null }>(
+  docs: T[],
+): Promise<T[]> {
+  if (!docs?.length) return docs ?? []
 
-  const ids = articles
-    .map((a) => a.featuredImage?.image)
+  const ids = docs
+    .map((d) => d.featuredImage?.image)
     .filter((img): img is number => typeof img === 'number')
 
-  if (ids.length === 0) return articles
+  if (ids.length === 0) return docs
 
   const urlMap = await fetchMediaUrlsByIds([...new Set(ids)])
 
-  return articles.map((a) => {
-    const img = a.featuredImage?.image
-    if (a.featuredImage && typeof img === 'number' && urlMap.has(img)) {
+  return docs.map((d) => {
+    const img = d.featuredImage?.image
+    if (d.featuredImage && typeof img === 'number' && urlMap.has(img)) {
       return {
-        ...a,
+        ...d,
         featuredImage: {
-          ...a.featuredImage,
+          ...d.featuredImage,
           image: { url: urlMap.get(img)!, alternativeText: null },
         },
       }
     }
-    return a
+    return d
   })
 }
 
@@ -292,6 +319,7 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
       depth: 1,
       select: PAGE_SCALAR_SELECT,
       populate: PAGE_SCALAR_POPULATE,
+      joins: false,
     }) as unknown as Promise<PayloadDocsResponse<RawPayloadPage>>,
     payload
       .find({
@@ -299,8 +327,11 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
         collection: 'pages',
         where: { 'parent.fullSlug': { equals: fullSlug } },
         limit: 100,
-        depth: 1,
+        // depth 0: obrázky karet dořeší enrichFeaturedImages hromadně — depth 1
+        // by populoval media dokument za KAŽDÉ dítě zvlášť (v dev ~0,35 s/kus).
+        depth: 0,
         select: PAGE_CHILDREN_SELECT,
+        joins: false,
       })
       .catch(() => ({ docs: [] })) as unknown as Promise<PayloadDocsResponse<PageChild>>,
     payload
@@ -314,8 +345,12 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
           ],
         },
         limit: 100,
-        depth: 1,
+        // depth 0: mainPage stačí jako id (třídění přes relationId) a obrázky
+        // karet dořeší enrichArticleImages. depth 1 by populoval mainPage jako
+        // celé pages dokumenty VČETNĚ vyhodnocení jejich joinů (sekundy navíc).
+        depth: 0,
         select: PAGE_ARTICLES_SELECT,
+        joins: false,
       })
       .catch(() => ({ docs: [] })) as unknown as Promise<PayloadDocsResponse<Article>>,
   ])) as unknown as [
@@ -346,7 +381,12 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
     secondaryArticles: { docs: secondary },
   })
 
-  match.articles = await enrichArticleImages(match.articles)
+  const [enrichedArticles, enrichedChildren] = await Promise.all([
+    enrichFeaturedImages(match.articles),
+    enrichFeaturedImages(match.children.docs),
+  ])
+  match.articles = enrichedArticles
+  match.children = { docs: enrichedChildren }
 
   return {
     data: {
@@ -410,17 +450,36 @@ async function fetchPageLightByFullSlugUncached(
   fullSlug: string,
 ): Promise<{ data: { pages: Page[] } }> {
   const payload = await getDb()
-  const res = await payload.find({
-    overrideAccess: false,
-    collection: 'pages',
-    where: { fullSlug: { equals: fullSlug } },
-    limit: 1,
-    depth: 1,
-    select: ANCESTOR_SELECT,
-    populate: MENU_POPULATE,
-  })
+  // Předek + jeho děti (menu sekce) paralelně — obojí bez joinů.
+  const [res, childrenRes] = await Promise.all([
+    payload.find({
+      overrideAccess: false,
+      collection: 'pages',
+      where: { fullSlug: { equals: fullSlug } },
+      limit: 1,
+      depth: 1,
+      select: ANCESTOR_SELECT,
+      joins: false,
+    }),
+    payload
+      .find({
+        overrideAccess: false,
+        collection: 'pages',
+        where: { 'parent.fullSlug': { equals: fullSlug } },
+        limit: 100,
+        depth: 0,
+        select: MENU_SELECT,
+        joins: false,
+      })
+      .catch(() => ({ docs: [] })),
+  ])
   const raw = res.docs?.[0] as unknown as RawPayloadPage | undefined
-  const match = raw ? normalizePage(raw) : undefined
+  const match = raw
+    ? normalizePage({
+        ...raw,
+        subPages: { docs: (childrenRes.docs ?? []) as unknown as PageChild[] },
+      })
+    : undefined
   return { data: { pages: match ? [match] : [] } }
 }
 

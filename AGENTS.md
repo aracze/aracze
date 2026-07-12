@@ -6,6 +6,21 @@
 2. **Před každým pushem se vždy zeptej** — platí pro `main` i pro jakoukoliv jinou větev. Pozor: push do `main` spouští automatické nasazení na produkci (GitHub Actions → ghcr.io → server).
 3. **Před commitem vždy proveď code review změn a sepiš ho do chatu**: co se mění a proč, seznam dotčených souborů, rizika/dopady, jak bylo ověřeno (testy, lokální build/běh). Commit proveď až po odsouhlasení.
 
+## ⚠️ Cache — závazná pravidla (dev vs. produkce)
+
+1. **V dev režimu (`pnpm dev`) NESMÍ být aktivní žádná cache CMS dat** — žádné
+   `unstable_cache`, ISR ani full route cache. Obsah upravený v adminu se musí na
+   webu projevit okamžitě a měření výkonu musí ukazovat skutečné (necachované) časy.
+2. Každé cachované čtení CMS dat MUSÍ jít přes helper `cached()` v `src/lib/payload.ts`
+   (v dev vrací funkci bez cache obalu). Nikdy nevolej `unstable_cache` přímo
+   z jiného místa — jediná povolená výjimka je `src/lib/search.ts`, které má stejnou
+   dev/prod větev.
+3. Povolené výjimky v dev: React `cache()` (jen dedup dotazů v rámci JEDNOHO requestu,
+   nic nedrží mezi requesty) a cache externích API mimo CMS (kurzy měn, počasí —
+   chrání rate limity třetích stran).
+4. Produkce: `unstable_cache` s tagy + okamžitá invalidace přes hooky
+   v `src/hooks/revalidation.ts` (`updateTag` při publikaci v adminu).
+
 You are an expert Payload CMS developer. When working with Payload projects, follow these rules:
 
 ## Core Principles
