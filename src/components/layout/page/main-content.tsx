@@ -112,18 +112,21 @@ export const MainContent = ({
     : null
 
   return (
-    <main className="max-w-7xl mx-auto px-5 py-12 md:py-20 flex flex-col lg:flex-row gap-16 lg:gap-24">
-      {/* Main Content */}
-      <div className="flex-1 min-w-0">
+    <main className="max-w-7xl mx-auto px-4 py-12 md:py-20 flex flex-col items-stretch lg:flex-row lg:justify-center gap-8 lg:gap-10">
+      {/* Main Content — čtecí sloupec jako u článku (viz reading-prose) */}
+      <div className="flex-1 min-w-0 lg:max-w-[808px] lg:px-16">
         <CollapsiblePageTextWithContributor
           textHtml={textHtml}
-          contributor={showAktualniInfo ? contributor : null}
+          // Autor se zobrazuje na místech (Místa/Místo k navštívení/Turistický cíl)
+          // i na informačních podstránkách (Vstupní podmínky, Měna a ceny, Počasí…)
+          // — jako na původním webu. Rubriky a statické stránky autora nemají.
+          contributor={showAktualniInfo || showTableOfContents ? contributor : null}
           collapsible={pageCategory === PageCategory.Misto_k_navstiveni}
         />
       </div>
 
       {/* Sidebar / Info Column */}
-      <aside className="w-full lg:w-80 flex flex-col gap-12 relative">
+      <aside className="w-full lg:w-[340px] shrink-0 flex flex-col gap-12 relative">
         {/* Time, Exchange & Practical Info — for place-type pages */}
         {showAktualniInfo && (timezone || exchangeRate || practicalInfoChild) && (
           <div className="relative pl-8">

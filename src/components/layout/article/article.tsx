@@ -93,13 +93,13 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
 
       {/* Article Content + side advertisement (two-column on desktop) */}
       <div className="max-w-7xl mx-auto px-4 py-16 md:py-8 flex flex-col items-stretch lg:flex-row lg:justify-center gap-8 lg:gap-10">
-        <main className="flex-1 min-w-0 lg:max-w-[808px]">
+        <main className="flex-1 min-w-0 lg:max-w-[808px] lg:px-16">
           {/* Už sanitizované HTML z richTextToHtml (DOMPurify) vkládáme přímo —
               odstavce tak zůstávají PŘÍMÝMI potomky .prose (kvůli
               `.prose > p:first-of-type`) a nadpisy mají id přímo z richTextToHtml
               (rehypeSlug byl proto zbytečný). */}
           <div
-            className="article-prose prose max-w-[808px] prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline"
+            className="reading-prose prose max-w-[808px] prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline"
             dangerouslySetInnerHTML={{ __html: articleText }}
           />
 

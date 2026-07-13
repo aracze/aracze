@@ -7,7 +7,6 @@ import {
   Homepage,
   GlobalFooter,
 } from '@/types/payload'
-import { type Payload } from 'payload'
 import { unstable_cache } from 'next/cache'
 import { cache } from 'react'
 import { getDb } from './db'
@@ -89,6 +88,10 @@ const PAGE_SCALAR_SELECT = {
   detail: true,
   featuredImage: true,
   createdBy: true,
+  // Bezpečný veřejný autor přes VIRTUÁLNÍ pole (afterRead hook čte uživatele s
+  // overrideAccess: true). Stejný vzor jako u článků. Ruční dohled přes
+  // findByID by tu selhal — web čte anonymně a Users.read = isAdminOrSelf.
+  createdByPublic: true,
 } as const
 
 const PAGE_CHILDREN_SELECT = {
@@ -344,46 +347,6 @@ function relationId(value: unknown): number | string | null {
   return null
 }
 
-async function resolvePageAuthorPublic(
-  payload: Payload,
-  createdBy: unknown,
-): Promise<Page['createdByPublic']> {
-  const authorId = relationId(createdBy)
-  if (authorId == null) return null
-
-  try {
-    const user = (await payload.findByID({
-      collection: 'users',
-      id: authorId,
-      depth: 0,
-      overrideAccess: false,
-      select: { username: true, firstName: true, lastName: true, avatar: true },
-    })) as unknown as {
-      id: number | string
-      username?: string | null
-      firstName?: string | null
-      lastName?: string | null
-      avatar?: unknown
-    }
-
-    const avatarId = relationId(user.avatar)
-    const avatarUrl =
-      typeof avatarId === 'number'
-        ? ((await fetchMediaUrlsByIds([avatarId])).get(avatarId) ?? null)
-        : null
-
-    return {
-      id: Number(user.id),
-      username: user.username ?? null,
-      firstName: user.firstName ?? null,
-      lastName: user.lastName ?? null,
-      avatar: avatarUrl ? { url: avatarUrl, alternativeText: null } : null,
-    }
-  } catch {
-    return null
-  }
-}
-
 async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { pages: Page[] } }> {
   const payload = await getDb()
 
@@ -458,23 +421,20 @@ async function fetchPageByFullSlugUncached(fullSlug: string): Promise<{ data: { 
     secondaryArticles: { docs: secondary },
   })
 
-  const [enrichedPageArr, enrichedArticles, enrichedChildren, createdByPublic, enrichedText] =
-    await Promise.all([
-      enrichFeaturedImages([match]),
-      enrichFeaturedImages(match.articles),
-      enrichFeaturedImages(match.children.docs),
-      resolvePageAuthorPublic(payload, (raw as { createdBy?: unknown }).createdBy),
-      // Obrázky v těle stránky (contentImage bloky) — depth 0 je nepopuluje.
-      enrichRichTextImages((match as { text?: unknown }).text),
-    ])
+  const [enrichedPageArr, enrichedArticles, enrichedChildren, enrichedText] = await Promise.all([
+    enrichFeaturedImages([match]),
+    enrichFeaturedImages(match.articles),
+    enrichFeaturedImages(match.children.docs),
+    // Obrázky v těle stránky (contentImage bloky) — depth 0 je nepopuluje.
+    enrichRichTextImages((match as { text?: unknown }).text),
+  ])
 
+  // createdByPublic teče přímo z virtuálního pole (viz PAGE_SCALAR_SELECT) skrz
+  // normalizePage → enrichFeaturedImages (obojí pole zachovává spreadem).
   const enrichedPage = enrichedPageArr[0] as Page
   enrichedPage.articles = enrichedArticles
   enrichedPage.children = { docs: enrichedChildren }
   ;(enrichedPage as { text?: unknown }).text = enrichedText
-  if (createdByPublic) {
-    enrichedPage.createdByPublic = createdByPublic
-  }
 
   return {
     data: {

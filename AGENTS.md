@@ -27,10 +27,16 @@
    v adminu — `updateTag` lze volat jen ze Server Action, z Payload hooku v route
    handleru vyhazuje chybu, takže by se invalidace tiše ztratila).
 
-## 🧠 Nainstalované AI skilly (primární zdroj obecných znalostí)
+## 🧠 Nainstalované AI skilly (ZÁVAZNÉ – primární zdroj obecných znalostí)
 
-Projekt má v `.claude/skills/` nainstalované **oficiální** skilly. Používej je — obsahují
-aktuální, upstream udržované znalosti, takže je není nutné duplikovat do tohoto souboru:
+**ZÁVAZNÉ:** Před psaním nebo úpravou kódu VŽDY zkonzultuj relevantní skill podle oblasti:
+Payload/CMS (kolekce, pole, hooky, práva, dotazy) → **`payload`**; frontend a výkon
+React/Next.js → **`vercel-react-best-practices`**; kontrola UI/přístupnosti → **`web-design-guidelines`**;
+migrace obsahu → **`cms-migration`**. Projektová pravidla v tomto souboru mají přednost
+před obecnými radami skillu, když se rozcházejí.
+
+Skilly jsou v `.claude/skills/` (v repu) i globálně v `~/.claude/skills/` (dostupné z jakékoli
+složky). Obsahují aktuální, upstream udržované znalosti, takže je není nutné sem duplikovat:
 
 - **`payload`** (payloadcms/skills) — kolekce, pole, hooky, přístupová práva, dotazy,
   uploady, drafty, live preview, DB adaptéry, REST/GraphQL/Local API. Aktivuje se při

@@ -64,7 +64,7 @@ export function CollapsiblePageTextWithContributor({
             (úvodní lead odstavec). dangerouslySetInnerHTML nesmí být na stejném
             elementu jako sourozenecký JSX (bílý přechod níže), proto vlastní div. */}
         <div
-          className="prose max-w-none prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline"
+          className="reading-prose prose max-w-[808px] prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline"
           dangerouslySetInnerHTML={{ __html: displayedHtml }}
         />
         {/* Text mizí do bílé — naznačuje, že pokračuje dál. */}
@@ -74,9 +74,13 @@ export function CollapsiblePageTextWithContributor({
       </div>
 
       {shouldCollapse && !isExpanded && (
-        <div className="relative mt-[10px] w-full">
+        // Desktop: autor je vyjmutý z toku (absolutně vlevo), aby „zobrazit více"
+        // bylo vycentrované na CELOU šířku (floatem by ho tlačítko — vlastní BFC —
+        // neobtékalo a odsunulo se doprava). Mobil: skládáme pod sebe (autor nahoře,
+        // tlačítko pod ním), jinak by úzký autor přes vycentrované tlačítko zasahoval.
+        <div className="relative mt-[10px] flex w-full flex-col items-center gap-3 sm:min-h-[44px] sm:flex-row sm:justify-center sm:gap-0">
           {contributor?.name && (
-            <div className="float-left">
+            <div className="sm:absolute sm:left-0 sm:top-1/2 sm:-translate-y-1/2">
               <div className="flex items-start">
                 <div className="mr-[15px] block h-[40px] w-[40px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-[0_3px_9px_rgba(0,0,0,0.22)]">
                   {contributor.profileHref ? (
@@ -128,7 +132,7 @@ export function CollapsiblePageTextWithContributor({
             type="button"
             onClick={() => setIsExpanded(true)}
             aria-expanded={isExpanded}
-            className="mx-auto block w-[130px] text-center text-[14px] font-bold leading-[19.5px] text-[#005580] hover:underline"
+            className="block w-[130px] text-center text-[14px] font-bold leading-[19.5px] text-[#005580] hover:underline"
           >
             zobrazit více
             <svg
@@ -144,8 +148,6 @@ export function CollapsiblePageTextWithContributor({
               <path d="M1 1l4 4 4-4" />
             </svg>
           </button>
-
-          <div className="clear-both" />
         </div>
       )}
 

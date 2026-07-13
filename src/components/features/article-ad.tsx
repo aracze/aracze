@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import Script from 'next/script'
 
 // Same Google AdSense publisher/slots as the legacy site (article side ads).
 // Overridable via env so units can be swapped without code changes.
@@ -24,19 +23,41 @@ const AD_VARIANTS = {
 
 /**
  * AdSense loader script. Render exactly ONCE per page (the article layout renders
- * several `ArticleAd` boxes, but the loader must be injected only once — Next's
- * `Script` id must be unique and the external script loaded a single time).
+ * several `ArticleAd` boxes, but the loader must be injected only once).
+ *
+ * Injected manually rather than via `next/script`: `next/script` stamps a
+ * `data-nscript` attribute onto the tag, which AdSense rejects with a console
+ * warning ("AdSense head tag doesn't support data-nscript attribute"). A plain
+ * `<script async crossorigin>` matches Google's official snippet exactly. We inject
+ * during idle time after the page is interactive to preserve the original
+ * `strategy="lazyOnload"` behaviour (never render-blocking), and guard by element
+ * id so it loads a single time.
  */
 export function AdSenseScript() {
-  return (
-    <Script
-      id="adsbygoogle-js"
-      async
-      strategy="lazyOnload"
-      crossOrigin="anonymous"
-      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-    />
-  )
+  useEffect(() => {
+    const SCRIPT_ID = 'adsbygoogle-js'
+    if (document.getElementById(SCRIPT_ID)) return
+
+    const inject = () => {
+      if (document.getElementById(SCRIPT_ID)) return
+      const script = document.createElement('script')
+      script.id = SCRIPT_ID
+      script.async = true
+      script.crossOrigin = 'anonymous'
+      script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`
+      document.head.appendChild(script)
+    }
+
+    // Load lazily, during browser idle time (mirrors next/script's `lazyOnload`).
+    if (typeof window.requestIdleCallback === 'function') {
+      const handle = window.requestIdleCallback(inject)
+      return () => window.cancelIdleCallback?.(handle)
+    }
+    const timeout = window.setTimeout(inject, 1)
+    return () => window.clearTimeout(timeout)
+  }, [])
+
+  return null
 }
 
 /**

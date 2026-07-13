@@ -30,9 +30,9 @@
   /* Core typography based on ara.cz */
   .prose p {
     font-size: 18px;
-    line-height: 2; /* 200% for standard text readability */
+    line-height: 1.9; /* vzdušné, ale řádky drží pohromadě jako odstavec */
     color: #353535;
-    margin-bottom: 20px;
+    margin-bottom: 26px; /* ~1.55em: mezera mezi odstavci výrazně > mezera mezi řádky (~16px), aby odstavce byly jako oddělené vzdušné bloky */
     margin-top: 0;
     letter-spacing: 0.01rem;
     font-weight: 400;
@@ -59,7 +59,7 @@
 
   .prose h2 {
     font-size: 22px;
-    line-height: 1.9;
+    line-height: 1.25; /* nadpis = těsné řádkování (ne 1.9 jako tělo) */
     color: #005580;
     margin-top: 25px;
     margin-bottom: 12px;
@@ -73,7 +73,7 @@
 
   .prose h3 {
     font-size: 21px;
-    line-height: 1.5;
+    line-height: 1.3;
     color: #005580;
     margin-top: 33px;
     margin-bottom: 13px;
@@ -82,7 +82,7 @@
 
   .prose h4 {
     font-size: 18px;
-    line-height: 1.5;
+    line-height: 1.3;
     color: #212529;
     margin-top: 10px;
     margin-bottom: 10px;
@@ -171,16 +171,13 @@
     margin-right: -1rem;
   }
 
-  /* Article body: narrower text column for comfortable reading (~70 chars/line),
-     while images and maps break back out to the full column width. */
+  /* Čtecí sloupec (články i textové stránky – místa, praktické informace…):
+     odsazení ~64px řídí `lg:px-16` na OBSAHOVÉM SLOUPCI (aby s textem lícoval
+     i autor a patička), ne padding na prose. Obrázky a mapy se přes to odsazení
+     "vylámou" do plné šířky sloupce (proto `-64px` = přesně to px-16). */
   @media (min-width: 1024px) {
-    .prose.article-prose {
-      padding-left: 64px;
-      padding-right: 64px;
-    }
-
-    .prose.article-prose .image-wrapper,
-    .prose.article-prose .rich-text-map-container {
+    .prose.reading-prose .image-wrapper,
+    .prose.reading-prose .rich-text-map-container {
       margin-left: -64px;
       margin-right: -64px;
     }
