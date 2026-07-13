@@ -1,4 +1,4 @@
-import type { Access, CollectionConfig, FieldAccess } from 'payload'
+import type { Access, CollectionConfig, FieldAccess, PayloadRequest } from 'payload'
 
 const isAdmin: Access = ({ req: { user } }) => {
   return Boolean(user?.roles?.includes('admin'))
@@ -13,6 +13,12 @@ const isAdminOrSelf: Access = ({ req: { user } }) => {
     },
   }
 }
+
+// Přístup do admin panelu (`access.admin`) — jen admin/editor. Bez tohoto
+// pravidla by se do /admin dostal KAŽDÝ přihlášený (i výchozí role `user`).
+// Pozn.: `access.admin` musí vracet jen boolean (ne query Where jako `Access`).
+const isAdminOrEditor = ({ req: { user } }: { req: PayloadRequest }): boolean =>
+  Boolean(user?.roles?.some((role) => role === 'admin' || role === 'editor'))
 
 const isAdminFieldAccess: FieldAccess = ({ req: { user } }) => {
   return Boolean(user?.roles?.includes('admin'))
@@ -31,6 +37,7 @@ export const Users: CollectionConfig = {
   },
   auth: true,
   access: {
+    admin: isAdminOrEditor,
     read: isAdminOrSelf,
     update: isAdminOrSelf,
     delete: isAdmin,

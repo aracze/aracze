@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { fetchFooter } from '@/lib/payload'
 import { ImageLink } from '@/types/payload'
-import { richTextToHtml } from '@/lib/utils'
+import { richTextToHtml } from '@/lib/rich-text-html'
 import { isCloudinary } from '@/lib/cloudinary-loader'
 
 import DOMPurify from 'isomorphic-dompurify'

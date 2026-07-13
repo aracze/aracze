@@ -3,6 +3,9 @@ import { revalidateGlobalsAfterChange } from '../hooks/revalidation'
 
 export const Homepage: GlobalConfig = {
   slug: 'homepage',
+  access: {
+    read: () => true,
+  },
   hooks: {
     afterChange: [revalidateGlobalsAfterChange],
   },

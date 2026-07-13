@@ -6,7 +6,6 @@ import Image from 'next/image'
 import { ImageLink, PageCategory } from '@/types/payload'
 import { isCloudinary } from '@/lib/cloudinary-loader'
 import Search from '@/components/features/search/search'
-import DOMPurify from 'isomorphic-dompurify'
 
 // Header je client komponenta → cokoli mu předáme se serializuje do RSC payloadu
 // na KAŽDÉ stránce. Proto přijímá jen navigační podmnožinu (bez `text`, `meta`,
@@ -22,7 +21,16 @@ export type NavPage = {
   }
 }
 
-export function Header({ pages, headerLogo }: { pages: NavPage[]; headerLogo?: ImageLink | null }) {
+export function Header({
+  pages,
+  headerLogo,
+  logoSvgHtml,
+}: {
+  pages: NavPage[]
+  headerLogo?: ImageLink | null
+  /** Předsanitizované SVG loga (na serveru přes `sanitizeHeaderLogoSvg`). */
+  logoSvgHtml?: string | null
+}) {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -74,23 +82,12 @@ export function Header({ pages, headerLogo }: { pages: NavPage[]; headerLogo?: I
         <div className="max-w-7xl mx-auto px-4 md:px-12 flex items-center w-full gap-8">
           {logo && (
             <Link href="/" className="flex items-center shrink-0">
-              {logo.svgCode ? (
+              {logoSvgHtml ? (
                 <div
                   className="h-[26px] w-auto flex items-center [&_svg]:h-[26px] [&_svg]:w-auto"
-                  dangerouslySetInnerHTML={{
-                    __html: (() => {
-                      // Sjednotí fill na bílou pro 3- i 6-místné hex barvy
-                      // v jednoduchých i dvojitých uvozovkách.
-                      const processed = logo.svgCode.replace(
-                        /fill=(["'])#(?:[a-f0-9]{6}|[a-f0-9]{3})\1/gi,
-                        'fill="white"',
-                      )
-
-                      return DOMPurify.sanitize(processed, {
-                        USE_PROFILES: { svg: true },
-                      })
-                    })(),
-                  }}
+                  // Už sanitizované na serveru (sanitizeHeaderLogoSvg) — proto se
+                  // DOMPurify nemusí bundlovat do klienta.
+                  dangerouslySetInnerHTML={{ __html: logoSvgHtml }}
                 />
               ) : (
                 logo.image?.url && (

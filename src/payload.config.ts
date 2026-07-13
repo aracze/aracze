@@ -120,11 +120,12 @@ export default buildConfig({
   endpoints: [
     dbDumpEndpoint,
     dbImportEndpoint,
-    {
-      path: '/init-db',
-      method: 'get',
-      handler: initDbEndpoint,
-    },
+    // /init-db dělá DROP SCHEMA public CASCADE — registruje se JEN když je
+    // ALLOW_INIT_DB=true (bootstrap prázdné DB); jinak endpoint vůbec neexistuje.
+    // POST (ne GET), ať ho nespustí prefetch/<img>/historie. Autorizace v handleru.
+    ...(process.env.ALLOW_INIT_DB === 'true'
+      ? [{ path: '/init-db', method: 'post' as const, handler: initDbEndpoint }]
+      : []),
   ],
   plugins: [
     nestedDocsPlugin({

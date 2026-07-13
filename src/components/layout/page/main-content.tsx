@@ -2,7 +2,7 @@ import React from 'react'
 import { PageCategory, PageChild, RichTextRoot } from '@/types/payload'
 import Link from 'next/link'
 import { LocalTime } from '@/components/features/local-time'
-import { richTextToHtml } from '@/lib/utils'
+import { richTextToHtml } from '@/lib/rich-text-html'
 import { CollapsiblePageTextWithContributor } from './collapsible-page-text'
 
 interface TocItem {

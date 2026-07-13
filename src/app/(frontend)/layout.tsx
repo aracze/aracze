@@ -10,6 +10,7 @@ import { Open_Sans, Poppins } from 'next/font/google'
 import './globals.css'
 import { isProduction } from '@/lib/utils'
 import { Header } from '@/components/layout/header/header'
+import { sanitizeHeaderLogoSvg } from '@/lib/rich-text-html'
 import { Footer } from '@/components/layout/footer/footer'
 import { WebVitals } from '@/components/features/web-vitals'
 import { fetchRootPages } from '@/lib/payload'
@@ -65,6 +66,11 @@ export default async function RootLayout({
       : undefined,
   }))
 
+  // Logo SVG sanitizujeme na SERVERU a Headeru (klient) předáme hotový string —
+  // tím se DOMPurify nedostane do klientského bundlu.
+  const headerLogo = data.global?.header?.logo ?? null
+  const headerLogoSvg = headerLogo?.svgCode ? sanitizeHeaderLogoSvg(headerLogo.svgCode) : null
+
   return (
     <html lang="cs" className={`${openSans.variable} ${poppins.variable}`}>
       <body className="antialiased">
@@ -73,7 +79,7 @@ export default async function RootLayout({
         {/* HLAVNÍ KONTEJNER: flex rozložení pro menu a obsah */}
         <div className="flex flex-col min-h-screen">
           {headerPages.length > 0 && (
-            <Header pages={headerPages} headerLogo={data.global?.header?.logo} />
+            <Header pages={headerPages} headerLogo={headerLogo} logoSvgHtml={headerLogoSvg} />
           )}
           <div className="grow w-full">{children}</div>
           <Footer />

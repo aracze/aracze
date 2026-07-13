@@ -29,7 +29,14 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&appid=${premiumKey}&units=metric&exclude=minutely,alerts`
 
     // Zrušíme požadavek po 10 s, ať se route nezasekne na pomalém upstreamu.
-    const response = await fetch(url, { signal: AbortSignal.timeout(10_000) })
+    // Cache per URL (lat/lng) na 10 min — souřadnice místa jsou fixní, takže víc
+    // návštěvníků nad stejným místem = cache-hit a šetří rate limit OpenWeather.
+    // (Není to CMS data, takže dev-freshness pravidlo se netýká; stejný přístup
+    // jako u kurzů měn v exchange-rate.ts.)
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(10_000),
+      next: { revalidate: 600 },
+    })
     const weatherJson = await response.json()
 
     if (!response.ok) {

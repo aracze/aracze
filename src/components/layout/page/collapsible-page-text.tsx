@@ -57,12 +57,16 @@ export function CollapsiblePageTextWithContributor({
   return (
     <div className="relative">
       <div
-        className={cn(
-          'relative prose max-w-none prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline',
-          !isExpanded && shouldCollapse && 'max-h-[250px] overflow-hidden',
-        )}
+        className={cn('relative', !isExpanded && shouldCollapse && 'max-h-[250px] overflow-hidden')}
       >
-        <div dangerouslySetInnerHTML={{ __html: displayedHtml }} />
+        {/* prose třídy jsou přímo na boxu s textem, aby odstavce byly PŘÍMÝMI
+            potomky .prose — jinak selže selektor `.prose > p:first-of-type`
+            (úvodní lead odstavec). dangerouslySetInnerHTML nesmí být na stejném
+            elementu jako sourozenecký JSX (bílý přechod níže), proto vlastní div. */}
+        <div
+          className="prose max-w-none prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline"
+          dangerouslySetInnerHTML={{ __html: displayedHtml }}
+        />
         {/* Text mizí do bílé — naznačuje, že pokračuje dál. */}
         {shouldCollapse && !isExpanded && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[50px] bg-gradient-to-b from-transparent to-white" />

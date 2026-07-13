@@ -1,13 +1,11 @@
 import React from 'react'
-import ReactMarkdown from 'react-markdown'
-import rehypeRaw from 'rehype-raw'
-import rehypeSlug from 'rehype-slug'
 import { Article as ArticleType } from '@/types/payload'
-import { getPayloadURL, richTextToHtml } from '@/lib/utils'
+import { getPayloadURL } from '@/lib/utils'
+import { richTextToHtml } from '@/lib/rich-text-html'
 import { isCloudinary } from '@/lib/cloudinary-loader'
 import Link from 'next/link'
 import Image from 'next/image'
-import { fetchPageByFullSlug } from '@/lib/payload'
+import { fetchPageLightByFullSlug, pageHasArticles } from '@/lib/payload'
 import { Subnavigation } from '@/components/layout/page/subnavigation'
 import { HeroSection } from '@/components/layout/page/hero-section'
 import { ArticleAd, AdSenseScript } from '@/components/features/article-ad'
@@ -24,6 +22,10 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
   // Resolve the context page (the page the user came from based on URL)
   const contextPageSlug = contextSlug || article.mainPage?.fullSlug?.replace(/^\//, '') || null
   const { contextPage, rootPage } = await resolveContextPages(contextPageSlug)
+
+  // Má kořenová stránka články? Levný count (přes FK mainPage) místo tahání
+  // celého pole článků těžkým fetchem — rozhoduje jen o záložce „Články".
+  const rootHasArticles = rootPage ? await pageHasArticles(rootPage.id) : false
 
   const heroImageUrl = resolveHeroImage(contextPage || rootPage, article)
 
@@ -84,7 +86,7 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
           currentPageCategory={contextPage?.category}
           isSubPlace={false}
           hasPlaces={(rootPage.children?.docs?.length ?? 0) > 0}
-          hasArticles={(rootPage.articles?.length ?? 0) > 0}
+          hasArticles={rootHasArticles}
           activeSection="clanky"
         />
       )}
@@ -92,17 +94,21 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
       {/* Article Content + side advertisement (two-column on desktop) */}
       <div className="max-w-7xl mx-auto px-4 py-16 md:py-8 flex flex-col items-stretch lg:flex-row lg:justify-center gap-8 lg:gap-10">
         <main className="flex-1 min-w-0 lg:max-w-[808px]">
-          <div className="article-prose prose max-w-[808px] prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline">
-            <ReactMarkdown rehypePlugins={[rehypeRaw, rehypeSlug]}>{articleText}</ReactMarkdown>
-          </div>
+          {/* Už sanitizované HTML z richTextToHtml (DOMPurify) vkládáme přímo —
+              odstavce tak zůstávají PŘÍMÝMI potomky .prose (kvůli
+              `.prose > p:first-of-type`) a nadpisy mají id přímo z richTextToHtml
+              (rehypeSlug byl proto zbytečný). */}
+          <div
+            className="article-prose prose max-w-[808px] prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline"
+            dangerouslySetInnerHTML={{ __html: articleText }}
+          />
 
           {/* Attribution (Zdroj: ...) — right-aligned italic, like the legacy `p.attribution` */}
           {article.attribution && (
-            <div className="mt-12 text-right text-sm italic text-gray-600 [&_a]:font-medium [&_a]:text-[#215491] [&_a]:no-underline hover:[&_a]:underline">
-              <ReactMarkdown rehypePlugins={[rehypeRaw]}>
-                {richTextToHtml(article.attribution)}
-              </ReactMarkdown>
-            </div>
+            <div
+              className="mt-12 text-right text-sm italic text-gray-600 [&_a]:font-medium [&_a]:text-[#215491] [&_a]:no-underline hover:[&_a]:underline"
+              dangerouslySetInnerHTML={{ __html: richTextToHtml(article.attribution) }}
+            />
           )}
 
           {/* Author */}
@@ -156,17 +162,22 @@ async function resolveContextPages(contextPageSlug: string | null) {
 
   // Root = první segment slugu. Když je stejný jako celý slug, kontext JE kořen
   // → stačí jeden dotaz.
+  // Používáme LEHKÝ fetch: detail článku potřebuje z (kořenové) stránky jen
+  // menu/hero pole (title, fullSlug, category, children, featuredImage), NE plná
+  // data stránky včetně všech jejích článků a enriche obrázků (to dělal těžký
+  // fetchPageByFullSlug zbytečně). Počet článků pro záložku „Články" řešíme zvlášť
+  // levným countem (pageHasArticles) v komponentě.
   const rootSlug = contextPageSlug.split('/')[0]
   if (rootSlug === contextPageSlug) {
-    const { data } = await fetchPageByFullSlug(contextPageSlug)
+    const { data } = await fetchPageLightByFullSlug(contextPageSlug)
     const contextPage = data?.pages[0] ?? null
     return { contextPage, rootPage: contextPage }
   }
 
-  // Nezávislé dotazy běží paralelně (fetchPageByFullSlug je navíc dedup přes cache).
+  // Nezávislé dotazy běží paralelně (fetchPageLightByFullSlug je navíc dedup přes cache).
   const [ctxRes, rootRes] = await Promise.all([
-    fetchPageByFullSlug(contextPageSlug),
-    fetchPageByFullSlug(rootSlug),
+    fetchPageLightByFullSlug(contextPageSlug),
+    fetchPageLightByFullSlug(rootSlug),
   ])
 
   const contextPage = ctxRes.data?.pages[0] ?? null

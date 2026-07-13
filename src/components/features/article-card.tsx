@@ -1,23 +1,35 @@
-import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Article } from '@/types/payload'
-import { cn, getArticleExcerpt, getArticleImageUrl } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { isCloudinary } from '@/lib/cloudinary-loader'
+
+/**
+ * Lehký view-model karty článku. Server (seznam) předpočítá perex/URL/href, takže
+ * přes RSC hranici do klienta jde jen tohle — NE celý `Article` s plným tělem
+ * rich-textu. Viz ArticlesList / ArticlesListClassic.
+ */
+export interface ArticleCardVM {
+  key: string
+  title: string
+  href: string
+  excerpt: string
+  imageUrl: string | null
+}
 
 /** Single article card used in listings (recommended articles, rubric pages). */
 export function ArticleCard({
-  article,
+  title,
   href,
+  excerpt,
+  imageUrl,
   className,
 }: {
-  article: Article
+  title: string
   href: string
+  excerpt: string
+  imageUrl: string | null
   className?: string
 }) {
-  const articleText = getArticleExcerpt(article)
-  const imageUrl = getArticleImageUrl(article)
-
   return (
     <Link
       href={href}
@@ -30,7 +42,7 @@ export function ArticleCard({
         {imageUrl ? (
           <Image
             src={imageUrl}
-            alt={article.title}
+            alt={title}
             fill
             className="object-cover transition-transform duration-700 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -60,10 +72,10 @@ export function ArticleCard({
 
       <div className="p-6 flex flex-col flex-1 relative">
         <h3 className="text-xl font-bold text-[#1a3f6c] mb-2 group-hover:text-[#215491] transition-colors leading-[1.25]">
-          {article.title}
+          {title}
         </h3>
         <div className="text-gray-500 line-clamp-3 text-sm leading-relaxed mb-5 font-light">
-          {articleText}
+          {excerpt}
         </div>
         <div className="mt-auto flex items-center text-[#215491] font-bold text-[12px] tracking-[0.1em] uppercase group/read font-heading">
           <span>Číst více</span>

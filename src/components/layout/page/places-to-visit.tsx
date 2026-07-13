@@ -2,7 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import { PageCategory, PageChild, RichTextRoot } from '@/types/payload'
 import { GoogleMap, MapMarker } from '@/components/features/google-map'
-import { richTextToHtml } from '@/lib/utils'
+import { richTextToHtml } from '@/lib/rich-text-html'
 import { ExpandableTouristPoint } from './expandable-tourist-point'
 import { PlaceCardImage } from './place-card-image'
 
