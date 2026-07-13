@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { LocalTime } from '@/components/features/local-time'
 import { richTextToHtml } from '@/lib/rich-text-html'
 import { CollapsiblePageTextWithContributor } from './collapsible-page-text'
+import { ArticleAd, AdSenseScript } from '@/components/features/article-ad'
 
 interface TocItem {
   id: string
@@ -129,9 +130,9 @@ export const MainContent = ({
       <aside className="w-full lg:w-[340px] shrink-0 flex flex-col gap-12 relative">
         {/* Time, Exchange & Practical Info — for place-type pages */}
         {showAktualniInfo && (timezone || exchangeRate || practicalInfoChild) && (
-          <div className="relative pl-8">
-            {/* Vertical line (shortened) */}
-            <div className="absolute left-0 top-[20%] h-[70%] w-px bg-[#e4e4e4]" />
+          <div className="relative">
+            {/* Vertical line (shortened) — mezi textem a panelem */}
+            <div className="absolute -left-[30px] top-[20%] h-[70%] w-px bg-[#e4e4e4]" />
 
             <div className="text-center bg-white py-4 px-0">
               {/* Section 1: Time and Exchange Rate */}
@@ -206,26 +207,35 @@ export const MainContent = ({
           </div>
         )}
 
-        {/* Table of Contents — for "Vstupní podmínky" */}
-        {showTableOfContents && headings.length > 0 && (
-          <nav className="hidden lg:block sticky top-24">
-            <ul>
-              {headings.map((heading) => (
-                <li key={heading.id}>
-                  <a
-                    href={`#${heading.id}`}
-                    className={`block py-4 border-b border-[#e4e4e4] transition-colors duration-300 hover:text-black no-underline ${
-                      heading.level === 2
-                        ? 'font-semibold text-gray-800/85'
-                        : 'font-normal text-gray-800/65'
-                    }`}
-                  >
-                    {heading.text}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
+        {/* Obsah (TOC) + reklama ve společném sticky bloku (jako u článku) —
+            jen na praktických informacích. Sticky společně, ať se nepřekrývají. */}
+        {showTableOfContents && (
+          <div className="hidden lg:block sticky top-5">
+            {headings.length > 0 && (
+              <nav>
+                <ul>
+                  {headings.map((heading) => (
+                    <li key={heading.id}>
+                      <a
+                        href={`#${heading.id}`}
+                        className={`block py-4 border-b border-[#e4e4e4] transition-colors duration-300 hover:text-black no-underline ${
+                          heading.level === 2
+                            ? 'font-semibold text-gray-800/85'
+                            : 'font-normal text-gray-800/65'
+                        }`}
+                      >
+                        {heading.text}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            )}
+            <div className={headings.length > 0 ? 'mt-12' : ''}>
+              <AdSenseScript />
+              <ArticleAd variant="primary" />
+            </div>
+          </div>
         )}
       </aside>
     </main>

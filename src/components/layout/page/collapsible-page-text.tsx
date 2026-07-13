@@ -55,7 +55,7 @@ export function CollapsiblePageTextWithContributor({
   const displayedHtml = !isExpanded && shouldCollapse ? previewHtml : textHtml
 
   return (
-    <div className="relative">
+    <>
       <div
         className={cn('relative', !isExpanded && shouldCollapse && 'max-h-[250px] overflow-hidden')}
       >
@@ -78,7 +78,7 @@ export function CollapsiblePageTextWithContributor({
         // bylo vycentrované na CELOU šířku (floatem by ho tlačítko — vlastní BFC —
         // neobtékalo a odsunulo se doprava). Mobil: skládáme pod sebe (autor nahoře,
         // tlačítko pod ním), jinak by úzký autor přes vycentrované tlačítko zasahoval.
-        <div className="relative mt-[10px] flex w-full flex-col items-center gap-3 sm:min-h-[44px] sm:flex-row sm:justify-center sm:gap-0">
+        <div className="relative mt-[30px] flex w-full flex-col items-center gap-3 sm:min-h-[44px] sm:flex-row sm:justify-center sm:gap-0">
           {contributor?.name && (
             <div className="sm:absolute sm:left-0 sm:top-1/2 sm:-translate-y-1/2">
               <div className="flex items-start">
@@ -200,6 +200,6 @@ export function CollapsiblePageTextWithContributor({
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

@@ -1,4 +1,3 @@
-import { revalidateTag } from 'next/cache'
 import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
@@ -14,10 +13,16 @@ import type {
  * změna je na webu vidět hned — žádné čekání na vypršení cache, žádné webhooky.
  */
 
-// revalidateTag funguje jen uvnitř Next runtime; mimo něj (payload CLI,
-// skripty) ho tiše přeskočíme, aby nespadl např. generate:types.
-const safeRevalidate = (tags: string[]) => {
+// `next/cache` se importuje LÍNĚ a s explicitní příponou `.js`. Tento modul se
+// přes externalizovaný Payload config (serverExternalPackages: ['payload', …] +
+// devBundleServerPackages: false) načítá nativním Node ESM loaderem, a ten u
+// balíčku bez `exports` mapy (next) neumí dořešit bezpříponový `next/cache`
+// → ERR_MODULE_NOT_FOUND. `next/cache.js` je fyzický soubor, který se resolvne
+// nativně i přes bundler. Líné načtení navíc znamená, že mimo Next runtime
+// (payload CLI, skripty jako generate:types) se `next/cache` vůbec nesáhne.
+const safeRevalidate = async (tags: string[]) => {
   try {
+    const { revalidateTag } = await import('next/cache.js')
     // expire: 0 → tag se zneplatní okamžitě. (updateTag je v Next 16 jen pro
     // Server Actions; z Payload hooku by vyhodil chybu a invalidace by se ztratila.)
     for (const tag of tags) revalidateTag(tag, { expire: 0 })
@@ -48,8 +53,11 @@ const pageTags = (doc: PageLikeDoc | undefined | null): string[] => {
   return tags
 }
 
-export const revalidatePageAfterChange: CollectionAfterChangeHook = ({ doc, previousDoc }) => {
-  safeRevalidate([
+export const revalidatePageAfterChange: CollectionAfterChangeHook = async ({
+  doc,
+  previousDoc,
+}) => {
+  await safeRevalidate([
     'pages',
     'root_pages',
     'sitemap',
@@ -60,8 +68,8 @@ export const revalidatePageAfterChange: CollectionAfterChangeHook = ({ doc, prev
   return doc
 }
 
-export const revalidatePageAfterDelete: CollectionAfterDeleteHook = ({ doc }) => {
-  safeRevalidate([
+export const revalidatePageAfterDelete: CollectionAfterDeleteHook = async ({ doc }) => {
+  await safeRevalidate([
     'pages',
     'root_pages',
     'sitemap',
@@ -91,8 +99,11 @@ const articlePageTags = (doc: ArticleLikeDoc | undefined | null): string[] => {
   return tags
 }
 
-export const revalidateArticleAfterChange: CollectionAfterChangeHook = ({ doc, previousDoc }) => {
-  safeRevalidate([
+export const revalidateArticleAfterChange: CollectionAfterChangeHook = async ({
+  doc,
+  previousDoc,
+}) => {
+  await safeRevalidate([
     'articles',
     'sitemap',
     // Relace mohou být jen id (bez fullSlug) — pak spadne invalidace na
@@ -104,13 +115,13 @@ export const revalidateArticleAfterChange: CollectionAfterChangeHook = ({ doc, p
   return doc
 }
 
-export const revalidateArticleAfterDelete: CollectionAfterDeleteHook = ({ doc }) => {
-  safeRevalidate(['articles', 'sitemap', 'pages', ...articlePageTags(doc as ArticleLikeDoc)])
+export const revalidateArticleAfterDelete: CollectionAfterDeleteHook = async ({ doc }) => {
+  await safeRevalidate(['articles', 'sitemap', 'pages', ...articlePageTags(doc as ArticleLikeDoc)])
   return doc
 }
 
 /** Globals (header, homepage, footer) ovlivňují layout všech stránek. */
-export const revalidateGlobalsAfterChange: GlobalAfterChangeHook = ({ doc }) => {
-  safeRevalidate(['root_pages', 'footer'])
+export const revalidateGlobalsAfterChange: GlobalAfterChangeHook = async ({ doc }) => {
+  await safeRevalidate(['root_pages', 'footer'])
   return doc
 }
