@@ -18,7 +18,9 @@ interface PlacesToVisitProps {
 
 function getFullHtml(text: string | RichTextRoot | null | undefined): string {
   if (!text) return ''
-  return typeof text === 'string' ? text : richTextToHtml(text)
+  // richTextToHtml je centrální sanitizační hranice (DOMPurify) — string i
+  // RichTextRoot musí projít přes ni, ať se nevrací neošetřené HTML.
+  return richTextToHtml(text)
 }
 
 /** Plain-text náhled odvozený z už vyrenderovaného HTML (bez dalšího renderu). */

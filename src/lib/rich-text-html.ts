@@ -8,6 +8,8 @@ import DOMPurify from 'isomorphic-dompurify'
 type RichTextRenderContext = {
   currencyCode?: string | null
   exchangeRate?: number | null
+  /** Už použitá heading id v rámci jednoho dokumentu (unikátnost kotev). */
+  usedHeadingIds?: Set<string>
 }
 
 const CC_ICON_SVG =
@@ -24,12 +26,31 @@ function headingIdFromHtml(html: string): string {
     .replace(/[^\p{L}\p{M}\p{N}\p{Pc}\-]/gu, '')
 }
 
+// Zajistí unikátní heading id v rámci dokumentu: opakovaný nadpis dostane
+// příponu -2, -3 … (jinak by fragmentové odkazy skočily vždy na první výskyt).
+function uniqueHeadingId(baseId: string, used?: Set<string>): string {
+  if (!baseId || !used) return baseId
+  let id = baseId
+  let n = 2
+  while (used.has(id)) {
+    id = `${baseId}-${n}`
+    n++
+  }
+  used.add(id)
+  return id
+}
+
 /**
  * Convert a Lexical rich text JSON tree to an HTML string.
  * Falls back to returning the value as-is if it's already a string.
  */
 export function richTextToHtml(value: unknown, context: RichTextRenderContext = {}): string {
-  const rawHtml = richTextToHtmlInternal(value, context)
+  // Čerstvá sada heading id pro každé volání (= per dokument/pole).
+  const ctx: RichTextRenderContext = {
+    ...context,
+    usedHeadingIds: context.usedHeadingIds ?? new Set<string>(),
+  }
+  const rawHtml = richTextToHtmlInternal(value, ctx)
   return DOMPurify.sanitize(rawHtml, {
     ADD_TAGS: ['iframe', 'section', 'svg', 'path', 'button'],
     ADD_ATTR: [
@@ -97,7 +118,7 @@ function richTextToHtmlInternal(value: unknown, context: RichTextRenderContext =
     case 'heading': {
       const rawTag = String((node.tag as string | undefined) || 'h2').toLowerCase()
       const tag = allowedHeadingTags.has(rawTag) ? rawTag : 'h2'
-      const id = headingIdFromHtml(children)
+      const id = uniqueHeadingId(headingIdFromHtml(children), context.usedHeadingIds)
       const idAttr = id ? ` id="${id}"` : ''
       return `<${tag}${idAttr}>${children}</${tag}>`
     }
@@ -305,7 +326,7 @@ function richTextToHtmlInternal(value: unknown, context: RichTextRenderContext =
           )}</span><span class="nice-to-know-item__value-wrap"><span>${escapeHtml(
             item.value || '',
           )}</span>${
-            t === 'time' && timeData
+            t === 'time' && timeData && timeData.offsetLabel
               ? ` <span class="nice-to-know-item__time-diff">${escapeHtml(
                   timeData.offsetLabel,
                 )}</span>`
@@ -425,7 +446,7 @@ function sanitizeBudgetTier(type: unknown): 'budget' | 'midrange' | 'top' {
 function getTimeDataForTimezone(timeZone: string): {
   day: string
   time: string
-  offsetLabel: string
+  offsetLabel: string | null
 } {
   const now = new Date()
 
@@ -440,7 +461,8 @@ function getTimeDataForTimezone(timeZone: string): {
     const destinationOffset = getOffsetHours(timeZone, now)
     const pragueOffset = getOffsetHours('Europe/Prague', now)
 
-    let offsetLabel = '0h'
+    // Neznámý offset = null (ne „0h" — to by lhalo, že je stejný jako Praha).
+    let offsetLabel: string | null = null
     if (destinationOffset !== null && pragueOffset !== null) {
       const diffHours = destinationOffset - pragueOffset
       const value = Number.isInteger(diffHours) ? `${diffHours}` : diffHours.toFixed(1)
@@ -449,7 +471,7 @@ function getTimeDataForTimezone(timeZone: string): {
 
     return { day, time, offsetLabel }
   } catch {
-    return { day: '', time: '--:--', offsetLabel: '0h' }
+    return { day: '', time: '--:--', offsetLabel: null }
   }
 }
 

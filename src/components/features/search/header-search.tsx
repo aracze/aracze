@@ -50,6 +50,7 @@ export function HeaderSearch() {
   return (
     <div className="flex items-center">
       <button
+        type="button"
         onClick={() => setIsExpanded(true)}
         className="p-3 text-white/90 hover:text-white hover:bg-white/10 rounded-full transition-all duration-300"
         aria-label="Otevřít vyhledávání"
@@ -74,6 +75,7 @@ export function HeaderSearch() {
                 />
                 <div className="hidden md:flex items-center gap-4 border-l border-gray-100 pl-6">
                   <button
+                    type="button"
                     onClick={handleClear}
                     aria-label="Zavřít vyhledávání"
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
@@ -81,7 +83,12 @@ export function HeaderSearch() {
                     <X className="w-6 h-6" strokeWidth={2.5} />
                   </button>
                 </div>
-                <button onClick={handleClear} className="md:hidden p-2 text-gray-400">
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  aria-label="Zavřít vyhledávání"
+                  className="md:hidden p-2 text-gray-400"
+                >
                   <X className="w-6 h-6" strokeWidth={2.5} />
                 </button>
               </div>

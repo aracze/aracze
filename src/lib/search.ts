@@ -17,30 +17,40 @@ import type { SearchItem } from '@/types/search'
 // ven z unstable_cache a fallback řeší až getFuse.
 async function loadSearchDataUncached(): Promise<SearchItem[]> {
   const payload = await getDb()
-  const res = await payload.find({
-    overrideAccess: false,
-    collection: 'pages',
-    limit: 200,
-    depth: 0,
-    select: { title: true, text: true, slug: true, fullSlug: true },
-    // Bez joinů — jejich vyhodnocení stojí stovky ms za KAŽDÝ dokument
-    // (viz komentář u MENU_SELECT v lib/payload.ts).
-    joins: false,
-  })
-  return (res.docs || []).map((p) => {
-    const doc = p as unknown as {
-      title?: string
-      text?: unknown
-      slug?: string
-      fullSlug?: string
+  const items: SearchItem[] = []
+  // Stránkujeme přes CELOU kolekci — s pevným limitem 200 by se do indexu
+  // dostalo jen prvních 200 stránek a zbytek by nešel vyhledat.
+  let page = 1
+  for (;;) {
+    const res = await payload.find({
+      overrideAccess: false,
+      collection: 'pages',
+      limit: 200,
+      page,
+      depth: 0,
+      select: { title: true, text: true, slug: true, fullSlug: true },
+      // Bez joinů — jejich vyhodnocení stojí stovky ms za KAŽDÝ dokument
+      // (viz komentář u MENU_SELECT v lib/payload.ts).
+      joins: false,
+    })
+    for (const p of res.docs || []) {
+      const doc = p as unknown as {
+        title?: string
+        text?: unknown
+        slug?: string
+        fullSlug?: string
+      }
+      items.push({
+        title: doc.title ?? '',
+        text: richTextToPlainText(doc.text).slice(0, 2000),
+        slug: doc.slug ?? '',
+        fullSlug: doc.fullSlug ?? '',
+      } satisfies SearchItem)
     }
-    return {
-      title: doc.title ?? '',
-      text: richTextToPlainText(doc.text).slice(0, 2000),
-      slug: doc.slug ?? '',
-      fullSlug: doc.fullSlug ?? '',
-    } satisfies SearchItem
-  })
+    if (!res.hasNextPage) break
+    page++
+  }
+  return items
 }
 
 const loadSearchData = isProduction()

@@ -158,7 +158,6 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
           exchangeRate={exchangeData?.rate}
           pageTitle={page.title}
           genitive={page.detail?.genitive}
-          createdBy={page.createdBy}
           createdByPublic={page.createdByPublic}
         />
 

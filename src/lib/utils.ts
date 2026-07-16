@@ -15,7 +15,14 @@ export function isProduction() {
 }
 
 export function getPayloadURL() {
-  return (process.env.PAYLOAD_BASE_API_URL || 'http://localhost:3000').replace(/\/$/, '')
+  // Klientsky bezpečné: v prohlížeči je dostupná jen proměnná s prefixem
+  // `NEXT_PUBLIC_`. Server-only `PAYLOAD_BASE_API_URL` necháváme jako fallback,
+  // ať se serverové volání nerozbije, kdyby `NEXT_PUBLIC_` verze chyběla.
+  return (
+    process.env.NEXT_PUBLIC_PAYLOAD_BASE_URL ||
+    process.env.PAYLOAD_BASE_API_URL ||
+    'http://localhost:3000'
+  ).replace(/\/$/, '')
 }
 
 /**

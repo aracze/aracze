@@ -78,9 +78,9 @@ export default async function RootLayout({
 
         {/* HLAVNÍ KONTEJNER: flex rozložení pro menu a obsah */}
         <div className="flex flex-col min-h-screen">
-          {headerPages.length > 0 && (
-            <Header pages={headerPages} headerLogo={headerLogo} logoSvgHtml={headerLogoSvg} />
-          )}
+          {/* Header renderujeme vždy (i když se navigace nenačte — fetchRootPages
+              vrací pages: [] při výpadku DB) — logo, hledání a CTA tak zůstanou. */}
+          <Header pages={headerPages} headerLogo={headerLogo} logoSvgHtml={headerLogoSvg} />
           <div className="grow w-full">{children}</div>
           <Footer />
         </div>

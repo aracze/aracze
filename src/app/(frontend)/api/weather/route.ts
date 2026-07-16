@@ -1,33 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {
+  // Nevalidní tělo požadavku = chyba klienta → 400 (ne 500).
+  let body: unknown
   try {
-    const { lat, lng } = await request.json()
+    body = await request.json()
+  } catch {
+    return NextResponse.json(
+      { error: 'Valid latitude and longitude are required' },
+      { status: 400 },
+    )
+  }
 
-    if (
-      typeof lat !== 'number' ||
-      typeof lng !== 'number' ||
-      !isFinite(lat) ||
-      !isFinite(lng) ||
-      lat < -90 ||
-      lat > 90 ||
-      lng < -180 ||
-      lng > 180
-    ) {
-      return NextResponse.json(
-        { error: 'Valid latitude and longitude are required' },
-        { status: 400 },
-      )
-    }
+  const { lat, lng } = (body ?? {}) as { lat?: unknown; lng?: unknown }
 
-    const premiumKey = process.env.OPENWEATHER_API_KEY
-    if (!premiumKey) {
-      console.error('OPENWEATHER_API_KEY is not defined in environment variables')
-      return NextResponse.json({ error: 'OpenWeather API configuration missing' }, { status: 500 })
-    }
+  if (
+    typeof lat !== 'number' ||
+    typeof lng !== 'number' ||
+    !isFinite(lat) ||
+    !isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    return NextResponse.json(
+      { error: 'Valid latitude and longitude are required' },
+      { status: 400 },
+    )
+  }
 
-    const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&appid=${premiumKey}&units=metric&exclude=minutely,alerts`
+  const premiumKey = process.env.OPENWEATHER_API_KEY
+  if (!premiumKey) {
+    console.error('OPENWEATHER_API_KEY is not defined in environment variables')
+    return NextResponse.json({ error: 'OpenWeather API configuration missing' }, { status: 500 })
+  }
 
+  const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&appid=${premiumKey}&units=metric&exclude=minutely,alerts`
+
+  try {
     // Zrušíme požadavek po 10 s, ať se route nezasekne na pomalém upstreamu.
     // Cache per URL (lat/lng) na 10 min — souřadnice místa jsou fixní, takže víc
     // návštěvníků nad stejným místem = cache-hit a šetří rate limit OpenWeather.
@@ -37,17 +48,15 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
       signal: AbortSignal.timeout(10_000),
       next: { revalidate: 600 },
     })
-    const weatherJson = await response.json()
 
     if (!response.ok) {
-      // Nevracíme tělo upstreamu (může nést interní detaily) — jen generická
-      // chyba s upstream statusem.
-      return NextResponse.json(
-        { error: 'Failed to fetch weather forecast' },
-        { status: response.status },
-      )
+      // Selhání upstreamu normalizujeme na 500 — neprosakujeme jeho status
+      // (401/429…) ani tělo (může nést API klíč / interní detaily) ke klientovi.
+      console.error('Weather upstream responded with status', response.status)
+      return NextResponse.json({ error: 'Failed to fetch weather forecast' }, { status: 500 })
     }
 
+    const weatherJson = await response.json()
     return NextResponse.json(weatherJson)
   } catch {
     // Bez objektu chyby / URL — URL obsahuje API klíč, nesmí do logu.

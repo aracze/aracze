@@ -83,7 +83,12 @@ export default async function PageRoute({ params }: Props) {
   // await ve fetchAncestorChain už jen sáhne pro hotový výsledek (šetří celou
   // sériovou vlnu ~0,3–0,5 s na podstránkách). Fire-and-forget + catch: když
   // stránka neexistuje (článek/404), výsledky se prostě nepoužijí.
-  for (let i = 1; i < slug.length; i++) {
+  // Předehříváme jen do rozumné hloubky hierarchie — bez stropu by uměle
+  // dlouhá (např. nepřátelská) URL rozjela desítky zbytečných DB dotazů na
+  // neexistující cestu. Skutečný detail se dohledá dál bez ohledu na strop.
+  const MAX_PREWARM_DEPTH = 6
+  const prewarmDepth = Math.min(slug.length, MAX_PREWARM_DEPTH)
+  for (let i = 1; i < prewarmDepth; i++) {
     const prefix = slug.slice(0, i).join('/')
     void fetchPageLightByFullSlug(prefix).catch(() => {})
     // Kontext podnavigace bývá některý z předků — předehřejeme i levný počet

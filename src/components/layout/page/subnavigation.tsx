@@ -126,7 +126,10 @@ export const Subnavigation = ({
       currentPageCategory === PageCategory.Prakticke_informace)
 
   return (
-    <div className="bg-white border-b border-gray-100 relative z-30 overflow-x-auto whitespace-nowrap">
+    <nav
+      aria-label="Sekundární navigace"
+      className="bg-white border-b border-gray-100 relative z-30 overflow-x-auto whitespace-nowrap"
+    >
       <div className="max-w-7xl mx-auto px-4 md:px-12">
         <div className="flex gap-0 justify-center text-xs md:text-base font-semibold font-heading">
           {/* Context page (the Place that owns this menu) */}
@@ -182,6 +185,6 @@ export const Subnavigation = ({
             ))}
         </div>
       </div>
-    </div>
+    </nav>
   )
 }

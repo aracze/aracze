@@ -42,14 +42,21 @@ export const HeroSection = ({
                 const isLast = idx === breadcrumbs.length - 1
                 return (
                   <li key={bc.href} className="flex items-center gap-1.5">
-                    <Link
-                      href={bc.href}
-                      className={`text-[14px] tracking-wide transition-colors duration-200 hover:text-[#1a3f6c] ${
-                        isLast ? 'text-gray-700 font-bold' : 'text-gray-500 font-medium'
-                      }`}
-                    >
-                      {bc.title}
-                    </Link>
+                    {isLast ? (
+                      <span
+                        aria-current="page"
+                        className="text-[14px] font-bold tracking-wide text-gray-700"
+                      >
+                        {bc.title}
+                      </span>
+                    ) : (
+                      <Link
+                        href={bc.href}
+                        className="text-[14px] font-medium tracking-wide text-gray-500 transition-colors duration-200 hover:text-[#1a3f6c]"
+                      >
+                        {bc.title}
+                      </Link>
+                    )}
                     {!isLast && (
                       <span className="text-gray-300 text-[12px] px-0.5" aria-hidden="true">
                         /

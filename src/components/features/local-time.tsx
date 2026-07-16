@@ -73,7 +73,7 @@ export function LocalTime({
   }
 
   return (
-    <div className={`flex items-baseline justify-center gap-2 py-1 ${className}`}>
+    <div className={`flex items-baseline justify-center gap-2 py-1 h-[42px] ${className}`}>
       <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#67747c]">
         {data.day}
       </span>

@@ -27,7 +27,7 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
   // celého pole článků těžkým fetchem — rozhoduje jen o záložce „Články".
   const rootHasArticles = rootPage ? await pageHasArticles(rootPage.id) : false
 
-  const heroImageUrl = resolveHeroImage(contextPage || rootPage, article)
+  const heroImage = resolveHeroImage(contextPage || rootPage, article)
 
   // Author (safe public subset from the backend virtual field)
   const author = article.createdByPublic ?? null
@@ -70,8 +70,8 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
       {/* Article Header / Hero */}
       <HeroSection
         title={article.title}
-        imageUrl={heroImageUrl}
-        styleCss={article.featuredImage?.featureImageStyleCss || undefined}
+        imageUrl={heroImage.url}
+        styleCss={heroImage.styleCss}
         filterId={`blurFilter-article-${article.documentId}`}
       />
 
@@ -198,10 +198,15 @@ function resolveHeroImage(
 ) {
   // Prefer article's own featured image (a populated media object), fall back to context page.
   const articleImage = article.featuredImage?.image
-  const url =
-    (articleImage && typeof articleImage === 'object' ? articleImage.url : null) ??
-    page?.featuredImage?.image?.url
-  if (!url) return null
+  const articleUrl = articleImage && typeof articleImage === 'object' ? articleImage.url : null
+  const url = articleUrl ?? page?.featuredImage?.image?.url ?? null
 
-  return url.startsWith('/') ? `${getPayloadURL()}${url}` : url
+  return {
+    url: url ? (url.startsWith('/') ? `${getPayloadURL()}${url}` : url) : null,
+    // styleCss (ohnisko/pozice) musí pocházet ze STEJNÉHO obrázku jako `url` —
+    // u fallbacku na obrázek stránky tedy z featuredImage stránky, ne z článku.
+    styleCss: articleUrl
+      ? article.featuredImage?.featureImageStyleCss || undefined
+      : page?.featuredImage?.featureImageStyleCss || undefined,
+  }
 }

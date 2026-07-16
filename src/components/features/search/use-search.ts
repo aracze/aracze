@@ -17,11 +17,16 @@ export function useSearch() {
             signal: controller.signal,
           })
           const data = await res.json()
-          if (data.success) {
+          // Neúspěšná odpověď (chyba, success:false, nečekaný tvar) nesmí nechat
+          // viset staré výsledky — v takovém případě je vyprázdníme.
+          if (res.ok && data.success && Array.isArray(data.message)) {
             setResults(data.message)
+          } else {
+            setResults([])
           }
         } catch (error) {
           if ((error as Error)?.name === 'AbortError') return
+          setResults([])
           console.error('Search fetch error:', error)
         }
       } else {

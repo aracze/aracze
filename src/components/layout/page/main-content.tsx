@@ -16,15 +16,22 @@ function extractHeadings(html: string): TocItem[] {
   const headings: TocItem[] = []
   // Nadpisy mají po renderu atributy (např. id z richTextToHtml) — otevírací
   // tag proto musí povolit i atributy, jinak by TOC zůstalo prázdné.
-  const regex = /<(h[23])(?:\s[^>]*)?>(.*?)<\/\1>/gi
+  // Zachytíme i atributy otevíracího tagu, ať přečteme skutečné `id`, které
+  // vygeneroval richTextToHtml (vč. případných -2/-3 u opakovaných nadpisů) —
+  // jinak by TOC odkaz nesouhlasil s kotvou v textu.
+  const regex = /<(h[23])([^>]*)>(.*?)<\/\1>/gi
   let match
   while ((match = regex.exec(html)) !== null) {
     const level = parseInt(match[1][1], 10)
-    const text = match[2].replace(/<[^>]+>/g, '').trim()
-    const id = text
-      .toLowerCase()
-      .replace(/ /g, '-')
-      .replace(/[^\p{L}\p{M}\p{N}\p{Pc}\-]/gu, '')
+    const attrs = match[2]
+    const text = match[3].replace(/<[^>]+>/g, '').trim()
+    const idMatch = attrs.match(/\sid="([^"]*)"/)
+    const id =
+      idMatch?.[1] ??
+      text
+        .toLowerCase()
+        .replace(/ /g, '-')
+        .replace(/[^\p{L}\p{M}\p{N}\p{Pc}\-]/gu, '')
     headings.push({ id, text, level })
   }
   return headings
@@ -39,7 +46,6 @@ export const MainContent = ({
   exchangeRate,
   pageTitle,
   genitive,
-  createdBy,
   createdByPublic,
 }: {
   text: string | RichTextRoot
@@ -50,15 +56,6 @@ export const MainContent = ({
   exchangeRate?: number | null
   pageTitle?: string | null
   genitive?: string | null
-  createdBy?:
-    | {
-        username?: string | null
-        firstName?: string | null
-        lastName?: string | null
-        avatar?: { url?: string | null } | null
-      }
-    | number
-    | null
   createdByPublic?: {
     username?: string | null
     firstName?: string | null
@@ -93,8 +90,9 @@ export const MainContent = ({
 
   const cleanGenitive = genitive?.replace(/^do\s+/i, '')
   const displayName = cleanGenitive || pageTitle
-  const author =
-    (createdBy && typeof createdBy === 'object' ? createdBy : null) || createdByPublic || null
+  // Autora bereme VÝHRADNĚ z veřejného virtuálního pole `createdByPublic` —
+  // interní `createdBy` (surová relace na uživatele) se na frontend nevystavuje.
+  const author = createdByPublic ?? null
   const authorName =
     author?.username || [author?.firstName, author?.lastName].filter(Boolean).join(' ') || null
   const rawAvatarUrl = author?.avatar?.url

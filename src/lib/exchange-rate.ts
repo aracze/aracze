@@ -14,7 +14,12 @@ async function fetchExchangeRateRaw(
   try {
     const res = await fetch(
       `https://api.frankfurter.app/latest?from=${encodeURIComponent(currencyCode)}&to=CZK`,
-      { next: { revalidate: 86400 } }, // cache for 24h
+      {
+        // Timeout, ať se render nezasekne na pomalém/nedostupném upstreamu —
+        // abort spadne do catch níže a vrátí null (cache 24h zůstává zachovaná).
+        signal: AbortSignal.timeout(10_000),
+        next: { revalidate: 86400 }, // cache for 24h
+      },
     )
     if (!res.ok) return null
 

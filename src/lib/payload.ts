@@ -596,7 +596,14 @@ async function pageHasArticlesBySlugUncached(fullSlug: string): Promise<boolean>
   const res = await payload.count({
     overrideAccess: false,
     collection: 'articles',
-    where: { 'mainPage.fullSlug': { equals: fullSlug } },
+    // Stejné pokrytí jako detail stránky (fetchPageByFullSlugUncached): článek
+    // připojený přes `mainPage` NEBO přes sekundární `pages`.
+    where: {
+      or: [
+        { 'mainPage.fullSlug': { equals: fullSlug } },
+        { 'pages.fullSlug': { equals: fullSlug } },
+      ],
+    },
   })
   return (res.totalDocs ?? 0) > 0
 }
@@ -623,7 +630,12 @@ export const pageHasArticles = cache(async (pageId: number | string): Promise<bo
     const res = await payload.count({
       overrideAccess: false,
       collection: 'articles',
-      where: { mainPage: { equals: pageId } },
+      // Článek připojený přes `mainPage` NEBO sekundární `pages` (stejně jako
+      // detail stránky) — jinak by se záložka „Články" u některých stránek
+      // nezobrazila, i když články mají.
+      where: {
+        or: [{ mainPage: { equals: pageId } }, { pages: { in: [pageId] } }],
+      },
     })
     return (res.totalDocs ?? 0) > 0
   } catch {
