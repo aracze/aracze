@@ -23,6 +23,23 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 # ENV NEXT_TELEMETRY_DISABLED 1
 
+# NEXT_PUBLIC_* proměnné Next.js zapéká do klientského bundlu UŽ PŘI BUILDU
+# (ne za běhu), takže je sem předáváme jako build-args z GitHub Variables
+# (viz .github/workflows/cd.yml). Bez nich by web měl prázdný Google Maps klíč,
+# špatné URL obrázků a chybějící SITE_URL.
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_PAYLOAD_BASE_URL
+ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+ARG NEXT_PUBLIC_ADSENSE_CLIENT
+ARG NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT
+ARG NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT_2
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_PAYLOAD_BASE_URL=$NEXT_PUBLIC_PAYLOAD_BASE_URL \
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY \
+    NEXT_PUBLIC_ADSENSE_CLIENT=$NEXT_PUBLIC_ADSENSE_CLIENT \
+    NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT=$NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT \
+    NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT_2=$NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT_2
+
 RUN corepack enable pnpm && pnpm run build
 
 # Ensure the public directory exists so the runner stage can safely copy it
