@@ -583,7 +583,7 @@ async function htmlToLexical(
         if (type === 'language') {
           const bubble = item.querySelector('.language-bubble') || header
           if (bubble) {
-            let textParts: string[] = []
+            const textParts: string[] = []
             // Pokud je tam <a> tag, použijeme ho jako kontejner, jinak bublinu samotnou
             const container = bubble.querySelector('a') || bubble
             container.childNodes.forEach((node: any) => {
@@ -970,7 +970,7 @@ async function htmlToLexical(
       // odstraníme ho, aby se text nezdvojil.
       let captionToRemove: any = null
       const parentFigure = img.closest?.('figure') || null
-      let searchContext = parentFigure || img
+      const searchContext = parentFigure || img
       let current = searchContext.nextElementSibling
 
       // Hledáme popisek v následujících dvou elementech (pro případ prázdných tagů mezi nimi)

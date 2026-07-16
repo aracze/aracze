@@ -1,0 +1,75 @@
+import Link from 'next/link'
+import { StaticHeroOverlay } from '@/components/features/static-hero-overlay'
+import { StaticHeroWave } from '@/components/features/static-hero-wave'
+import { StaticHeroImage } from '@/components/features/static-hero-image'
+
+interface Breadcrumb {
+  title: string
+  href: string
+}
+
+interface HeroSectionProps {
+  title: string
+  imageUrl: string | null
+  styleCss?: string
+  filterId?: string
+  breadcrumbs?: Breadcrumb[]
+}
+
+export const HeroSection = ({
+  title,
+  imageUrl,
+  styleCss,
+  filterId,
+  breadcrumbs,
+}: HeroSectionProps) => {
+  return (
+    <section className="relative w-full h-[315px] bg-[#3b444f]">
+      {/* Cover Image Background with its own overflow clipping */}
+      <div className="absolute inset-0 overflow-hidden">
+        <StaticHeroImage imageUrl={imageUrl} styleCss={styleCss} />
+      </div>
+
+      {/* Title Content - Overlaid like in Grails */}
+      <div className="relative z-[101] h-full flex flex-col items-center justify-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        {breadcrumbs && breadcrumbs.length > 0 && (
+          <nav
+            aria-label="Breadcrumb navigation"
+            className="mb-2 flex items-center gap-2 -translate-y-[20px] bg-white/90 backdrop-blur-md border border-white/20 rounded-full px-5 py-1.5 shadow-sm"
+          >
+            <ol className="flex items-center gap-1.5 list-none p-0 m-0">
+              {breadcrumbs.map((bc, idx) => {
+                const isLast = idx === breadcrumbs.length - 1
+                return (
+                  <li key={bc.href} className="flex items-center gap-1.5">
+                    <Link
+                      href={bc.href}
+                      className={`text-[14px] tracking-wide transition-colors duration-200 hover:text-[#1a3f6c] ${
+                        isLast ? 'text-gray-700 font-bold' : 'text-gray-500 font-medium'
+                      }`}
+                    >
+                      {bc.title}
+                    </Link>
+                    {!isLast && (
+                      <span className="text-gray-300 text-[12px] px-0.5" aria-hidden="true">
+                        /
+                      </span>
+                    )}
+                  </li>
+                )
+              })}
+            </ol>
+          </nav>
+        )}
+        <h1 className="-translate-y-[16px] text-[40px] font-semibold text-white text-center tracking-normal [text-shadow:1px_1px_1px_rgba(0,0,0,0.5)]">
+          {title}
+        </h1>
+        <div className="-translate-y-[12px] w-[30px] h-px bg-[#D7E1EF] rounded-full mx-auto"></div>
+      </div>
+
+      <StaticHeroOverlay filterId={filterId} />
+
+      <StaticHeroWave />
+    </section>
+  )
+}
