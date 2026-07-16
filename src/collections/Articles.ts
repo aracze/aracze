@@ -1,6 +1,9 @@
 import type { CollectionConfig } from 'payload'
+import { revalidateArticleAfterChange, revalidateArticleAfterDelete } from '../hooks/revalidation'
 import { imageFields } from '../fields/image'
 import { slugField } from '../fields/slug'
+import { isAdmin } from '../access/isAdmin'
+import { isAdminOrEditor } from '../access/isAdminOrEditor'
 
 import {
   MetaDescriptionField,
@@ -27,6 +30,15 @@ export const Articles: CollectionConfig = {
   },
   access: {
     read: () => true,
+    // Zápis obsahu jen admin/editor; mazání jen admin. Bez těchto pravidel by
+    // Payload povolil zápis KAŽDÉMU přihlášenému (i roli `user`).
+    create: isAdminOrEditor,
+    update: isAdminOrEditor,
+    delete: isAdmin,
+  },
+  hooks: {
+    afterChange: [revalidateArticleAfterChange],
+    afterDelete: [revalidateArticleAfterDelete],
   },
   fields: [
     {

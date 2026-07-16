@@ -4,9 +4,20 @@ import type { PayloadHandler } from 'payload'
 export const initDbEndpoint: PayloadHandler = async (req) => {
   const { payload } = req
 
-  // Simple security check using your existing secret
-  const url = new URL(req.url || '', 'http://localhost')
-  if (url.searchParams.get('secret') !== process.env.PAYLOAD_SECRET) {
+  // Bezpečnostní pojistky pro destruktivní operaci (DROP SCHEMA public CASCADE):
+  //  1) běží jen když je výslovně povoleno přes env ALLOW_INIT_DB (v produkci vypnuto),
+  //  2) tajemství se čte z HLAVIČKY `x-init-secret`, ne z URL query (query končí
+  //     v access-logu proxy, historii prohlížeče a v hlavičce Referer),
+  //  3) endpoint je registrovaný jako POST, ne GET (viz payload.config.ts) — GET
+  //     by šel spustit prefetchem, <img>, historií nebo cache.
+  // Admin-session zde záměrně nepožadujeme: init se pouští na prázdné DB, kde
+  // ještě žádný admin neexistuje.
+  if (process.env.ALLOW_INIT_DB !== 'true') {
+    return Response.json({ error: 'Not found' }, { status: 404 })
+  }
+  const secret = process.env.PAYLOAD_SECRET
+  const provided = req.headers?.get('x-init-secret')
+  if (!secret || provided !== secret) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -186,15 +197,9 @@ export const initDbEndpoint: PayloadHandler = async (req) => {
 
     return Response.json({ message: 'Database initialized successfully' })
   } catch (_error: any) {
-    payload.logger.error('Database initialization failed: ' + _error.message)
-    // Return the actual error message so we can debug
-    return Response.json(
-      {
-        error: _error.message,
-        stack: _error.stack,
-        detail: _error.detail || 'No extra detail',
-      },
-      { status: 500 },
-    )
+    // Detail chyby (message/stack/detail) jen do serverového logu — klientovi
+    // nevracíme interní informace o schématu/cestách.
+    payload.logger.error('Database initialization failed: ' + (_error?.message ?? _error))
+    return Response.json({ error: 'Database initialization failed' }, { status: 500 })
   }
 }

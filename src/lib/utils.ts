@@ -1,0 +1,100 @@
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+import type { Article } from '@/types/payload'
+
+// Čisté (klientsky bezpečné) utility. Rendering rich-textu do HTML (s těžkou
+// závislostí DOMPurify) je záměrně v samostatném `rich-text-html.ts`, aby se
+// DOMPurify nedostal do klientského bundlu přes tento sdílený modul.
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+export function isProduction() {
+  return process.env.NODE_ENV === 'production'
+}
+
+export function getPayloadURL() {
+  // Klientsky bezpečné: v prohlížeči je dostupná jen proměnná s prefixem
+  // `NEXT_PUBLIC_`. Server-only `PAYLOAD_BASE_API_URL` necháváme jako fallback,
+  // ať se serverové volání nerozbije, kdyby `NEXT_PUBLIC_` verze chyběla.
+  return (
+    process.env.NEXT_PUBLIC_PAYLOAD_BASE_URL ||
+    process.env.PAYLOAD_BASE_API_URL ||
+    'http://localhost:3000'
+  ).replace(/\/$/, '')
+}
+
+/**
+ * Public base URL of the site itself (not the Payload API) — used for absolute
+ * URLs in the sitemap, canonical links, etc. Nastav `NEXT_PUBLIC_SITE_URL` v env.
+ */
+export function getSiteURL() {
+  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.ara.cz').replace(/\/$/, '')
+}
+
+export function richTextToPlainText(value: unknown): string {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (!value || typeof value !== 'object') {
+    return ''
+  }
+
+  const texts: string[] = []
+
+  const visit = (node: unknown) => {
+    if (!node || typeof node !== 'object') {
+      return
+    }
+
+    if ('text' in node && typeof (node as { text?: unknown }).text === 'string') {
+      texts.push((node as { text: string }).text)
+    }
+
+    if ('children' in node && Array.isArray((node as { children?: unknown[] }).children)) {
+      for (const child of (node as { children: unknown[] }).children) {
+        visit(child)
+      }
+    }
+
+    if ('root' in node) {
+      visit((node as { root?: unknown }).root)
+    }
+  }
+
+  visit(value)
+
+  return texts.join(' ').replace(/\s+/g, ' ').trim()
+}
+
+// ─── Sdílené odvozeniny pro článkové karty/seznamy (jedno místo pravdy) ──────
+
+/** Plain-text perex z rich-textu článku. */
+export function getArticleExcerpt(article: Article): string {
+  return richTextToPlainText(article.text)
+}
+
+/**
+ * URL náhledového obrázku článku. `featuredImage.image` je populovaný media objekt
+ * (po enrichArticleImages), před tím číselné id → v tom případě vrátíme null.
+ */
+export function getArticleImageUrl(article: Article): string | null {
+  const media = article.featuredImage?.image
+  const rawUrl = media && typeof media === 'object' ? media.url : null
+  if (!rawUrl) return null
+  return rawUrl.startsWith('/') ? `${getPayloadURL()}${rawUrl}` : rawUrl
+}
+
+/** Odkaz na detail článku (pod rodičovskou stránkou, fallback /blog/<slug>). */
+export function getArticleHref(article: Article, parentFullSlug?: string): string {
+  return parentFullSlug
+    ? `${parentFullSlug.replace(/\/$/, '')}/${article.slug}`
+    : `/blog/${article.slug}`
+}
+
+/** Stabilní React key pro článek (documentId → slug → title+index). */
+export function getArticleKey(article: Article, index: number): string {
+  return article.documentId || article.slug || `${article.title}-${index}`
+}

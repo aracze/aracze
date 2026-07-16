@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { isAdmin } from '../access/isAdmin'
+import { isAdminOrEditor } from '../access/isAdminOrEditor'
 
 const s3Endpoint = process.env.S3_ENDPOINT || ''
 const s3Bucket = process.env.S3_BUCKET || ''
@@ -64,6 +66,11 @@ export const Media: CollectionConfig = {
   slug: 'media',
   access: {
     read: () => true,
+    // Nahrávání/úpravy médií jen admin/editor; mazání jen admin. Bez těchto
+    // pravidel by Payload povolil zápis KAŽDÉMU přihlášenému (i roli `user`).
+    create: isAdminOrEditor,
+    update: isAdminOrEditor,
+    delete: isAdmin,
   },
   hooks: {
     beforeOperation: [

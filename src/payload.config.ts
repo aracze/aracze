@@ -47,6 +47,9 @@ export default buildConfig({
     user: Users.slug,
     importMap: {
       baseDir: path.resolve(dirname),
+      // Generovaný import map držíme jako .ts (pravidlo: zdroje Payloadu pod src
+      // jsou TypeScript). `payload generate:importmap` zapisuje na tuto cestu.
+      importMapFile: path.resolve(dirname, 'app/(payload)/admin/importMap.ts'),
     },
     components: {
       afterNavLinks: ['/components/DatabaseNav#DatabaseNav'],
@@ -117,11 +120,12 @@ export default buildConfig({
   endpoints: [
     dbDumpEndpoint,
     dbImportEndpoint,
-    {
-      path: '/init-db',
-      method: 'get',
-      handler: initDbEndpoint,
-    },
+    // /init-db dělá DROP SCHEMA public CASCADE — registruje se JEN když je
+    // ALLOW_INIT_DB=true (bootstrap prázdné DB); jinak endpoint vůbec neexistuje.
+    // POST (ne GET), ať ho nespustí prefetch/<img>/historie. Autorizace v handleru.
+    ...(process.env.ALLOW_INIT_DB === 'true'
+      ? [{ path: '/init-db', method: 'post' as const, handler: initDbEndpoint }]
+      : []),
   ],
   plugins: [
     nestedDocsPlugin({

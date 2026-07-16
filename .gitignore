@@ -53,6 +53,10 @@ node_modules/
 # local editor settings
 .vscode/
 
+# vim swap files
+*.swp
+*.swo
+
 # database & sessions
 *.session.sql
 
