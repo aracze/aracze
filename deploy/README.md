@@ -4,7 +4,7 @@ Architektura: **GitHub Actions** sestaví Docker obrazy → nahraje do **ghcr.io
 přihlásí se přes SSH na **server** a spustí novou verzi. Server nic nebuilduje,
 jen stahuje hotové obrazy.
 
-```
+```text
  push do main ─▶ GitHub Actions ─▶ build obrazu ─▶ ghcr.io ─▶ SSH deploy ─▶ server
 ```
 
@@ -21,20 +21,22 @@ veřejný web i administrace v jednom obraze).
 Repozitář `ara-cms-payload` → Settings → Secrets and variables → Actions.
 
 **Secrets** (tajné):
-| Název | Hodnota |
-|-------|---------|
-| `DEPLOY_HOST` | `217.154.225.117` |
-| `DEPLOY_USER` | `deploy` (uživatel pro nasazování, viz krok 2) |
-| `DEPLOY_SSH_KEY` | privátní SSH klíč pro nasazování (celý obsah) |
+
+| Název            | Hodnota                                        |
+| ---------------- | ---------------------------------------------- |
+| `DEPLOY_HOST`    | `217.154.225.117`                              |
+| `DEPLOY_USER`    | `deploy` (uživatel pro nasazování, viz krok 2) |
+| `DEPLOY_SSH_KEY` | privátní SSH klíč pro nasazování (celý obsah)  |
 
 **Variables** (veřejné `NEXT_PUBLIC_*` — Next.js je zapéká do klientského bundlu
 už PŘI BUILDU, proto musí být tady, ne jen v serverovém `.env`):
-| Název | Hodnota |
-|-------|---------|
-| `NEXT_PUBLIC_SITE_URL` | `http://217.154.225.117` (po pořízení domény `https://www.ara.cz`) |
-| `NEXT_PUBLIC_PAYLOAD_BASE_URL` | `http://217.154.225.117` (stejné jako web) |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | klíč pro mapy (v Google Cloud omez přes „HTTP referrer") |
-| `NEXT_PUBLIC_ADSENSE_CLIENT` / `..._ARTICLE_SLOT` / `..._ARTICLE_SLOT_2` | AdSense (nepovinné) |
+
+| Název                                                                    | Hodnota                                                            |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `NEXT_PUBLIC_SITE_URL`                                                   | `http://217.154.225.117` (po pořízení domény `https://www.ara.cz`) |
+| `NEXT_PUBLIC_PAYLOAD_BASE_URL`                                           | `http://217.154.225.117` (stejné jako web)                         |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`                                        | klíč pro mapy (v Google Cloud omez přes "HTTP referrer")           |
+| `NEXT_PUBLIC_ADSENSE_CLIENT` / `..._ARTICLE_SLOT` / `..._ARTICLE_SLOT_2` | AdSense (nepovinné)                                                |
 
 > Obrazy do ghcr.io se pushují automaticky pomocí vestavěného `GITHUB_TOKEN`,
 > žádný další token pro push není potřeba.
@@ -130,6 +132,7 @@ do produkce. CMS má na to vestavěné endpointy (`pg_dump --format=c`, resp.
 3. Protože import přepíše schéma lokálním (bez záznamu o migraci), po importu
    označíme počáteční migraci jako provedenou, aby ji CMS při restartu
    nespouštěl znovu:
+
    ```bash
    docker compose exec -T postgres psql -U postgres -d aracze -c \
      "CREATE TABLE IF NOT EXISTS payload_migrations (id serial PRIMARY KEY, name varchar, batch numeric, updated_at timestamptz DEFAULT now() NOT NULL, created_at timestamptz DEFAULT now() NOT NULL); \
