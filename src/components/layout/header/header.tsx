@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -8,6 +8,8 @@ import { Menu, X, ChevronDown } from 'lucide-react'
 import { ImageLink, PageCategory } from '@/types/payload'
 import { isCloudinary } from '@/lib/cloudinary-loader'
 import Search from '@/components/features/search/search'
+
+const CONTINENT_ORDER = ['Evropa', 'Amerika', 'Asie', 'Afrika', 'Austrálie']
 
 // Header je client komponenta → cokoli mu předáme se serializuje do RSC payloadu
 // na KAŽDÉ stránce. Proto přijímá jen navigační podmnožinu (bez `text`, `meta`,
@@ -132,23 +134,23 @@ export function Header({
   // Najdeme aktuálně aktivní stránku pro mega menu
   const activePage = pages?.find((p) => String(p.id) === activeDropdown)
 
-  const CONTINENT_ORDER = ['Evropa', 'Amerika', 'Asie', 'Afrika', 'Austrálie']
+  // Filtr + řazení navigace závisí jen na `pages` (neměnné mezi rendery při hoveru
+  // menu). Memoizujeme, ať se přeskupení nepočítá při každém otevření dropdownu.
+  // Kontinenty v pevném pořadí, zbytek abecedně česky. Sdílíme mezi desktopem
+  // a mobilním menu.
+  const sortedNavPages = useMemo(() => {
+    const navPages = (pages || []).filter((p) => p.category === PageCategory.Misto_k_navstiveni)
+    return navPages.sort((a, b) => {
+      const indexA = CONTINENT_ORDER.indexOf(a.title)
+      const indexB = CONTINENT_ORDER.indexOf(b.title)
 
-  // Main nav lists only top-level destinations (category "Místo k navštívení").
-  const navPages = (pages || []).filter((p) => p.category === PageCategory.Misto_k_navstiveni)
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB
+      if (indexA !== -1) return -1
+      if (indexB !== -1) return 1
 
-  // Řazení sdílíme mezi desktop navigací a mobilním menu (kontinenty v pořadí,
-  // zbytek abecedně česky).
-  const sortedNavPages = [...navPages].sort((a, b) => {
-    const indexA = CONTINENT_ORDER.indexOf(a.title)
-    const indexB = CONTINENT_ORDER.indexOf(b.title)
-
-    if (indexA !== -1 && indexB !== -1) return indexA - indexB
-    if (indexA !== -1) return -1
-    if (indexB !== -1) return 1
-
-    return a.title.localeCompare(b.title, 'cs')
-  })
+      return a.title.localeCompare(b.title, 'cs')
+    })
+  }, [pages])
 
   // Aktivní stránka v mobilním menu (a11y: aria-current + vizuální akcent).
   const normalizePath = (path: string) => path.replace(/\/+$/, '') || '/'

@@ -37,9 +37,8 @@ services:
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
-      # Absolutní URL pro obrázky servírované ze serveru (relativní /… cesty).
-      # NEXT_PUBLIC_* se do image zapékají při buildu (viz cd.yml), tady nejsou.
-      PAYLOAD_BASE_API_URL: ${SITE_URL}
+      # NEXT_PUBLIC_* (vč. base URL pro absolutní adresy obrázků) se do image
+      # zapékají při buildu (viz cd.yml), za běhu tu proto nejsou.
       # SMTP (odesílání e-mailů z administrace – reset hesla). Běhové proměnné,
       # ne build-time – hodnoty doplň do /opt/aracze/.env. Bez SMTP_HOST se
       # e-maily jen vypíšou do logu (žádné odesílání).

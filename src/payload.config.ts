@@ -180,11 +180,15 @@ export default buildConfig({
           const mainPageId = (doc as any).mainPage
           if (mainPageId) {
             try {
-              // Najdeme hlavní stránku, abychom získali její fullSlug
+              // Najdeme hlavní stránku, abychom získali její fullSlug.
+              // `req` předáváme, aby dotaz běžel ve stejné transakci jako
+              // původní operace (jinak si bere separátní DB spojení z poolu).
               const mainPage = await req.payload.findByID({
                 collection: 'pages',
                 id: typeof mainPageId === 'object' ? mainPageId.id : mainPageId,
                 depth: 0,
+                select: { fullSlug: true },
+                req,
               })
               if (mainPage?.fullSlug) {
                 return `https://www.ara.cz${mainPage.fullSlug}/${slug}`

@@ -126,8 +126,7 @@ storage credentials, the following variables drive user-visible features:
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`                                                                      | For maps    | Google Maps on place pages (public — ships to the browser).                         |
 | `OPENWEATHER_API_KEY`                                                                                  | For weather | Server-side key for the `/api/weather` endpoint (never exposed to the browser).     |
 | `NEXT_PUBLIC_SITE_URL`                                                                                 | Recommended | Public site URL for the sitemap and canonical links (default `https://www.ara.cz`). |
-| `PAYLOAD_BASE_API_URL`                                                                                 | Recommended | Base URL used to build absolute image URLs.                                         |
-| `NEXT_PUBLIC_PAYLOAD_BASE_URL`                                                                         | Recommended | Base URL used by header/footer logo images.                                         |
+| `NEXT_PUBLIC_PAYLOAD_BASE_URL`                                                                         | Recommended | Base URL used to build absolute image URLs (logos, avatars, social sharing).        |
 | `NEXT_PUBLIC_ADSENSE_CLIENT`, `NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT`, `NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT_2` | Optional    | Google AdSense units in article listings.                                           |
 
 > `NEXT_PUBLIC_*` variables are inlined into the client bundle at build time and
