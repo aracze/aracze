@@ -47,6 +47,7 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_FROM: ${SMTP_FROM}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME}
     ports:
       # Sloučená appka (veřejný web i /admin) běží na portu 80 (http://<IP>/)
       - '80:3000'
