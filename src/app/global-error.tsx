@@ -81,6 +81,10 @@ export default function GlobalError({
             >
               Zkusit znovu
             </button>
+            {/* Po kritické chybě chceme TVRDÝ reload (čistý stav aplikace) —
+                klientská navigace přes <Link> by mohla znovu spadnout do téhož
+                rozbitého stromu. Proto záměrně plain <a>. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/"
               style={{
