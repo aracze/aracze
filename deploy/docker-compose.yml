@@ -18,7 +18,7 @@ services:
       # /var/lib/postgresql (ne /…/data jako u <=17).
       - pgdata:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,7 +42,7 @@ services:
       PAYLOAD_BASE_API_URL: ${SITE_URL}
     ports:
       # Sloučená appka (veřejný web i /admin) běží na portu 80 (http://<IP>/)
-      - "80:3000"
+      - '80:3000'
 
 volumes:
   pgdata:
