@@ -6,6 +6,28 @@ import os from 'node:os'
 import path from 'node:path'
 import { createWriteStream } from 'node:fs'
 
+const runPgDumpDirect = async (dbUrl: string, filePath: string) => {
+  return await new Promise<{ code: number; stderr: string }>((resolve, reject) => {
+    const child = spawn('pg_dump', ['--dbname', dbUrl, '--format=c', '--no-owner', '--no-acl'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+    const out = createWriteStream(filePath)
+    child.stdout.pipe(out)
+
+    let stderr = ''
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString()
+    })
+
+    child.on('error', reject)
+    child.on('close', (code) => {
+      out.close()
+      resolve({ code: code ?? 1, stderr })
+    })
+  })
+}
+
 const runPgDumpDocker = async (
   composeCmd: string[],
   service: string,
@@ -156,15 +178,27 @@ export const dbDumpEndpoint: Endpoint = {
     const filePath = path.join(tmpDir, filename)
 
     try {
-      const url = new URL(databaseUrl)
-      url.hostname = dockerHost
-      url.port = url.port || '5432'
+      const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RENDER
+      let result: { code: number; stderr: string }
 
-      let result = await runPgDumpDockerAuto(dockerService, url.toString(), filePath)
-      if (result.code !== 0) {
-        const containerId = dockerContainer || (await findContainerId(dockerService)) || undefined
-        if (containerId) {
-          result = await runPgDumpDockerExec(containerId, url.toString(), filePath)
+      if (isProduction) {
+        // V produkčním kontejneru není `docker` k dispozici, ale `pg_dump`
+        // (postgresql-client) v image je a databáze je dosažitelná po síti
+        // (hostname `postgres`). Voláme proto pg_dump přímo — stejně jako import.
+        result = await runPgDumpDirect(databaseUrl, filePath)
+      } else {
+        // Lokálně (pnpm dev na hostu) běží Postgres v Dockeru — dump provádíme
+        // uvnitř kontejneru přes docker compose exec / docker exec.
+        const url = new URL(databaseUrl)
+        url.hostname = dockerHost
+        url.port = url.port || '5432'
+
+        result = await runPgDumpDockerAuto(dockerService, url.toString(), filePath)
+        if (result.code !== 0) {
+          const containerId = dockerContainer || (await findContainerId(dockerService)) || undefined
+          if (containerId) {
+            result = await runPgDumpDockerExec(containerId, url.toString(), filePath)
+          }
         }
       }
 
