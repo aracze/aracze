@@ -6,3 +6,5 @@ When migrating features from the legacy Grails site or checking legacy behavior
 (URLs, domain model, business rules), read
 `grails/AI_MIGRATION_SOURCE.md` — a compact knowledge base
 of the old `aracze-grails` project (architecture, domain model, conventions).
+Note: `grails/` is git-ignored, so this is a **local-only** reference — it lives only
+on machines that have the legacy materials and is not part of fresh clones/CI.
