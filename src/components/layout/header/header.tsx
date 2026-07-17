@@ -140,6 +140,15 @@ export function Header({
     return a.title.localeCompare(b.title, 'cs')
   })
 
+  // Aktivní stránka v mobilním menu (a11y: aria-current + vizuální akcent).
+  const normalizePath = (path: string) => path.replace(/\/+$/, '') || '/'
+  const currentPath = normalizePath(pathname || '/')
+  const isActivePath = (slug: string) => normalizePath(slug) === currentPath
+  const isAncestorPath = (slug: string) => {
+    const base = normalizePath(slug)
+    return currentPath === base || currentPath.startsWith(`${base}/`)
+  }
+
   return (
     <header
       onBlur={(e) => {
@@ -281,26 +290,44 @@ export function Header({
             aria-label="Zavřít menu"
             tabIndex={-1}
             onClick={closeMobileMenu}
-            className="fixed top-[65px] right-0 bottom-0 left-0 z-[140] bg-black/40 animate-in fade-in duration-200 motion-reduce:animate-none"
+            className="fixed top-[65px] right-0 bottom-0 left-0 z-[140] bg-black/50 animate-in fade-in duration-200 motion-reduce:animate-none"
           />
+          {/* Vysouvací panel zprava (drawer) – omezená šířka, ať nepůsobí prázdně
+              na širších mobilech; safe-area insety kvůli výřezům/„home" liště. */}
           <div
             id="mobile-menu"
             ref={mobilePanelRef}
-            className="fixed top-[65px] right-0 bottom-0 left-0 z-[150] overflow-y-auto [overscroll-behavior:contain] bg-[#215491] text-white animate-in fade-in slide-in-from-top-2 duration-200 motion-reduce:animate-none"
+            className="fixed top-[65px] right-0 bottom-0 z-[150] w-[85%] max-w-sm overflow-y-auto overscroll-contain bg-[#215491] text-white shadow-2xl animate-in slide-in-from-right duration-200 motion-reduce:animate-none [padding-bottom:env(safe-area-inset-bottom)] [padding-right:env(safe-area-inset-right)]"
           >
-            <nav aria-label="Hlavní navigace" className="px-4 py-2">
+            <nav aria-label="Hlavní navigace" className="py-2">
               <ul className="flex flex-col divide-y divide-white/10">
                 {sortedNavPages.map((page, index) => {
                   const hasChildren = (page.children?.docs?.length ?? 0) > 0
                   const pageId = String(page.id || `temp-id-${index}`)
                   const expanded = mobileExpandedId === pageId
+                  const active = isActivePath(page.fullSlug)
+                  const inSection = isAncestorPath(page.fullSlug)
                   return (
                     <li key={pageId}>
-                      <div className="flex items-center">
+                      <div
+                        className={`relative flex items-center transition-colors duration-150 motion-reduce:transition-none hover:bg-white/5 active:bg-white/10 ${
+                          expanded ? 'sticky top-0 z-10 bg-[#215491] shadow-md' : ''
+                        }`}
+                      >
+                        {/* Vizuální akcent pro aktivní stránku / aktivní sekci. */}
+                        {(active || inSection) && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r bg-white"
+                          />
+                        )}
                         <Link
                           href={page.fullSlug}
                           onClick={() => setMobileOpen(false)}
-                          className="flex-1 rounded-sm py-3 font-heading text-[16px] font-semibold text-white [-webkit-tap-highlight-color:transparent] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                          aria-current={active ? 'page' : undefined}
+                          className={`flex-1 px-4 py-3.5 font-heading text-[16px] font-semibold [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none focus-visible:ring-inset ${
+                            active ? 'text-white' : 'text-white/90'
+                          }`}
                         >
                           {page.title}
                         </Link>
@@ -313,7 +340,7 @@ export function Header({
                             aria-label={
                               expanded ? `Sbalit ${page.title}` : `Rozbalit ${page.title}`
                             }
-                            className="inline-flex h-11 w-11 items-center justify-center rounded-md text-white [touch-action:manipulation] [-webkit-tap-highlight-color:transparent] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                            className="mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-white [touch-action:manipulation] [-webkit-tap-highlight-color:transparent] hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none"
                           >
                             <ChevronDown
                               className={`h-5 w-5 transition-transform duration-200 motion-reduce:transition-none ${
@@ -325,30 +352,42 @@ export function Header({
                         )}
                       </div>
                       {hasChildren && expanded && (
-                        <ul id={`mobile-submenu-${pageId}`} className="pb-2">
+                        <ul
+                          id={`mobile-submenu-${pageId}`}
+                          className="mt-1 mb-2 ml-6 border-l border-white/15"
+                        >
                           {[...(page.children?.docs || [])]
                             .sort((a, b) => a.title.localeCompare(b.title, 'cs'))
-                            .map((child, ci) => (
-                              <li key={child.id || `child-${ci}`}>
-                                <Link
-                                  href={child.fullSlug}
-                                  onClick={() => setMobileOpen(false)}
-                                  className="block rounded-sm py-2 pl-4 text-[15px] text-white/85 hover:text-white [-webkit-tap-highlight-color:transparent] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
-                                >
-                                  {child.title}
-                                </Link>
-                              </li>
-                            ))}
+                            .map((child, ci) => {
+                              const childActive = isActivePath(child.fullSlug)
+                              return (
+                                <li key={child.id || `child-${ci}`}>
+                                  <Link
+                                    href={child.fullSlug}
+                                    onClick={() => setMobileOpen(false)}
+                                    aria-current={childActive ? 'page' : undefined}
+                                    className={`block py-2.5 pr-4 pl-4 text-[15px] transition-colors duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-white/5 active:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none focus-visible:ring-inset motion-reduce:transition-none ${
+                                      childActive
+                                        ? 'font-semibold text-white'
+                                        : 'text-white/85 hover:text-white'
+                                    }`}
+                                  >
+                                    {child.title}
+                                  </Link>
+                                </li>
+                              )
+                            })}
                         </ul>
                       )}
                     </li>
                   )
                 })}
-                <li className="pt-3 pb-4">
+                <li className="px-4 pt-3 pb-2">
                   <Link
                     href="/rady-na-cestu"
                     onClick={() => setMobileOpen(false)}
-                    className="block rounded-full border-2 border-white/50 py-2.5 text-center font-heading text-[13px] font-bold uppercase tracking-wider text-white [-webkit-tap-highlight-color:transparent] hover:bg-white hover:text-[#215491] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                    aria-current={isActivePath('/rady-na-cestu') ? 'page' : undefined}
+                    className="block rounded-full border-2 border-white/50 py-2.5 text-center font-heading text-[13px] font-bold tracking-wider text-white uppercase transition-colors duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-white hover:text-[#215491] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none motion-reduce:transition-none"
                   >
                     Rady na cestu
                   </Link>
