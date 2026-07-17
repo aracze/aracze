@@ -93,11 +93,21 @@ export function Header({
       }
     }
 
+    // Když se okno dostane na desktop breakpoint (md = 768px), menu zavřeme —
+    // jinak `md:hidden` skryje panel i hamburger, ale mobileOpen zůstane true
+    // a body by zůstalo zamčené proti scrollování (resize/otočení displeje).
+    const desktopMq = window.matchMedia('(min-width: 768px)')
+    const handleBreakpoint = () => {
+      if (desktopMq.matches) setMobileOpen(false)
+    }
+    desktopMq.addEventListener('change', handleBreakpoint)
+
     document.addEventListener('keydown', onKeyDown)
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
     return () => {
+      desktopMq.removeEventListener('change', handleBreakpoint)
       document.removeEventListener('keydown', onKeyDown)
       document.body.style.overflow = prevOverflow
     }
@@ -299,7 +309,7 @@ export function Header({
             ref={mobilePanelRef}
             className="fixed top-[65px] right-0 bottom-0 z-[150] w-[85%] max-w-sm overflow-y-auto overscroll-contain bg-[#215491] text-white shadow-2xl animate-in slide-in-from-right duration-200 motion-reduce:animate-none [padding-bottom:env(safe-area-inset-bottom)] [padding-right:env(safe-area-inset-right)]"
           >
-            <nav aria-label="Hlavní navigace" className="py-2">
+            <nav aria-label="Mobilní navigace" className="py-2">
               <ul className="flex flex-col divide-y divide-white/10">
                 {sortedNavPages.map((page, index) => {
                   const hasChildren = (page.children?.docs?.length ?? 0) > 0
