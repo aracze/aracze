@@ -74,6 +74,12 @@ let backupGenCounter = 0
 // větším nevyřízeném zbytku nerozjede najednou.
 const R2_RECONCILE_BATCH = 20
 
+// Timeout stažení z Cloudinary. Obrázky se tahají v jednotkách sekund; 15 s je
+// pojistka proti zaseknutému spojení — bez ní by záloha nikdy nedoběhla (status
+// by zůstal `pending` a položka by visela v `latestBackupGen`). Po timeoutu se
+// zapíše `error` a dorovnání to zkusí příště znovu.
+const R2_FETCH_TIMEOUT_MS = 15_000
+
 // Čisté přípony pro běžné MIME typy (klíč v R2).
 const R2_MIME_EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -150,7 +156,7 @@ async function backupMediaToR2(
     } else {
       payload.logger.info(`Zahajuji zálohování do R2 (stahuji z Cloudinary): ${r2Key}`)
 
-      const response = await fetch(url)
+      const response = await fetch(url, { signal: AbortSignal.timeout(R2_FETCH_TIMEOUT_MS) })
       if (!response.ok) {
         throw new Error(`Načtení z Cloudinary selhalo: ${response.statusText}`)
       }

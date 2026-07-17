@@ -5,6 +5,7 @@ import 'dotenv/config'
 
 const BATCH_SIZE = 20 // Stahujeme 20 najednou
 const DELAY_BETWEEN_BATCHES = 1000 // 1 vteřina pauza
+const FETCH_TIMEOUT_MS = 15_000 // Pojistka proti zaseknutému stažení z Cloudinary
 
 // Zálohujeme JEN obrázky z produkčního Cloudinary účtu. Lokálně nahrané obrázky
 // jdou na dev účet (CLOUDINARY_CLOUD_NAME v .env), a proto do R2 zálohy nepatří.
@@ -105,7 +106,7 @@ async function run() {
 
       // 2. Stáhneme obrázek z Cloudinary
       try {
-        const response = await fetch(url)
+        const response = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
         if (!response.ok) {
           throw new Error(`Načtení selhalo se statusem: ${response.status}`)
         }
