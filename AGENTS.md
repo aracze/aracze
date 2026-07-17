@@ -88,7 +88,7 @@ specifická pro tento web:
 4. **Transaction Safety**: Always pass `req` to nested operations in hooks.
 5. **Access Control**: Understand Local API bypasses access control by default.
 6. **Consistent Formatting**: Always run `pnpm exec prettier --write <file>` after changing any files.
-7. **Frontend Rules**: Frontend i admin jsou v tomto jednom appu — viz sekce „🌐 Frontend (Next.js) — projektová pravidla" výše (dřívější odkaz na samostatné `ara-nextjs-frontend/AGENTS.md` je po sloučení projektů zastaralý).
+7. **Frontend Rules**: Frontend i admin jsou v tomto jednom appu — viz sekce „🌐 Frontend (Next.js) — projektová pravidla" výše.
 8. **Updated README**: Keep README.md up-to-date with new features.
 
 ### Code Validation
