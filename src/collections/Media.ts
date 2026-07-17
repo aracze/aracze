@@ -62,6 +62,14 @@ const sanitizeFilename = (name: string): string => {
   return extension ? `${sanitizedBase}.${extension.toLowerCase()}` : sanitizedBase
 }
 
+// Nejnovější „generace" R2 zálohy pro daný doc (in-memory, per-proces). Detached
+// zálohy téhož média mohou doběhnout mimo pořadí; před zápisem statusu proto
+// ověříme, že tahle záloha je pořád ta nejnovější — jinak by starší doběhnutí
+// přepsalo status novější. Paměť jednoho procesu stačí (stejně jako u samotné
+// detached zálohy), žádná změna DB schématu.
+const latestBackupGen = new Map<string | number, number>()
+let backupGenCounter = 0
+
 export const Media: CollectionConfig = {
   slug: 'media',
   access: {
@@ -89,6 +97,10 @@ export const Media: CollectionConfig = {
       async ({ doc, req }) => {
         // Zabezpečíme inicializaci kontextu pro konzistentní přístup
         req.context = req.context || {}
+
+        // R2 záloha běží JEN v produkci. V dev režimu (`pnpm dev`) se obrázky
+        // nahrávají na dev Cloudinary účet a do produkčního R2 bucketu nepatří.
+        if (process.env.NODE_ENV !== 'production') return
 
         // Zabráníme nekonečnému cyklu při aktualizaci statusu
         if (req.context.skipR2Backup) return
@@ -139,6 +151,12 @@ export const Media: CollectionConfig = {
         const docId = doc.id
         const altText = (doc.alt as string) || ''
 
+        // Tahle záloha se stává nejnovější pro daný doc. `isStale()` pak před
+        // zápisem statusu pozná, že mezitím naběhla novější (a status nepřepíše).
+        const backupGen = ++backupGenCounter
+        latestBackupGen.set(docId, backupGen)
+        const isStale = () => latestBackupGen.get(docId) !== backupGen
+
         // Stažení z Cloudinary + upload do R2 je pomalé síťové I/O. Kdyby běželo
         // uvnitř transakce tohoto requestu (tj. s awaitem v hooku), drželo by DB
         // spojení otevřené po celou dobu přenosu → při souběhu uploadů hrozí
@@ -176,6 +194,13 @@ export const Media: CollectionConfig = {
 
             payload.logger.info(`Záloha souboru ${r2Key} do R2 proběhla úspěšně.`)
 
+            // Status zapíšeme jen když je tahle záloha pořád nejnovější — jinak
+            // bychom přepsali výsledek novější zálohy téhož média.
+            if (isStale()) {
+              payload.logger.info(`R2 status pro ${r2Key} přeskočen — běží novější záloha.`)
+              return
+            }
+
             // Status zálohy zapíšeme BEZ `req` — vlastní krátká transakce, která
             // po commitu původního requestu jen krátce zabere spojení. `skipR2Backup`
             // brání rekurzi tohoto afterChange.
@@ -189,6 +214,9 @@ export const Media: CollectionConfig = {
             const errorMsg = error instanceof Error ? error.message : String(error)
             payload.logger.error(`Chyba při zálohování do R2: ${errorMsg}`)
 
+            // Stejná ochrana i pro chybový status.
+            if (isStale()) return
+
             // Záznam chyby pro pozdější opravu
             await payload
               .update({
@@ -198,6 +226,10 @@ export const Media: CollectionConfig = {
                 context: { skipR2Backup: true },
               })
               .catch(() => {})
+          } finally {
+            // Úklid: když je tahle záloha pořád nejnovější, odregistrujeme ji, ať
+            // mapa nedrží dokončené položky (drží jen běžící zálohy).
+            if (latestBackupGen.get(docId) === backupGen) latestBackupGen.delete(docId)
           }
         }
 
