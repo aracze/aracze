@@ -300,7 +300,18 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, center
     const AdvancedMarkerElement = googleApi.maps.marker?.AdvancedMarkerElement
     const useAdvancedMarkers = Boolean(GOOGLE_MAPS_MAP_ID && AdvancedMarkerElement)
 
-    // Create markers
+    // #8: Markery se staví JEN tady, v initMap, který kvůli guardu
+    // `mapInstanceRef.current` proběhne na jeden mount právě jednou. To je dnes
+    // v pořádku: `markers`/`centerLat`/`centerLng`/`zoom` počítá server z dat
+    // stránky (viz places-to-visit.tsx) a nic je za běhu nemění — stránka je
+    // force-dynamic, takže při každé navigaci se komponenta mountuje znovu
+    // (= „přemountování to řeší"). POZOR do budoucna: kdyby někdo přidal na mapu
+    // KLIENTSKÝ filtr/přepínač, který mění `markers` (nebo střed/zoom) BEZ
+    // přemountu, tyhle piny by se neaktualizovaly a hover efekt níže (závislý na
+    // `markers`) by mířil na staré instance. Pak je nutné stavbu markerů
+    // vytáhnout do samostatného efektu nad `[loaded, markers]`, který nejdřív
+    // uklidí `markersRef` (clearInstanceListeners + odpojení z mapy) a teprve pak
+    // je postaví znovu.
     for (const m of markers) {
       let marker: any
 
