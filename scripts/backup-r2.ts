@@ -6,6 +6,11 @@ import 'dotenv/config'
 const BATCH_SIZE = 20 // Stahujeme 20 najednou
 const DELAY_BETWEEN_BATCHES = 1000 // 1 vteřina pauza
 
+// Zálohujeme JEN obrázky z produkčního Cloudinary účtu. Lokálně nahrané obrázky
+// jdou na dev účet (CLOUDINARY_CLOUD_NAME v .env), a proto do R2 zálohy nepatří.
+// Produkční účet lze v případě potřeby přepsat přes PROD_CLOUDINARY_CLOUD_NAME.
+const PROD_CLOUD = process.env.PROD_CLOUDINARY_CLOUD_NAME || 'ara'
+
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -34,10 +39,13 @@ async function run() {
   let totalProcessed = 0
   let totalUploaded = 0
   let totalSkipped = 0
+  let totalSkippedDev = 0
   let totalErrors = 0
   let hasNextPage = true
 
-  console.log(`Zahajuji zálohování objektů Media do R2 (${bucket})`)
+  console.log(
+    `Zahajuji zálohování objektů Media do R2 (${bucket}) – jen z produkčního účtu "${PROD_CLOUD}"`,
+  )
 
   while (hasNextPage) {
     const { docs, hasNextPage: hasMore } = await payload.find({
@@ -61,6 +69,18 @@ async function run() {
       if (!publicId || !url) {
         console.log(`[Skipped] ID ${doc.id}: Chybí Cloudinary public_id nebo URL.`)
         totalSkipped++
+        return
+      }
+
+      // Přeskočíme vše, co není na produkčním Cloudinary účtu (typicky lokálně
+      // nahrané testovací obrázky na dev účtu). Rozlišujeme podle cloud_name v URL:
+      // https://res.cloudinary.com/<cloud_name>/image/upload/...
+      const urlCloud = url.split('res.cloudinary.com/')[1]?.split('/')[0]
+      if (urlCloud !== PROD_CLOUD) {
+        console.log(
+          `[Dev-skip] ID ${doc.id}: účet "${urlCloud ?? '?'}" ≠ produkce "${PROD_CLOUD}", přeskakuji.`,
+        )
+        totalSkippedDev++
         return
       }
 
@@ -129,9 +149,10 @@ async function run() {
 
   console.log('\n=======================================')
   console.log('ZÁLOHOVÁNÍ DOKONČENO')
-  console.log(`Celkem zpracováno zprávců: ${totalProcessed}`)
+  console.log(`Celkem zpracováno záznamů: ${totalProcessed}`)
   console.log(`Nově nahráno do R2: ${totalUploaded}`)
   console.log(`Přeskočeno (již existovalo / chybné): ${totalSkipped}`)
+  console.log(`Přeskočeno (mimo produkční účet "${PROD_CLOUD}"): ${totalSkippedDev}`)
   console.log(`Chyby: ${totalErrors}`)
   console.log('=======================================')
 

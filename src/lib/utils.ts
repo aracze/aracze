@@ -16,13 +16,8 @@ export function isProduction() {
 
 export function getPayloadURL() {
   // Klientsky bezpečné: v prohlížeči je dostupná jen proměnná s prefixem
-  // `NEXT_PUBLIC_`. Server-only `PAYLOAD_BASE_API_URL` necháváme jako fallback,
-  // ať se serverové volání nerozbije, kdyby `NEXT_PUBLIC_` verze chyběla.
-  return (
-    process.env.NEXT_PUBLIC_PAYLOAD_BASE_URL ||
-    process.env.PAYLOAD_BASE_API_URL ||
-    'http://localhost:3000'
-  ).replace(/\/$/, '')
+  // `NEXT_PUBLIC_`. Fallback na localhost drží lokální vývoj.
+  return (process.env.NEXT_PUBLIC_PAYLOAD_BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
 }
 
 /**
@@ -92,6 +87,19 @@ export function getArticleHref(article: Article, parentFullSlug?: string): strin
   return parentFullSlug
     ? `${parentFullSlug.replace(/\/$/, '')}/${article.slug}`
     : `/blog/${article.slug}`
+}
+
+/**
+ * #21: Je cesta z URL platným rodičem článku? Článek smí žít jen pod svou
+ * `mainPage` NEBO některou z `pages` — jinak jde o „ducha" (starý/cizí odkaz,
+ * překlep) a route má vrátit 404. `validParentSlugs` chodí z datové vrstvy už
+ * normalizované (bez lomítek); `parentSlug` z URL (join segmentů) taky nemá
+ * lomítka, ale pro jistotu ho normalizujeme taky.
+ */
+export function isValidArticleParent(parentSlug: string, validParentSlugs?: string[]): boolean {
+  if (!validParentSlugs?.length) return false
+  const normalized = parentSlug.replace(/^\/+|\/+$/g, '')
+  return validParentSlugs.includes(normalized)
 }
 
 /** Stabilní React key pro článek (documentId → slug → title+index). */

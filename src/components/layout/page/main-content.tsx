@@ -97,8 +97,8 @@ export const MainContent = ({
   const authorName =
     author?.username || [author?.firstName, author?.lastName].filter(Boolean).join(' ') || null
   // Absolutní URL avataru přes getPayloadURL() (vždy vrátí platnou base) + try/catch —
-  // přímé `new URL(url, process.env.PAYLOAD_BASE_API_URL)` by při chybějící proměnné
-  // dostalo undefined a shodilo render (TypeError). Stejný vzor jako v article.tsx.
+  // přímé `new URL(url, undefined)` by při chybějící base shodilo render (TypeError).
+  // Stejný vzor jako v article.tsx.
   const rawAvatarUrl = author?.avatar?.url
   let avatarUrl = '/assets/avatar-white.jpg'
   if (rawAvatarUrl) {

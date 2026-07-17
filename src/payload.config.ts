@@ -17,6 +17,7 @@ import sharp from 'sharp'
 import { nestedDocsPlugin } from '@payloadcms/plugin-nested-docs'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { cloudinaryStorage } from 'payload-storage-cloudinary'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 
 import { migrations } from './migrations'
 import { Users } from './collections/Users'
@@ -36,8 +37,7 @@ import { Header } from './globals/Header'
 import { Footer } from './globals/Footer'
 import { dbDumpEndpoint } from './endpoints/dbDump'
 import { dbImportEndpoint } from './endpoints/dbImport'
-
-import { initDbEndpoint } from './endpoints/initDb'
+import { r2ReconcileAllEndpoint } from './endpoints/r2ReconcileAll'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -100,6 +100,32 @@ export default buildConfig({
       }),
     ],
   }),
+  // E-maily (reset hesla do administrace atd.) posílá Payload přes SMTP.
+  // Adaptér zapojíme JEN když je nastavené SMTP_HOST — bez něj se web chová
+  // jako dřív (e-mail se vypíše do konzole). Zoho: host smtp.zoho.com, port 465
+  // = implicitní SSL (`secure: true`); pro STARTTLS port (587) je `secure: false`.
+  email: process.env.SMTP_HOST
+    ? nodemailerAdapter({
+        defaultFromAddress: process.env.SMTP_FROM || process.env.SMTP_USER || 'info@ara.cz',
+        defaultFromName: process.env.SMTP_FROM_NAME || 'Ara.cz',
+        transportOptions: {
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT) || 465,
+          secure: (Number(process.env.SMTP_PORT) || 465) === 465,
+          // Auth přidáme JEN když je nastavený SMTP_USER. Lokální relay bez
+          // přihlášení (Mailpit/Mailhog) by jinak dostal auth s undefined
+          // přihlašovacími údaji a NodeMailer může vyhodit chybu.
+          ...(process.env.SMTP_USER
+            ? {
+                auth: {
+                  user: process.env.SMTP_USER,
+                  pass: process.env.SMTP_PASSWORD,
+                },
+              }
+            : {}),
+        },
+      })
+    : undefined,
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
@@ -117,16 +143,7 @@ export default buildConfig({
     prodMigrations: process.env.PAYLOAD_RUN_MIGRATIONS === 'true' ? migrations : undefined,
   }),
   sharp,
-  endpoints: [
-    dbDumpEndpoint,
-    dbImportEndpoint,
-    // /init-db dělá DROP SCHEMA public CASCADE — registruje se JEN když je
-    // ALLOW_INIT_DB=true (bootstrap prázdné DB); jinak endpoint vůbec neexistuje.
-    // POST (ne GET), ať ho nespustí prefetch/<img>/historie. Autorizace v handleru.
-    ...(process.env.ALLOW_INIT_DB === 'true'
-      ? [{ path: '/init-db', method: 'post' as const, handler: initDbEndpoint }]
-      : []),
-  ],
+  endpoints: [dbDumpEndpoint, dbImportEndpoint, r2ReconcileAllEndpoint],
   plugins: [
     nestedDocsPlugin({
       collections: ['pages'],
@@ -160,11 +177,15 @@ export default buildConfig({
           const mainPageId = (doc as any).mainPage
           if (mainPageId) {
             try {
-              // Najdeme hlavní stránku, abychom získali její fullSlug
+              // Najdeme hlavní stránku, abychom získali její fullSlug.
+              // `req` předáváme, aby dotaz běžel ve stejné transakci jako
+              // původní operace (jinak si bere separátní DB spojení z poolu).
               const mainPage = await req.payload.findByID({
                 collection: 'pages',
                 id: typeof mainPageId === 'object' ? mainPageId.id : mainPageId,
                 depth: 0,
+                select: { fullSlug: true },
+                req,
               })
               if (mainPage?.fullSlug) {
                 return `https://www.ara.cz${mainPage.fullSlug}/${slug}`

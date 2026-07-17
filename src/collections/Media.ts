@@ -1,5 +1,5 @@
-import type { CollectionConfig } from 'payload'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import type { CollectionConfig, Payload } from 'payload'
+import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { isAdmin } from '../access/isAdmin'
 import { isAdminOrEditor } from '../access/isAdminOrEditor'
 
@@ -62,6 +62,235 @@ const sanitizeFilename = (name: string): string => {
   return extension ? `${sanitizedBase}.${extension.toLowerCase()}` : sanitizedBase
 }
 
+// Nejnovější „generace" R2 zálohy pro daný doc (in-memory, per-proces). Detached
+// zálohy téhož média mohou doběhnout mimo pořadí; před zápisem statusu proto
+// ověříme, že tahle záloha je pořád ta nejnovější — jinak by starší doběhnutí
+// přepsalo status novější. Paměť jednoho procesu stačí (stejně jako u samotné
+// detached zálohy), žádná změna DB schématu.
+const latestBackupGen = new Map<string | number, number>()
+let backupGenCounter = 0
+
+// Kolik nedodělaných záloh dohnat za jedno nahrání (dorovnání), ať se to při
+// větším nevyřízeném zbytku nerozjede najednou.
+const R2_RECONCILE_BATCH = 20
+
+// Čisté přípony pro běžné MIME typy (klíč v R2).
+const R2_MIME_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/svg+xml': 'svg',
+  'image/webp': 'webp',
+  'application/pdf': 'pdf',
+  'application/octet-stream': 'bin',
+}
+
+type R2BackupMedia = {
+  id: string | number
+  cloudinaryPublicId: string
+  url: string
+  mimeType?: string | null
+  cloudinaryFormat?: string | null
+  alt?: string | null
+}
+
+function resolveR2Key(
+  cloudinaryPublicId: string,
+  mimeType?: string | null,
+  cloudinaryFormat?: string | null,
+): string {
+  const extension =
+    cloudinaryFormat ||
+    (mimeType ? R2_MIME_EXTENSIONS[mimeType] || mimeType.split('/')[1]?.split('+')[0] : 'bin') ||
+    'bin'
+  const safeExtension = extension === 'jpeg' ? 'jpg' : extension
+  return `${cloudinaryPublicId}.${safeExtension}`
+}
+
+// Záloha JEDNOHO média do R2. Volá se `void`em (DETACHED, bez `req`): stažení
+// z Cloudinary + upload je pomalé síťové I/O a nesmí držet DB spojení requestu.
+// Generation-guard (latestBackupGen) brání staršímu doběhnutí přepsat status
+// novější zálohy téhož média. Nahrání do R2 jde pod stejný klíč → idempotentní.
+async function backupMediaToR2(
+  payload: Payload,
+  media: R2BackupMedia,
+  opts?: { skipIfInR2?: boolean },
+): Promise<void> {
+  const { id, cloudinaryPublicId, url, mimeType, cloudinaryFormat, alt } = media
+  const r2Key = resolveR2Key(cloudinaryPublicId, mimeType, cloudinaryFormat)
+
+  const backupGen = ++backupGenCounter
+  latestBackupGen.set(id, backupGen)
+  const isStale = () => latestBackupGen.get(id) !== backupGen
+
+  try {
+    if (!s3Endpoint || !s3Bucket || !s3AccessKeyId || !s3Secret) {
+      throw new Error('Chybí konfigurace R2 (environment variables)')
+    }
+
+    // Dorovnání (`skipIfInR2`): když objekt v R2 UŽ je, přeskočíme stažení+upload
+    // a jen narovnáme status — šetří přenos i Cloudinary requesty (klíčové při
+    // hromadném narovnání backlogu). Při čerstvém nahrání (bez `skipIfInR2`)
+    // nahráváme vždy, ať se aktuální soubor do R2 opravdu dostane.
+    let alreadyInR2 = false
+    if (opts?.skipIfInR2) {
+      try {
+        await s3Client.send(new HeadObjectCommand({ Bucket: s3Bucket, Key: r2Key }))
+        alreadyInR2 = true
+      } catch (headError) {
+        const name = (headError as { name?: string })?.name
+        const httpStatus = (headError as { $metadata?: { httpStatusCode?: number } })?.$metadata
+          ?.httpStatusCode
+        // NotFound/404 = objekt chybí → nahrajeme. Jiná chyba = skutečný problém.
+        if (name !== 'NotFound' && httpStatus !== 404) throw headError
+      }
+    }
+
+    if (alreadyInR2) {
+      payload.logger.info(`R2: ${r2Key} už existuje — jen dorovnávám status na success.`)
+    } else {
+      payload.logger.info(`Zahajuji zálohování do R2 (stahuji z Cloudinary): ${r2Key}`)
+
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`Načtení z Cloudinary selhalo: ${response.statusText}`)
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer())
+
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: s3Bucket,
+          Key: r2Key,
+          Body: buffer,
+          ContentType: mimeType || 'application/octet-stream',
+          Metadata: { alt: encodeURIComponent(alt || '') },
+        }),
+      )
+
+      payload.logger.info(`Záloha souboru ${r2Key} do R2 proběhla úspěšně.`)
+    }
+
+    // Status zapíšeme jen když je tahle záloha pořád nejnovější (jinak přepisujeme
+    // výsledek novější). Zápis BEZ `req` = vlastní krátká transakce; `skipR2Backup`
+    // brání rekurzi afterChange.
+    if (isStale()) {
+      payload.logger.info(`R2 status pro ${r2Key} přeskočen — běží novější záloha.`)
+      return
+    }
+    await payload.update({
+      collection: 'media',
+      id,
+      data: { r2BackupStatus: 'success' },
+      context: { skipR2Backup: true },
+    })
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    payload.logger.error(`Chyba při zálohování do R2 (${r2Key}): ${errorMsg}`)
+
+    if (isStale()) return
+    await payload
+      .update({
+        collection: 'media',
+        id,
+        data: { r2BackupStatus: 'error' },
+        context: { skipR2Backup: true },
+      })
+      .catch(() => {})
+  } finally {
+    // Úklid: pokud je tahle záloha pořád nejnovější, odregistrujeme ji (mapa tak
+    // drží jen běžící zálohy).
+    if (latestBackupGen.get(id) === backupGen) latestBackupGen.delete(id)
+  }
+}
+
+// Dorovnání: dožene média, jejichž záloha nedoběhla (`r2BackupStatus` `pending`
+// nebo `error` — výpadek při nahrávání, restart serveru…). Spouští se při každém
+// nahrání (viz afterChange), takže není potřeba cron — cena je, že se nedodělané
+// zálohy dorovnají až s dalším uploadem (časová záruka není potřeba). Bere jen
+// malou dávku.
+async function reconcilePendingBackups(payload: Payload): Promise<void> {
+  try {
+    const res = await payload.find({
+      collection: 'media',
+      where: { r2BackupStatus: { in: ['pending', 'error'] } },
+      limit: R2_RECONCILE_BATCH,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    for (const media of res.docs as unknown as Array<Record<string, unknown>>) {
+      const id = media.id as string | number
+      const cloudinaryPublicId = media.cloudinaryPublicId as string | undefined
+      const url = media.url as string | undefined
+      if (!cloudinaryPublicId || !url) continue // nemá co zálohovat
+      if (latestBackupGen.has(id)) continue // už se právě zálohuje
+      void backupMediaToR2(
+        payload,
+        {
+          id,
+          cloudinaryPublicId,
+          url,
+          mimeType: media.mimeType as string | undefined,
+          cloudinaryFormat: media.cloudinaryFormat as string | undefined,
+          alt: media.alt as string | undefined,
+        },
+        { skipIfInR2: true },
+      )
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    payload.logger.error(`R2 dorovnání (reconcile) selhalo: ${errorMsg}`)
+  }
+}
+
+// Jednorázové narovnání CELÉHO backlogu (bez dávkového limitu) — volá ho admin
+// endpoint /api/r2-reconcile-all. Posbírá všechna média se stavem pending/error
+// a sekvenčně je projede s HEAD-checkem (co v R2 už je, jen dostane status
+// `success` bez přenosu). Běží na pozadí (endpoint ho pustí `void`em). Vrací
+// počet zpracovaných.
+export async function reconcileAllPendingBackups(payload: Payload): Promise<number> {
+  const pending: R2BackupMedia[] = []
+  let page = 1
+
+  // Sběr: pagination je stabilní, protože během sběru status neměníme.
+  for (;;) {
+    const res = await payload.find({
+      collection: 'media',
+      where: { r2BackupStatus: { in: ['pending', 'error'] } },
+      limit: 200,
+      page,
+      depth: 0,
+      overrideAccess: true,
+    })
+    for (const media of res.docs as unknown as Array<Record<string, unknown>>) {
+      const id = media.id as string | number
+      const cloudinaryPublicId = media.cloudinaryPublicId as string | undefined
+      const url = media.url as string | undefined
+      if (!cloudinaryPublicId || !url) continue
+      pending.push({
+        id,
+        cloudinaryPublicId,
+        url,
+        mimeType: media.mimeType as string | undefined,
+        cloudinaryFormat: media.cloudinaryFormat as string | undefined,
+        alt: media.alt as string | undefined,
+      })
+    }
+    if (!res.hasNextPage) break
+    page++
+  }
+
+  let processed = 0
+  for (const media of pending) {
+    if (latestBackupGen.has(media.id)) continue // právě běží (hook/upload)
+    await backupMediaToR2(payload, media, { skipIfInR2: true })
+    processed++
+  }
+
+  payload.logger.info(`R2 reconcile-all: zpracováno ${processed} z ${pending.length} nalezených.`)
+  return processed
+}
+
 export const Media: CollectionConfig = {
   slug: 'media',
   access: {
@@ -90,6 +319,10 @@ export const Media: CollectionConfig = {
         // Zabezpečíme inicializaci kontextu pro konzistentní přístup
         req.context = req.context || {}
 
+        // R2 záloha běží JEN v produkci. V dev režimu (`pnpm dev`) se obrázky
+        // nahrávají na dev Cloudinary účet a do produkčního R2 bucketu nepatří.
+        if (process.env.NODE_ENV !== 'production') return
+
         // Zabráníme nekonečnému cyklu při aktualizaci statusu
         if (req.context.skipR2Backup) return
 
@@ -98,91 +331,33 @@ export const Media: CollectionConfig = {
         const isSecondCycle = req.context.skipCloudStorage === true
         if (!isSecondCycle) return
 
+        const { payload } = req
+
         const cloudinaryPublicId = doc.cloudinaryPublicId as string | undefined
         const cloudinaryUrl = doc.url as string | undefined
-        const mimeType = doc.mimeType as string | undefined
 
-        // Pokud nemáme ID nebo URL, nejde o nahrání souboru, které bychom chtěli zálohovat
-        if (!cloudinaryPublicId || !cloudinaryUrl) {
-          req.payload.logger.warn({
+        // 1) Záloha právě nahraného souboru (detached — nedrží DB spojení requestu).
+        if (cloudinaryPublicId && cloudinaryUrl) {
+          void backupMediaToR2(payload, {
+            id: doc.id,
+            cloudinaryPublicId,
+            url: cloudinaryUrl,
+            mimeType: doc.mimeType as string | undefined,
+            cloudinaryFormat: doc.cloudinaryFormat as string | undefined,
+            alt: doc.alt as string | undefined,
+          })
+        } else {
+          payload.logger.warn({
             msg: 'R2 afterChange: Druhý cyklus detekován, ale chybí Cloudinary data pro zálohu.',
             docId: doc.id,
             cloudinaryPublicId,
             hasUrl: !!cloudinaryUrl,
           })
-          return
         }
 
-        const cloudinaryFormat = doc.cloudinaryFormat as string | undefined
-
-        // Definice čistých přípon pro běžné MIME typy (R2 backup)
-        const mimeMap: Record<string, string> = {
-          'image/jpeg': 'jpg',
-          'image/png': 'png',
-          'image/svg+xml': 'svg',
-          'image/webp': 'webp',
-          'application/pdf': 'pdf',
-          'application/octet-stream': 'bin',
-        }
-
-        const extension =
-          cloudinaryFormat ||
-          (mimeType ? mimeMap[mimeType] || mimeType.split('/')[1]?.split('+')[0] : 'bin') ||
-          'bin'
-
-        const safeExtension = extension === 'jpeg' ? 'jpg' : extension
-        const r2Key = `${cloudinaryPublicId}.${safeExtension}`
-
-        try {
-          if (!s3Endpoint || !s3Bucket || !s3AccessKeyId || !s3Secret) {
-            throw new Error('Chybí konfigurace R2 (environment variables)')
-          }
-
-          req.payload.logger.info(`Zahajuji zálohování do R2 (stahuji z Cloudinary): ${r2Key}`)
-
-          const response = await fetch(cloudinaryUrl)
-          if (!response.ok) {
-            throw new Error(`Načtení z Cloudinary selhalo: ${response.statusText}`)
-          }
-
-          const arrayBuffer = await response.arrayBuffer()
-          const buffer = Buffer.from(arrayBuffer)
-
-          await s3Client.send(
-            new PutObjectCommand({
-              Bucket: s3Bucket,
-              Key: r2Key,
-              Body: buffer,
-              ContentType: mimeType || 'application/octet-stream',
-              Metadata: {
-                alt: encodeURIComponent((doc.alt as string) || ''),
-              },
-            }),
-          )
-
-          req.payload.logger.info(`Záloha souboru ${r2Key} do R2 proběhla úspěšně.`)
-
-          // Aktualizace statusu zálohy v DB
-          await req.payload.update({
-            collection: 'media',
-            id: doc.id,
-            data: { r2BackupStatus: 'success' },
-            req,
-            context: { skipR2Backup: true },
-          })
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error)
-          req.payload.logger.error(`Chyba při zálohování do R2: ${errorMsg}`)
-
-          // Záznam chyby pro pozdější opravu
-          await req.payload.update({
-            collection: 'media',
-            id: doc.id,
-            data: { r2BackupStatus: 'error' },
-            req,
-            context: { skipR2Backup: true },
-          })
-        }
+        // 2) Dorovnání: každé nahrání zároveň dožene případné dřívější nedodělané
+        //    zálohy (pending/error) — díky tomu není potřeba cron.
+        void reconcilePendingBackups(payload)
       },
     ],
   },

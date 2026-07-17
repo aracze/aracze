@@ -19,7 +19,19 @@ interface GoogleMapProps {
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+// Map ID je nutné pro AdvancedMarkerElement (nový typ značky). Zapéká se do
+// klientského bundlu při buildu (NEXT_PUBLIC_*). Když chybí, spadneme na klasický
+// google.maps.Marker (viz initMap) — piny se vždy zobrazí.
+const GOOGLE_MAPS_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || ''
 const MARKER_SIZE = 44
+
+// Kruhová „avatarová" ikona markeru z Cloudinary (r_max = kruh, bo_3px = bílý rámeček).
+// Pro ne-Cloudinary URL vrací originál (kruh/rámeček pak doplní CSS u obsahu markeru).
+function buildMarkerIconUrl(url: string): string {
+  return url.includes('cloudinary.com')
+    ? url.replace('/upload/', '/upload/w_44,h_44,c_fill,g_auto,r_max,bo_3px_solid_white,f_png/')
+    : url
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -179,10 +191,12 @@ function loadGoogleMaps(): Promise<void> {
 }
 
 export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, centerLng, zoom }) => {
+  const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<any[]>([])
   const infoWindowRef = useRef<any>(null)
+  const [inView, setInView] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -194,6 +208,8 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, center
     const map = new googleApi.maps.Map(mapRef.current, {
       zoom,
       center: { lat: centerLat, lng: centerLng },
+      // Map ID aktivuje cloud-based styling a hlavně AdvancedMarkerElement.
+      mapId: GOOGLE_MAPS_MAP_ID || undefined,
       mapTypeControl: true,
       mapTypeControlOptions: {
         style: googleApi.maps.MapTypeControlStyle.HORIZONTAL_BAR,
@@ -277,40 +293,106 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, center
       infoWindow.close()
     })
 
-    // Create markers
+    // AdvancedMarkerElement (nový, doporučený typ značky) funguje jen na mapě
+    // s Map ID. Když Map ID chybí (build bez GitHub Variable), spadneme na
+    // klasický google.maps.Marker — deprecation warning je menší zlo než zmizelé
+    // piny. `marker` knihovnu importuje loadGoogleMaps() vždy.
+    const AdvancedMarkerElement = googleApi.maps.marker?.AdvancedMarkerElement
+    const useAdvancedMarkers = Boolean(GOOGLE_MAPS_MAP_ID && AdvancedMarkerElement)
+
+    // #8: Markery se staví JEN tady, v initMap, který kvůli guardu
+    // `mapInstanceRef.current` proběhne na jeden mount právě jednou. To je dnes
+    // v pořádku: `markers`/`centerLat`/`centerLng`/`zoom` počítá server z dat
+    // stránky (viz places-to-visit.tsx) a nic je za běhu nemění — stránka je
+    // force-dynamic, takže při každé navigaci se komponenta mountuje znovu
+    // (= „přemountování to řeší"). POZOR do budoucna: kdyby někdo přidal na mapu
+    // KLIENTSKÝ filtr/přepínač, který mění `markers` (nebo střed/zoom) BEZ
+    // přemountu, tyhle piny by se neaktualizovaly a hover efekt níže (závislý na
+    // `markers`) by mířil na staré instance. Pak je nutné stavbu markerů
+    // vytáhnout do samostatného efektu nad `[loaded, markers]`, který nejdřív
+    // uklidí `markersRef` (clearInstanceListeners + odpojení z mapy) a teprve pak
+    // je postaví znovu.
     for (const m of markers) {
-      const markerOptions: any = {
-        position: { lat: m.lat, lng: m.lng },
-        map,
-        title: m.title,
-      }
+      let marker: any
 
-      // Use circular image icon if available
-      if (m.imageUrl) {
-        markerOptions.icon = {
-          url: m.imageUrl.includes('cloudinary.com')
-            ? m.imageUrl.replace(
-                '/upload/',
-                '/upload/w_44,h_44,c_fill,g_auto,r_max,bo_3px_solid_white,f_png/',
-              )
-            : m.imageUrl,
-          scaledSize: new googleApi.maps.Size(MARKER_SIZE, MARKER_SIZE),
+      if (useAdvancedMarkers) {
+        const advancedOptions: any = {
+          position: { lat: m.lat, lng: m.lng },
+          map,
+          title: m.title,
+          gmpClickable: true, // bez toho AdvancedMarkerElement neemituje 'click'
         }
+        // Kruhová obrázková ikona jako HTML obsah (AdvancedMarker používá `content`,
+        // ne `icon`). Výchozí ukotvení obsahu = dolní střed, stejně jako u klasické
+        // ikony → vizuální parita zůstává zachovaná.
+        if (m.imageUrl) {
+          const img = document.createElement('img')
+          img.src = buildMarkerIconUrl(m.imageUrl)
+          img.width = MARKER_SIZE
+          img.height = MARKER_SIZE
+          img.alt = m.title
+          img.style.cssText = 'display:block;width:44px;height:44px;object-fit:cover;'
+          if (!m.imageUrl.includes('cloudinary.com')) {
+            img.style.borderRadius = '50%'
+            img.style.border = '3px solid #fff'
+          }
+          advancedOptions.content = img
+        }
+        marker = new AdvancedMarkerElement(advancedOptions)
+      } else {
+        const markerOptions: any = {
+          position: { lat: m.lat, lng: m.lng },
+          map,
+          title: m.title,
+        }
+        // Use circular image icon if available
+        if (m.imageUrl) {
+          markerOptions.icon = {
+            url: buildMarkerIconUrl(m.imageUrl),
+            scaledSize: new googleApi.maps.Size(MARKER_SIZE, MARKER_SIZE),
+          }
+        }
+        marker = new googleApi.maps.Marker(markerOptions)
       }
-
-      const marker = new googleApi.maps.Marker(markerOptions)
 
       marker.addListener('click', () => {
         const content = buildInfoWindowContent(m)
         infoWindow.setContent(content)
-        infoWindow.open(map, marker)
+        // Objektová forma open() funguje pro Marker i AdvancedMarkerElement.
+        infoWindow.open({ anchor: marker, map })
       })
 
       markersRef.current.push(marker)
     }
   }, [markers, centerLat, centerLng, zoom])
 
+  // Google Maps SDK (stovky kB) natáhneme až když se kontejner mapy přiblíží
+  // viewportu. Na stránkách, kde je mapa pod přehybem, se tak SDK ani skript
+  // nestahuje hned při načtení stránky (šetří přenos i hlavní vlákno). Kde
+  // IntersectionObserver není (starší prohlížeč), načteme rovnou.
   useEffect(() => {
+    if (inView) return
+    const el = containerRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setInView(true)
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setInView(true)
+          observer.disconnect()
+        }
+      },
+      // Předtáhneme kousek před viewport, ať je mapa hotová dřív, než k ní uživatel dojede.
+      { rootMargin: '200px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [inView])
+
+  useEffect(() => {
+    if (!inView) return
     let cancelled = false
     loadGoogleMaps()
       .then(() => {
@@ -330,7 +412,7 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, center
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [inView])
 
   useEffect(() => {
     if (loaded) {
@@ -367,7 +449,7 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, center
       const handleMouseOver = () => {
         const content = buildInfoWindowContent(data)
         infoWindowRef.current?.setContent(content)
-        infoWindowRef.current?.open(mapInstanceRef.current!, marker)
+        infoWindowRef.current?.open({ anchor: marker, map: mapInstanceRef.current! })
       }
       const handleMouseOut = () => {
         infoWindowRef.current?.close()
@@ -386,34 +468,48 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, center
     }
   }, [loaded, markers])
 
-  if (loadError) {
-    return (
-      <div
-        className="w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]"
-        style={{ height: 'calc(100vh - 40px)', minHeight: '400px' }}
-      >
-        <p className="font-semibold text-[#1a3f6c] mb-2">Mapa není dostupná</p>
-        <p>{loadError}</p>
-      </div>
-    )
-  }
+  // Úklid při odmountu (např. při navigaci na jinou stránku): Google si drží
+  // interní listenery na mapě, markerech i info-okně. Bez explicitního zrušení
+  // zůstanou viset → únik paměti při každém průchodu stránkou s mapou.
+  useEffect(() => {
+    return () => {
+      const ev = (getWindowWithGoogle().google?.maps as any)?.event
+      if (ev) {
+        markersRef.current.forEach((marker) => ev.clearInstanceListeners(marker))
+        if (mapInstanceRef.current) ev.clearInstanceListeners(mapInstanceRef.current)
+        if (infoWindowRef.current) ev.clearInstanceListeners(infoWindowRef.current)
+      }
+      // Odpojíme markery od mapy (AdvancedMarkerElement přes `map`, klasický `setMap`).
+      markersRef.current.forEach((marker) => {
+        if (marker && typeof marker.setMap === 'function') marker.setMap(null)
+        else if (marker) marker.map = null
+      })
+      markersRef.current = []
+      infoWindowRef.current?.close?.()
+      mapInstanceRef.current = null
+    }
+  }, [])
 
-  if (!loaded) {
-    return (
-      <div
-        className="w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]"
-        style={{ height: 'calc(100vh - 40px)', minHeight: '400px' }}
-      >
-        <p className="font-semibold text-[#1a3f6c]">Načítám mapu…</p>
-      </div>
-    )
-  }
-
+  // Vnější kontejner je vždy v DOM (i před načtením) se stejnými rozměry —
+  // IntersectionObserver má co pozorovat a nevzniká CLS při dokreslení mapy.
   return (
     <div
-      ref={mapRef}
+      ref={containerRef}
       className="w-full rounded-lg"
       style={{ height: 'calc(100vh - 40px)', minHeight: '400px' }}
-    />
+    >
+      {loadError ? (
+        <div className="h-full w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]">
+          <p className="font-semibold text-[#1a3f6c] mb-2">Mapa není dostupná</p>
+          <p>{loadError}</p>
+        </div>
+      ) : !loaded ? (
+        <div className="h-full w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]">
+          <p className="font-semibold text-[#1a3f6c]">Načítám mapu…</p>
+        </div>
+      ) : (
+        <div ref={mapRef} className="h-full w-full rounded-lg" />
+      )}
+    </div>
   )
 }

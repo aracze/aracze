@@ -429,6 +429,14 @@ export const Pages: CollectionConfig = {
                 collection: 'users',
                 id: authorId,
                 depth: 1,
+                // Taháme jen pole, která níže skládáme do veřejného objektu —
+                // ne celého uživatele (heslo/hash, role, e-mail sem nepatří).
+                select: {
+                  username: true,
+                  firstName: true,
+                  lastName: true,
+                  avatar: true,
+                },
                 overrideAccess: true,
                 req,
               })) as any

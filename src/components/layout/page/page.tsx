@@ -8,6 +8,7 @@ import { PlacesToVisit } from './places-to-visit'
 import { fetchPageLightByFullSlug, fetchMediaUrlsByIds, pageHasArticlesBySlug } from '@/lib/payload'
 import { fetchExchangeRate } from '@/lib/exchange-rate'
 import { buildPageTitle, rootPageCategories } from '@/lib/page-title'
+import { getPayloadURL } from '@/lib/utils'
 
 // Categories that can "own" a sub-navigation menu.
 // Turistický cíl is excluded – it should always delegate to its parent Place.
@@ -196,10 +197,7 @@ function getHeroImage(page: PayloadPage, rootPage: PayloadPage) {
   }
   return pageForHeroImage.featuredImage?.image?.url
     ? pageForHeroImage.featuredImage.image.url.startsWith('/')
-      ? new URL(
-          pageForHeroImage.featuredImage.image.url,
-          process.env.PAYLOAD_BASE_API_URL,
-        ).toString()
+      ? new URL(pageForHeroImage.featuredImage.image.url, getPayloadURL()).toString()
       : pageForHeroImage.featuredImage.image.url
     : null
 }
