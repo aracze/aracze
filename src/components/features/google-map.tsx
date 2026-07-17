@@ -191,10 +191,12 @@ function loadGoogleMaps(): Promise<void> {
 }
 
 export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, centerLng, zoom }) => {
+  const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<any[]>([])
   const infoWindowRef = useRef<any>(null)
+  const [inView, setInView] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -353,7 +355,33 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, center
     }
   }, [markers, centerLat, centerLng, zoom])
 
+  // Google Maps SDK (stovky kB) natáhneme až když se kontejner mapy přiblíží
+  // viewportu. Na stránkách, kde je mapa pod přehybem, se tak SDK ani skript
+  // nestahuje hned při načtení stránky (šetří přenos i hlavní vlákno). Kde
+  // IntersectionObserver není (starší prohlížeč), načteme rovnou.
   useEffect(() => {
+    if (inView) return
+    const el = containerRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setInView(true)
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setInView(true)
+          observer.disconnect()
+        }
+      },
+      // Předtáhneme kousek před viewport, ať je mapa hotová dřív, než k ní uživatel dojede.
+      { rootMargin: '200px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [inView])
+
+  useEffect(() => {
+    if (!inView) return
     let cancelled = false
     loadGoogleMaps()
       .then(() => {
@@ -373,7 +401,7 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, center
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [inView])
 
   useEffect(() => {
     if (loaded) {
@@ -429,34 +457,48 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, center
     }
   }, [loaded, markers])
 
-  if (loadError) {
-    return (
-      <div
-        className="w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]"
-        style={{ height: 'calc(100vh - 40px)', minHeight: '400px' }}
-      >
-        <p className="font-semibold text-[#1a3f6c] mb-2">Mapa není dostupná</p>
-        <p>{loadError}</p>
-      </div>
-    )
-  }
+  // Úklid při odmountu (např. při navigaci na jinou stránku): Google si drží
+  // interní listenery na mapě, markerech i info-okně. Bez explicitního zrušení
+  // zůstanou viset → únik paměti při každém průchodu stránkou s mapou.
+  useEffect(() => {
+    return () => {
+      const ev = (getWindowWithGoogle().google?.maps as any)?.event
+      if (ev) {
+        markersRef.current.forEach((marker) => ev.clearInstanceListeners(marker))
+        if (mapInstanceRef.current) ev.clearInstanceListeners(mapInstanceRef.current)
+        if (infoWindowRef.current) ev.clearInstanceListeners(infoWindowRef.current)
+      }
+      // Odpojíme markery od mapy (AdvancedMarkerElement přes `map`, klasický `setMap`).
+      markersRef.current.forEach((marker) => {
+        if (marker && typeof marker.setMap === 'function') marker.setMap(null)
+        else if (marker) marker.map = null
+      })
+      markersRef.current = []
+      infoWindowRef.current?.close?.()
+      mapInstanceRef.current = null
+    }
+  }, [])
 
-  if (!loaded) {
-    return (
-      <div
-        className="w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]"
-        style={{ height: 'calc(100vh - 40px)', minHeight: '400px' }}
-      >
-        <p className="font-semibold text-[#1a3f6c]">Načítám mapu…</p>
-      </div>
-    )
-  }
-
+  // Vnější kontejner je vždy v DOM (i před načtením) se stejnými rozměry —
+  // IntersectionObserver má co pozorovat a nevzniká CLS při dokreslení mapy.
   return (
     <div
-      ref={mapRef}
+      ref={containerRef}
       className="w-full rounded-lg"
       style={{ height: 'calc(100vh - 40px)', minHeight: '400px' }}
-    />
+    >
+      {loadError ? (
+        <div className="h-full w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]">
+          <p className="font-semibold text-[#1a3f6c] mb-2">Mapa není dostupná</p>
+          <p>{loadError}</p>
+        </div>
+      ) : !loaded ? (
+        <div className="h-full w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]">
+          <p className="font-semibold text-[#1a3f6c]">Načítám mapu…</p>
+        </div>
+      ) : (
+        <div ref={mapRef} className="h-full w-full rounded-lg" />
+      )}
+    </div>
   )
 }
