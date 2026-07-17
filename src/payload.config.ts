@@ -37,6 +37,7 @@ import { Header } from './globals/Header'
 import { Footer } from './globals/Footer'
 import { dbDumpEndpoint } from './endpoints/dbDump'
 import { dbImportEndpoint } from './endpoints/dbImport'
+import { r2ReconcileAllEndpoint } from './endpoints/r2ReconcileAll'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -142,7 +143,7 @@ export default buildConfig({
     prodMigrations: process.env.PAYLOAD_RUN_MIGRATIONS === 'true' ? migrations : undefined,
   }),
   sharp,
-  endpoints: [dbDumpEndpoint, dbImportEndpoint],
+  endpoints: [dbDumpEndpoint, dbImportEndpoint, r2ReconcileAllEndpoint],
   plugins: [
     nestedDocsPlugin({
       collections: ['pages'],
