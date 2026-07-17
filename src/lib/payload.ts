@@ -512,10 +512,15 @@ const fetchArticleBySlugCached = cached(fetchArticleBySlugUncached, 'article', (
 ])
 
 export const fetchArticleBySlug = cache(async (slug: string, _parentSlug?: string) => {
+  // #23: chybu DB ZÁMĚRNĚ nepolykáme. „Článek neexistuje" vrací prázdné pole
+  // (uvnitř fetchArticleBySlugUncached, když find nic nevrátí) → route zavolá
+  // notFound() (404). Ale výpadek DB musí propadnout do error boundary (500,
+  // viditelná + zalogovaná chyba), ne se maskovat jako 404 „nenalezeno".
   try {
     return await fetchArticleBySlugCached(slug)
-  } catch {
-    return { data: { articles: [] as Article[] } }
+  } catch (err) {
+    console.error(`[article] načtení detailu selhalo pro "${slug}":`, err)
+    throw err
   }
 })
 
@@ -526,10 +531,15 @@ const fetchPageByFullSlugCached = cached(
 )
 
 export const fetchPageByFullSlug = cache(async (slug: string) => {
+  // #22: chybu DB ZÁMĚRNĚ nepolykáme. „Stránka neexistuje" vrací prázdné pole
+  // (uvnitř fetchPageByFullSlugUncached, když find nic nevrátí) → route zavolá
+  // notFound() (404). Ale výpadek DB musí propadnout do error boundary (500,
+  // viditelná + zalogovaná chyba), ne se maskovat jako 404 „stránka nenalezena".
   try {
     return await fetchPageByFullSlugCached(ensureCorrectFullSlug(slug))
-  } catch {
-    return { data: { pages: [] as Page[] } }
+  } catch (err) {
+    console.error(`[page] načtení detailu selhalo pro "${slug}":`, err)
+    throw err
   }
 })
 
