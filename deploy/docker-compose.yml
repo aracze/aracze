@@ -1,0 +1,48 @@
+# Produkční nasazení projektu aracze na server (IONOS VPS).
+# Obrazy se NEbuildují zde — stahují se hotové z GitHub Container Registry
+# (ghcr.io), sestavené v GitHub Actions. Server je jen spouští.
+#
+# Umístění na serveru: /opt/aracze/docker-compose.yml (+ /opt/aracze/.env)
+# Nasazení: docker compose pull && docker compose up -d
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # PostgreSQL 18+ image ukládá data do podadresáře; mount patří na
+      # /var/lib/postgresql (ne /…/data jako u <=17).
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Databáze není vystavená ven — přístup jen z ostatních kontejnerů.
+
+  cms:
+    image: ghcr.io/aracze/ara-cms-payload:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      # Absolutní URL pro obrázky servírované ze serveru (relativní /… cesty).
+      # NEXT_PUBLIC_* se do image zapékají při buildu (viz cd.yml), tady nejsou.
+      PAYLOAD_BASE_API_URL: ${SITE_URL}
+    ports:
+      # Sloučená appka (veřejný web i /admin) běží na portu 80 (http://<IP>/)
+      - "80:3000"
+
+volumes:
+  pgdata:

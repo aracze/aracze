@@ -12,3 +12,4 @@ pnpm-debug.log*
 docker-compose.yml
 Dockerfile
 grails
+deploy
