@@ -48,7 +48,7 @@ describe('maskované chyby DB (regrese #22/#23)', () => {
   it('#23 fetchArticleBySlug: úspěšné prázdno vrací [] (skutečné 404 zůstává)', async () => {
     findMock.mockResolvedValue({ docs: [] })
     await expect(fetchArticleBySlug('opravdu-neexistuje')).resolves.toEqual({
-      data: { articles: [] },
+      data: { articles: [], validParentSlugs: [] },
     })
   })
 })

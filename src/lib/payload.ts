@@ -453,17 +453,24 @@ const ARTICLE_DETAIL_SELECT = {
   attribution: true,
   featuredImage: true,
   mainPage: true,
+  // #21: `pages` (vedlejší stránky, kam článek patří) potřebujeme kvůli validaci
+  // rodiče v URL — článek smí žít jen pod mainPage NEBO některou z pages.
+  pages: true,
   createdBy: true,
   createdByPublic: true,
 } as const
 
+// Fullslug bez vodicích/koncových lomítek — pro porovnání s cestou z URL, která
+// je taky bez lomítek (`slug.slice(0, -1).join('/')`).
+const stripSlashes = (s: string) => s.replace(/^\/+|\/+$/g, '')
+
 async function fetchArticleBySlugUncached(
   slug: string,
-): Promise<{ data: { articles: Article[] } }> {
+): Promise<{ data: { articles: Article[]; validParentSlugs: string[] } }> {
   const payload = await getDb()
   // depth 0 + select + joins:false: dřívější depth 2 bez selectu populoval
   // mainPage/pages jako celé pages dokumenty včetně vyhodnocení JEJICH joinů
-  // (v dev ~24 s na dotaz). fullSlug rodiče a URL obrázku doplní mini-dotazy.
+  // (v dev ~24 s na dotaz). fullSlug rodičů a URL obrázku doplní mini-dotazy.
   const res = await payload.find({
     overrideAccess: false,
     collection: 'articles',
@@ -473,34 +480,64 @@ async function fetchArticleBySlugUncached(
     select: ARTICLE_DETAIL_SELECT,
     joins: false,
   })
-  const raw = res.docs?.[0] as unknown as (Article & { mainPage?: unknown }) | undefined
-  if (!raw) return { data: { articles: [] } }
+  const raw = res.docs?.[0] as unknown as
+    | (Article & { mainPage?: unknown; pages?: unknown })
+    | undefined
+  if (!raw) return { data: { articles: [], validParentSlugs: [] } }
 
   const mainPageId = relationId(raw.mainPage)
-  const [enriched, mainPageDoc, enrichedText] = await Promise.all([
+  const secondaryIds = Array.isArray(raw.pages)
+    ? (raw.pages as unknown[]).map(relationId).filter((id): id is number | string => id != null)
+    : []
+  // mainPage + vedlejší pages = všechny stránky, pod kterými článek legitimně žije.
+  const parentIds = [
+    ...new Set([mainPageId, ...secondaryIds].filter((id): id is number | string => id != null)),
+  ]
+
+  const [enriched, parentDocs, enrichedText] = await Promise.all([
     enrichFeaturedImages([raw]),
-    mainPageId != null
+    // Jedním dotazem fullSlug + title všech rodičů (mainPage i pages). overrideAccess
+    // false → nepublikovaný rodič se veřejně nepočítá jako platná cesta.
+    // Chybu NEPOLYKÁME (viz #22/#23): bez rodičů bychom nemohli validovat URL a
+    // omylem bychom vracely 404 na platný článek → radši propadne do error boundary.
+    parentIds.length > 0
       ? payload
-          .findByID({
+          .find({
+            overrideAccess: false,
             collection: 'pages',
-            id: mainPageId,
+            where: { id: { in: parentIds } },
+            limit: parentIds.length,
             depth: 0,
             select: { title: true, fullSlug: true },
             joins: false,
-            overrideAccess: false,
           })
-          .catch(() => null)
-      : Promise.resolve(null),
+          .then(
+            (r) =>
+              r.docs as unknown as Array<{
+                id: number | string
+                title?: string | null
+                fullSlug?: string | null
+              }>,
+          )
+      : Promise.resolve(
+          [] as Array<{ id: number | string; title?: string | null; fullSlug?: string | null }>,
+        ),
     // Obrázky v těle (contentImage bloky) — depth 0 je nepopuluje, dohledáme je.
     enrichRichTextImages(raw.text),
   ])
+
+  const parentById = new Map(parentDocs.map((d) => [d.id, d]))
+  const mainPageDoc = mainPageId != null ? (parentById.get(mainPageId) ?? null) : null
+  const validParentSlugs = parentDocs
+    .map((d) => (typeof d.fullSlug === 'string' && d.fullSlug ? stripSlashes(d.fullSlug) : null))
+    .filter((s): s is string => !!s)
 
   const article = {
     ...enriched[0],
     text: enrichedText,
     mainPage: mainPageDoc ?? null,
   } as unknown as Article
-  return { data: { articles: [article] } }
+  return { data: { articles: [article], validParentSlugs } }
 }
 
 const ensureCorrectFullSlug = (fullSlug: string) => {

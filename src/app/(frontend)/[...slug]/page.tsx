@@ -7,6 +7,7 @@ import {
   pageHasArticlesBySlug,
 } from '@/lib/payload'
 import { buildPageTitle, rootPageCategories } from '@/lib/page-title'
+import { isValidArticleParent } from '@/lib/utils'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
@@ -53,7 +54,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { data: articleData } = await fetchArticleBySlug(articleSlug, parentSlug)
 
     const article = articleData?.articles[0]
-    if (article) {
+    // #21: článek uznáme jen pod platným rodičem (mainPage nebo některá z pages);
+    // pod „duchem" (cizí/starou cestou) propadneme na notFound() níže.
+    if (article && isValidArticleParent(parentSlug, articleData.validParentSlugs)) {
       const canonicalSlug = article.mainPage?.fullSlug
         ? `${article.mainPage.fullSlug}/${article.slug}`
         : null
@@ -109,7 +112,13 @@ export default async function PageRoute({ params }: Props) {
     const parentSlug = slug.slice(0, -1).join('/')
     const { data: articleData } = await fetchArticleBySlug(articleSlug, parentSlug)
 
-    if (articleData?.articles.length > 0) {
+    // #21: článek se zobrazí jen pod platným rodičem (mainPage nebo některá
+    // z pages). Pod „duchem" (nesmyslná/stará/cizí cesta) → notFound() (404),
+    // ať nevznikají duplicitní URL s pomíchanými drobečky.
+    if (
+      articleData?.articles.length > 0 &&
+      isValidArticleParent(parentSlug, articleData.validParentSlugs)
+    ) {
       return <Article article={articleData.articles[0]} contextSlug={parentSlug} />
     }
   }

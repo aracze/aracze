@@ -89,6 +89,19 @@ export function getArticleHref(article: Article, parentFullSlug?: string): strin
     : `/blog/${article.slug}`
 }
 
+/**
+ * #21: Je cesta z URL platným rodičem článku? Článek smí žít jen pod svou
+ * `mainPage` NEBO některou z `pages` — jinak jde o „ducha" (starý/cizí odkaz,
+ * překlep) a route má vrátit 404. `validParentSlugs` chodí z datové vrstvy už
+ * normalizované (bez lomítek); `parentSlug` z URL (join segmentů) taky nemá
+ * lomítka, ale pro jistotu ho normalizujeme taky.
+ */
+export function isValidArticleParent(parentSlug: string, validParentSlugs?: string[]): boolean {
+  if (!validParentSlugs?.length) return false
+  const normalized = parentSlug.replace(/^\/+|\/+$/g, '')
+  return validParentSlugs.includes(normalized)
+}
+
 /** Stabilní React key pro článek (documentId → slug → title+index). */
 export function getArticleKey(article: Article, index: number): string {
   return article.documentId || article.slug || `${article.title}-${index}`
