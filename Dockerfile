@@ -1,8 +1,11 @@
 # To use this Dockerfile, you have to set `output: 'standalone'` in your next.config.mjs file.
 # From https://github.com/vercel/next.js/blob/canary/examples/with-docker/Dockerfile
 
-FROM node:22.17.0-alpine AS base
-RUN apk add --no-cache libc6-compat postgresql-client
+# Alpine 3.23 kvůli postgresql18-client — produkční DB běží na PostgreSQL 18
+# a pg_dump odmítá dumpovat novější server, než je verze klienta. Starší Alpine
+# (3.22) měl ve stabilních repozitářích jen klienta 17 → dump/import na produkci padal.
+FROM node:22-alpine3.23 AS base
+RUN apk add --no-cache libc6-compat postgresql18-client
 
 # Install dependencies only when needed
 FROM base AS deps
