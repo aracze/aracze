@@ -34,7 +34,7 @@ export const HeroSection = ({
       <div className="relative z-[101] h-full flex flex-col items-center justify-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav
-            aria-label="Breadcrumb navigation"
+            aria-label="Drobečková navigace"
             className="mb-2 flex items-center gap-2 -translate-y-[20px] bg-white/90 backdrop-blur-md border border-white/20 rounded-full px-5 py-1.5 shadow-sm"
           >
             <ol className="flex items-center gap-1.5 list-none p-0 m-0">

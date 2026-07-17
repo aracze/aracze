@@ -23,7 +23,7 @@ export const Homepage = ({ homepage }: { homepage?: HomepageType | null }) => {
         <StaticHeroWave />
       </section>
 
-      <main className="max-w-7xl mx-auto px-4 md:px-12 py-16 text-center">
+      <main id="obsah" className="max-w-7xl mx-auto px-4 md:px-12 py-16 text-center">
         <h2 className="text-3xl font-bold text-gray-800 mb-6 uppercase tracking-wider">
           {homepage?.title}
         </h2>
