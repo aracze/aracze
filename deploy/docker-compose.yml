@@ -40,6 +40,14 @@ services:
       # Absolutní URL pro obrázky servírované ze serveru (relativní /… cesty).
       # NEXT_PUBLIC_* se do image zapékají při buildu (viz cd.yml), tady nejsou.
       PAYLOAD_BASE_API_URL: ${SITE_URL}
+      # SMTP (odesílání e-mailů z administrace – reset hesla). Běhové proměnné,
+      # ne build-time – hodnoty doplň do /opt/aracze/.env. Bez SMTP_HOST se
+      # e-maily jen vypíšou do logu (žádné odesílání).
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
     ports:
       # Sloučená appka (veřejný web i /admin) běží na portu 80 (http://<IP>/)
       - '80:3000'

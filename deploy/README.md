@@ -36,10 +36,25 @@ už PŘI BUILDU, proto musí být tady, ne jen v serverovém `.env`):
 | `NEXT_PUBLIC_SITE_URL`                                                   | `http://217.154.225.117` (po pořízení domény `https://www.ara.cz`) |
 | `NEXT_PUBLIC_PAYLOAD_BASE_URL`                                           | `http://217.154.225.117` (stejné jako web)                         |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`                                        | klíč pro mapy (v Google Cloud omez přes "HTTP referrer")           |
+| `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`                                         | Map ID (Cloud Console → Map Management) pro nový typ značky        |
 | `NEXT_PUBLIC_ADSENSE_CLIENT` / `..._ARTICLE_SLOT` / `..._ARTICLE_SLOT_2` | AdSense (nepovinné)                                                |
 
 > Obrazy do ghcr.io se pushují automaticky pomocí vestavěného `GITHUB_TOKEN`,
 > žádný další token pro push není potřeba.
+
+**E-maily (SMTP) — běhové proměnné, ne GitHub Variables.** E-maily z administrace
+(reset hesla) posílá Payload přes SMTP. Tyto hodnoty NEjsou `NEXT_PUBLIC_*` (do
+prohlížeče nesmí), proto se nezapékají při buildu, ale nastavují se za běhu v
+serverovém `/opt/aracze/.env` (viz krok 2). Bez `SMTP_HOST` se e-maily jen vypíšou
+do logu. Původní web používal Zoho:
+
+```dotenv
+SMTP_HOST=smtp.zoho.com
+SMTP_PORT=465
+SMTP_USER=info@ara.cz
+SMTP_PASSWORD=<heslo_schranky>
+SMTP_FROM=info@ara.cz
+```
 
 ---
 

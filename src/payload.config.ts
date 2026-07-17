@@ -17,6 +17,7 @@ import sharp from 'sharp'
 import { nestedDocsPlugin } from '@payloadcms/plugin-nested-docs'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { cloudinaryStorage } from 'payload-storage-cloudinary'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 
 import { migrations } from './migrations'
 import { Users } from './collections/Users'
@@ -100,6 +101,25 @@ export default buildConfig({
       }),
     ],
   }),
+  // E-maily (reset hesla do administrace atd.) posílá Payload přes SMTP.
+  // Adaptér zapojíme JEN když je nastavené SMTP_HOST — bez něj se web chová
+  // jako dřív (e-mail se vypíše do konzole). Zoho: host smtp.zoho.com, port 465
+  // = implicitní SSL (`secure: true`); pro STARTTLS port (587) je `secure: false`.
+  email: process.env.SMTP_HOST
+    ? nodemailerAdapter({
+        defaultFromAddress: process.env.SMTP_FROM || process.env.SMTP_USER || 'info@ara.cz',
+        defaultFromName: process.env.SMTP_FROM_NAME || 'Ara.cz',
+        transportOptions: {
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT) || 465,
+          secure: (Number(process.env.SMTP_PORT) || 465) === 465,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASSWORD,
+          },
+        },
+      })
+    : undefined,
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
