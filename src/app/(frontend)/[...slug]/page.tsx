@@ -8,6 +8,7 @@ import {
 } from '@/lib/payload'
 import { buildPageTitle, rootPageCategories } from '@/lib/page-title'
 import { isValidArticleParent } from '@/lib/utils'
+import { resolveSlugRoute } from '@/lib/resolve-route'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
@@ -99,29 +100,14 @@ export default async function PageRoute({ params }: Props) {
     void pageHasArticlesBySlug('/' + prefix).catch(() => {})
   }
 
-  // 1. Try fetching as a Page
-  const { data: pageData } = await fetchPageByFullSlug(fullSlug)
-
-  if (pageData?.pages.length > 0) {
-    return <Page page={pageData?.pages[0]} />
-  }
-
-  // 2. If not a page, try fetching as an Article (last segment = article slug)
-  if (slug.length > 1) {
-    const articleSlug = slug[slug.length - 1]
-    const parentSlug = slug.slice(0, -1).join('/')
-    const { data: articleData } = await fetchArticleBySlug(articleSlug, parentSlug)
-
-    // #21: článek se zobrazí jen pod platným rodičem (mainPage nebo některá
-    // z pages). Pod „duchem" (nesmyslná/stará/cizí cesta) → notFound() (404),
-    // ať nevznikají duplicitní URL s pomíchanými drobečky.
-    if (
-      articleData?.articles.length > 0 &&
-      isValidArticleParent(parentSlug, articleData.validParentSlugs)
-    ) {
-      return <Article article={articleData.articles[0]} contextSlug={parentSlug} />
-    }
-  }
+  // Rozhodnutí stránka/článek/404 sdílíme s layoutem přes resolveSlugRoute
+  // (React-cache → stejné DB dotazy, žádné opakování). Tvrdý 404 řeší už layout
+  // NAD loading kostrou; tady jen vykreslíme obsah (notFound() zůstává jako
+  // pojistka, kdyby se sem 404 dostal).
+  const resolution = await resolveSlugRoute(fullSlug)
+  if (resolution.kind === 'page') return <Page page={resolution.page} />
+  if (resolution.kind === 'article')
+    return <Article article={resolution.article} contextSlug={resolution.parentSlug} />
 
   notFound()
 }
