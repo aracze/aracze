@@ -133,56 +133,75 @@ export const Media: CollectionConfig = {
         const safeExtension = extension === 'jpeg' ? 'jpg' : extension
         const r2Key = `${cloudinaryPublicId}.${safeExtension}`
 
-        try {
-          if (!s3Endpoint || !s3Bucket || !s3AccessKeyId || !s3Secret) {
-            throw new Error('Chybí konfigurace R2 (environment variables)')
+        // Hodnoty vytáhneme teď a přeneseme do detached úlohy — `doc`/`req` se
+        // po skončení hooku nespoléháme používat.
+        const { payload } = req
+        const docId = doc.id
+        const altText = (doc.alt as string) || ''
+
+        // Stažení z Cloudinary + upload do R2 je pomalé síťové I/O. Kdyby běželo
+        // uvnitř transakce tohoto requestu (tj. s awaitem v hooku), drželo by DB
+        // spojení otevřené po celou dobu přenosu → při souběhu uploadů hrozí
+        // vyčerpání connection poolu. Spustíme ho proto DETACHED (bez `req`):
+        // hook se vrátí hned, transakce se commitne a záloha doběhne na pozadí
+        // ve vlastním krátkém spojení. Cena: při restartu serveru přímo během
+        // přenosu se ta jedna záloha nedokončí (status zůstane 'pending').
+        const runBackup = async () => {
+          try {
+            if (!s3Endpoint || !s3Bucket || !s3AccessKeyId || !s3Secret) {
+              throw new Error('Chybí konfigurace R2 (environment variables)')
+            }
+
+            payload.logger.info(`Zahajuji zálohování do R2 (stahuji z Cloudinary): ${r2Key}`)
+
+            const response = await fetch(cloudinaryUrl)
+            if (!response.ok) {
+              throw new Error(`Načtení z Cloudinary selhalo: ${response.statusText}`)
+            }
+
+            const arrayBuffer = await response.arrayBuffer()
+            const buffer = Buffer.from(arrayBuffer)
+
+            await s3Client.send(
+              new PutObjectCommand({
+                Bucket: s3Bucket,
+                Key: r2Key,
+                Body: buffer,
+                ContentType: mimeType || 'application/octet-stream',
+                Metadata: {
+                  alt: encodeURIComponent(altText),
+                },
+              }),
+            )
+
+            payload.logger.info(`Záloha souboru ${r2Key} do R2 proběhla úspěšně.`)
+
+            // Status zálohy zapíšeme BEZ `req` — vlastní krátká transakce, která
+            // po commitu původního requestu jen krátce zabere spojení. `skipR2Backup`
+            // brání rekurzi tohoto afterChange.
+            await payload.update({
+              collection: 'media',
+              id: docId,
+              data: { r2BackupStatus: 'success' },
+              context: { skipR2Backup: true },
+            })
+          } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error)
+            payload.logger.error(`Chyba při zálohování do R2: ${errorMsg}`)
+
+            // Záznam chyby pro pozdější opravu
+            await payload
+              .update({
+                collection: 'media',
+                id: docId,
+                data: { r2BackupStatus: 'error' },
+                context: { skipR2Backup: true },
+              })
+              .catch(() => {})
           }
-
-          req.payload.logger.info(`Zahajuji zálohování do R2 (stahuji z Cloudinary): ${r2Key}`)
-
-          const response = await fetch(cloudinaryUrl)
-          if (!response.ok) {
-            throw new Error(`Načtení z Cloudinary selhalo: ${response.statusText}`)
-          }
-
-          const arrayBuffer = await response.arrayBuffer()
-          const buffer = Buffer.from(arrayBuffer)
-
-          await s3Client.send(
-            new PutObjectCommand({
-              Bucket: s3Bucket,
-              Key: r2Key,
-              Body: buffer,
-              ContentType: mimeType || 'application/octet-stream',
-              Metadata: {
-                alt: encodeURIComponent((doc.alt as string) || ''),
-              },
-            }),
-          )
-
-          req.payload.logger.info(`Záloha souboru ${r2Key} do R2 proběhla úspěšně.`)
-
-          // Aktualizace statusu zálohy v DB
-          await req.payload.update({
-            collection: 'media',
-            id: doc.id,
-            data: { r2BackupStatus: 'success' },
-            req,
-            context: { skipR2Backup: true },
-          })
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error)
-          req.payload.logger.error(`Chyba při zálohování do R2: ${errorMsg}`)
-
-          // Záznam chyby pro pozdější opravu
-          await req.payload.update({
-            collection: 'media',
-            id: doc.id,
-            data: { r2BackupStatus: 'error' },
-            req,
-            context: { skipR2Backup: true },
-          })
         }
+
+        void runBackup()
       },
     ],
   },
