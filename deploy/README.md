@@ -18,7 +18,7 @@ veřejný web i administrace v jednom obraze).
 
 ## 1) Co nastavit v GitHubu
 
-Repozitář `ara-cms-payload` → Settings → Secrets and variables → Actions.
+Repozitář `aracze` → Settings → Secrets and variables → Actions.
 
 **Secrets** (tajné):
 

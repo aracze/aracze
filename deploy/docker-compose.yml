@@ -25,7 +25,7 @@ services:
     # Databáze není vystavená ven — přístup jen z ostatních kontejnerů.
 
   cms:
-    image: ghcr.io/aracze/ara-cms-payload:latest
+    image: ghcr.io/aracze/aracze:latest
     restart: unless-stopped
     depends_on:
       postgres:
