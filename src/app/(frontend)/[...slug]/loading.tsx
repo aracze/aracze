@@ -21,9 +21,11 @@ export default function LoadingSlugPage() {
     >
       {/* Hero (stejná výška jako HeroSection) */}
       <div className="relative w-full h-[315px] bg-[#3b444f]/80">
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-          <div className="h-10 w-64 md:w-96 rounded bg-white/20" />
-          <div className="h-4 w-40 rounded bg-white/10" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          {/* Tři vycentrované linky (titulková oblast) – stejná tloušťka, liší se délkou */}
+          <div className="h-4 w-24 rounded-full bg-white/15" />
+          <div className="h-4 w-52 md:w-64 rounded-full bg-white/15" />
+          <div className="h-4 w-32 md:w-40 rounded-full bg-white/15" />
         </div>
 
         {/* Vlnka na spodní hraně — stejná jako v HeroSection, ať přechod nesekne */}
