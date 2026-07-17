@@ -122,7 +122,11 @@ export const MainContent = ({
     : null
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-12 md:py-20 flex flex-col items-stretch lg:flex-row lg:justify-center gap-8 lg:gap-10">
+    <main
+      id="obsah"
+      tabIndex={-1}
+      className="max-w-7xl mx-auto px-4 py-12 md:py-20 flex flex-col items-stretch lg:flex-row lg:justify-center gap-8 lg:gap-10 focus:outline-none"
+    >
       {/* Main Content — čtecí sloupec jako u článku (viz reading-prose) */}
       <div className="flex-1 min-w-0 lg:max-w-[808px] lg:px-16">
         <CollapsiblePageTextWithContributor
@@ -221,7 +225,7 @@ export const MainContent = ({
         {showTableOfContents && (
           <div className="hidden lg:block sticky top-5">
             {headings.length > 0 && (
-              <nav>
+              <nav aria-label="Obsah stránky">
                 <ul>
                   {headings.map((heading) => (
                     <li key={heading.id}>

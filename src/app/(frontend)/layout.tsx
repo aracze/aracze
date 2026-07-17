@@ -74,6 +74,13 @@ export default async function RootLayout({
   return (
     <html lang="cs" className={`${openSans.variable} ${poppins.variable}`}>
       <body className="antialiased">
+        {/* Skip link pro klávesnici/čtečky — skrytý, dokud nedostane fokus (Tab). */}
+        <a
+          href="#obsah"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[400] focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-[#215491] focus:shadow-lg"
+        >
+          Přeskočit na obsah
+        </a>
         {!isProduction() && <WebVitals />}
 
         {/* HLAVNÍ KONTEJNER: flex rozložení pro menu a obsah */}

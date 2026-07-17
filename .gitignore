@@ -60,3 +60,6 @@ node_modules/
 # database & sessions
 *.session.sql
 
+# legacy Grails project (jen podklad pro migraci, nenasazuje se)
+/grails/
+

@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
+import { Menu, X, ChevronDown } from 'lucide-react'
 import { ImageLink, PageCategory } from '@/types/payload'
 import { isCloudinary } from '@/lib/cloudinary-loader'
 import Search from '@/components/features/search/search'
@@ -34,6 +36,83 @@ export function Header({
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Mobilní menu (do `md` breakpointu). Vlastní stav nezávislý na desktop mega menu.
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileExpandedId, setMobileExpandedId] = useState<string | null>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const mobilePanelRef = useRef<HTMLDivElement>(null)
+  const pathname = usePathname()
+
+  const closeMobileMenu = () => {
+    setMobileOpen(false)
+    menuButtonRef.current?.focus()
+  }
+
+  // Přechod na jinou stránku menu zavře. Použijeme doporučený vzor React „úprava
+  // stavu při renderu" (sledování předchozí cesty přes stav) — bez setState v
+  // effectu (kaskádové rendery) i bez sahání na ref během renderu.
+  const [prevPathname, setPrevPathname] = useState(pathname)
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname)
+    setMobileOpen(false)
+    setMobileExpandedId(null)
+  }
+
+  // Otevřené menu: přesun fokusu dovnitř, Escape zavírá + vrací fokus na tlačítko,
+  // Tab drží fokus v panelu (focus trap) a scroll pozadí zamkneme.
+  useEffect(() => {
+    if (!mobileOpen) return
+
+    const focusables = () =>
+      Array.from(
+        mobilePanelRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ??
+          [],
+      )
+
+    focusables()[0]?.focus()
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setMobileOpen(false)
+        menuButtonRef.current?.focus()
+        return
+      }
+      if (e.key === 'Tab') {
+        const items = focusables()
+        if (items.length === 0) return
+        const first = items[0]
+        const last = items[items.length - 1]
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    }
+
+    // Když se okno dostane na desktop breakpoint (md = 768px), menu zavřeme —
+    // jinak `md:hidden` skryje panel i hamburger, ale mobileOpen zůstane true
+    // a body by zůstalo zamčené proti scrollování (resize/otočení displeje).
+    const desktopMq = window.matchMedia('(min-width: 768px)')
+    const handleBreakpoint = () => {
+      if (desktopMq.matches) setMobileOpen(false)
+    }
+    desktopMq.addEventListener('change', handleBreakpoint)
+
+    document.addEventListener('keydown', onKeyDown)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      desktopMq.removeEventListener('change', handleBreakpoint)
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [mobileOpen])
+
   const handleMouseEnter = (pageId: string) => {
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current)
@@ -58,6 +137,28 @@ export function Header({
   // Main nav lists only top-level destinations (category "Místo k navštívení").
   const navPages = (pages || []).filter((p) => p.category === PageCategory.Misto_k_navstiveni)
 
+  // Řazení sdílíme mezi desktop navigací a mobilním menu (kontinenty v pořadí,
+  // zbytek abecedně česky).
+  const sortedNavPages = [...navPages].sort((a, b) => {
+    const indexA = CONTINENT_ORDER.indexOf(a.title)
+    const indexB = CONTINENT_ORDER.indexOf(b.title)
+
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB
+    if (indexA !== -1) return -1
+    if (indexB !== -1) return 1
+
+    return a.title.localeCompare(b.title, 'cs')
+  })
+
+  // Aktivní stránka v mobilním menu (a11y: aria-current + vizuální akcent).
+  const normalizePath = (path: string) => path.replace(/\/+$/, '') || '/'
+  const currentPath = normalizePath(pathname || '/')
+  const isActivePath = (slug: string) => normalizePath(slug) === currentPath
+  const isAncestorPath = (slug: string) => {
+    const base = normalizePath(slug)
+    return currentPath === base || currentPath.startsWith(`${base}/`)
+  }
+
   return (
     <header
       onBlur={(e) => {
@@ -69,16 +170,16 @@ export function Header({
         }
       }}
       className={`absolute top-0 left-0 w-full z-[200] transition-colors duration-300 ${
-        activeDropdown ? 'bg-[#215491]' : 'bg-transparent'
+        activeDropdown || mobileOpen ? 'bg-[#215491]' : 'bg-transparent'
       } group/header`}
     >
       <div
         className={`absolute inset-0 h-[65px] bg-gradient-to-b from-black/50 to-transparent z-[-1] transition-opacity duration-300 ${
-          activeDropdown ? 'opacity-0' : 'opacity-100'
+          activeDropdown || mobileOpen ? 'opacity-0' : 'opacity-100'
         }`}
       />
 
-      <nav className="h-[65px] flex items-center">
+      <nav aria-label="Hlavní navigace" className="h-[65px] flex items-center">
         <div className="max-w-7xl mx-auto px-4 md:px-12 flex items-center w-full gap-8">
           {logo && (
             <Link href="/" className="flex items-center shrink-0">
@@ -108,43 +209,32 @@ export function Header({
           )}
 
           <div className="hidden md:flex items-center gap-0 h-full text-white/90 font-semibold">
-            {[...navPages]
-              .sort((a, b) => {
-                const indexA = CONTINENT_ORDER.indexOf(a.title)
-                const indexB = CONTINENT_ORDER.indexOf(b.title)
-
-                if (indexA !== -1 && indexB !== -1) return indexA - indexB
-                if (indexA !== -1) return -1
-                if (indexB !== -1) return 1
-
-                return a.title.localeCompare(b.title, 'cs')
-              })
-              .map((page, index) => {
-                const hasChildren = (page.children?.docs?.length ?? 0) > 0
-                const pageId = page.id || `temp-id-${index}`
-                return (
-                  <div
-                    key={pageId}
-                    className="h-[65px] flex items-center"
-                    onMouseEnter={() => hasChildren && handleMouseEnter(String(pageId))}
-                    onMouseLeave={handleMouseLeave}
-                    onFocus={() => hasChildren && handleMouseEnter(String(pageId))}
+            {sortedNavPages.map((page, index) => {
+              const hasChildren = (page.children?.docs?.length ?? 0) > 0
+              const pageId = page.id || `temp-id-${index}`
+              return (
+                <div
+                  key={pageId}
+                  className="h-[65px] flex items-center"
+                  onMouseEnter={() => hasChildren && handleMouseEnter(String(pageId))}
+                  onMouseLeave={handleMouseLeave}
+                  onFocus={() => hasChildren && handleMouseEnter(String(pageId))}
+                >
+                  <Link
+                    href={page.fullSlug}
+                    onClick={() => setActiveDropdown(null)}
+                    aria-haspopup={hasChildren || undefined}
+                    aria-expanded={hasChildren ? activeDropdown === String(pageId) : undefined}
+                    className="px-5 text-white hover:text-gray-100 transition-colors tracking-wide text-[15px] font-semibold font-heading flex items-center gap-1 whitespace-nowrap"
                   >
-                    <Link
-                      href={page.fullSlug}
-                      onClick={() => setActiveDropdown(null)}
-                      aria-haspopup={hasChildren || undefined}
-                      aria-expanded={hasChildren ? activeDropdown === String(pageId) : undefined}
-                      className="px-5 text-white hover:text-gray-100 transition-colors tracking-wide text-[15px] font-semibold font-heading flex items-center gap-1 whitespace-nowrap"
-                    >
-                      {page.title}
-                      {hasChildren && (
-                        <span className="inline-block border-white hover:border-gray-100 border-t-4 border-l-4 border-r-4 border-l-transparent border-r-transparent border-white/60" />
-                      )}
-                    </Link>
-                  </div>
-                )
-              })}
+                    {page.title}
+                    {hasChildren && (
+                      <span className="inline-block border-white hover:border-gray-100 border-t-4 border-l-4 border-r-4 border-l-transparent border-r-transparent border-white/60" />
+                    )}
+                  </Link>
+                </div>
+              )
+            })}
           </div>
 
           <div className="ml-auto flex items-center gap-4">
@@ -155,6 +245,21 @@ export function Header({
             >
               Rady na cestu
             </Link>
+            <button
+              ref={menuButtonRef}
+              type="button"
+              onClick={() => setMobileOpen((v) => !v)}
+              aria-label={mobileOpen ? 'Zavřít menu' : 'Otevřít menu'}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu"
+              className="md:hidden -mr-2 inline-flex h-11 w-11 items-center justify-center rounded-md text-white [touch-action:manipulation] [-webkit-tap-highlight-color:transparent] hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            >
+              {mobileOpen ? (
+                <X className="h-6 w-6" aria-hidden="true" />
+              ) : (
+                <Menu className="h-6 w-6" aria-hidden="true" />
+              )}
+            </button>
           </div>
         </div>
       </nav>
@@ -183,6 +288,122 @@ export function Header({
                   ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobilní menu (do `md`) — backdrop + rozbalovací panel s accordionem. */}
+      {mobileOpen && (
+        <div className="md:hidden">
+          <button
+            type="button"
+            aria-label="Zavřít menu"
+            tabIndex={-1}
+            onClick={closeMobileMenu}
+            className="fixed top-[65px] right-0 bottom-0 left-0 z-[140] bg-black/50 animate-in fade-in duration-200 motion-reduce:animate-none"
+          />
+          {/* Vysouvací panel zprava (drawer) – omezená šířka, ať nepůsobí prázdně
+              na širších mobilech; safe-area insety kvůli výřezům/„home" liště. */}
+          <div
+            id="mobile-menu"
+            ref={mobilePanelRef}
+            className="fixed top-[65px] right-0 bottom-0 z-[150] w-[85%] max-w-sm overflow-y-auto overscroll-contain bg-[#215491] text-white shadow-2xl animate-in slide-in-from-right duration-200 motion-reduce:animate-none [padding-bottom:env(safe-area-inset-bottom)] [padding-right:env(safe-area-inset-right)]"
+          >
+            <nav aria-label="Mobilní navigace" className="py-2">
+              <ul className="flex flex-col divide-y divide-white/10">
+                {sortedNavPages.map((page, index) => {
+                  const hasChildren = (page.children?.docs?.length ?? 0) > 0
+                  const pageId = String(page.id || `temp-id-${index}`)
+                  const expanded = mobileExpandedId === pageId
+                  const active = isActivePath(page.fullSlug)
+                  const inSection = isAncestorPath(page.fullSlug)
+                  return (
+                    <li key={pageId}>
+                      <div
+                        className={`relative flex items-center transition-colors duration-150 motion-reduce:transition-none hover:bg-white/5 active:bg-white/10 ${
+                          expanded ? 'sticky top-0 z-10 bg-[#215491] shadow-md' : ''
+                        }`}
+                      >
+                        {/* Vizuální akcent pro aktivní stránku / aktivní sekci. */}
+                        {(active || inSection) && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r bg-white"
+                          />
+                        )}
+                        <Link
+                          href={page.fullSlug}
+                          onClick={() => setMobileOpen(false)}
+                          aria-current={active ? 'page' : undefined}
+                          className={`flex-1 px-4 py-3.5 font-heading text-[16px] font-semibold [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none focus-visible:ring-inset ${
+                            active ? 'text-white' : 'text-white/90'
+                          }`}
+                        >
+                          {page.title}
+                        </Link>
+                        {hasChildren && (
+                          <button
+                            type="button"
+                            onClick={() => setMobileExpandedId(expanded ? null : pageId)}
+                            aria-expanded={expanded}
+                            aria-controls={`mobile-submenu-${pageId}`}
+                            aria-label={
+                              expanded ? `Sbalit ${page.title}` : `Rozbalit ${page.title}`
+                            }
+                            className="mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-white [touch-action:manipulation] [-webkit-tap-highlight-color:transparent] hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none"
+                          >
+                            <ChevronDown
+                              className={`h-5 w-5 transition-transform duration-200 motion-reduce:transition-none ${
+                                expanded ? 'rotate-180' : ''
+                              }`}
+                              aria-hidden="true"
+                            />
+                          </button>
+                        )}
+                      </div>
+                      {hasChildren && expanded && (
+                        <ul
+                          id={`mobile-submenu-${pageId}`}
+                          className="mt-1 mb-2 ml-6 border-l border-white/15"
+                        >
+                          {[...(page.children?.docs || [])]
+                            .sort((a, b) => a.title.localeCompare(b.title, 'cs'))
+                            .map((child, ci) => {
+                              const childActive = isActivePath(child.fullSlug)
+                              return (
+                                <li key={child.id || `child-${ci}`}>
+                                  <Link
+                                    href={child.fullSlug}
+                                    onClick={() => setMobileOpen(false)}
+                                    aria-current={childActive ? 'page' : undefined}
+                                    className={`block py-2.5 pr-4 pl-4 text-[15px] transition-colors duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-white/5 active:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none focus-visible:ring-inset motion-reduce:transition-none ${
+                                      childActive
+                                        ? 'font-semibold text-white'
+                                        : 'text-white/85 hover:text-white'
+                                    }`}
+                                  >
+                                    {child.title}
+                                  </Link>
+                                </li>
+                              )
+                            })}
+                        </ul>
+                      )}
+                    </li>
+                  )
+                })}
+                <li className="px-4 pt-3 pb-2">
+                  <Link
+                    href="/rady-na-cestu"
+                    onClick={() => setMobileOpen(false)}
+                    aria-current={isActivePath('/rady-na-cestu') ? 'page' : undefined}
+                    className="block rounded-full border-2 border-white/50 py-2.5 text-center font-heading text-[13px] font-bold tracking-wider text-white uppercase transition-colors duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-white hover:text-[#215491] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none motion-reduce:transition-none"
+                  >
+                    Rady na cestu
+                  </Link>
+                </li>
+              </ul>
+            </nav>
           </div>
         </div>
       )}

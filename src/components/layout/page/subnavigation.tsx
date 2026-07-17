@@ -133,18 +133,30 @@ export const Subnavigation = ({
       <div className="max-w-7xl mx-auto px-4 md:px-12">
         <div className="flex gap-0 justify-center text-xs md:text-base font-semibold font-heading">
           {/* Context page (the Place that owns this menu) */}
-          <Link href={contextFullSlug} className={itemClass(isContextActive)}>
+          <Link
+            href={contextFullSlug}
+            aria-current={isContextActive ? 'page' : undefined}
+            className={itemClass(isContextActive)}
+          >
             {contextTitle}
           </Link>
 
           {/* Anchor to the context place's "Co vidět" section (on the context page). */}
           {hasPlaces &&
             (isContextActive ? (
-              <a href="#mista" className={itemClass(activeSection === 'mista')}>
+              <a
+                href="#mista"
+                aria-current={activeSection === 'mista' ? true : undefined}
+                className={itemClass(activeSection === 'mista')}
+              >
                 Místa
               </a>
             ) : (
-              <Link href={sectionHref('mista')} className={itemClass(activeSection === 'mista')}>
+              <Link
+                href={sectionHref('mista')}
+                aria-current={activeSection === 'mista' ? true : undefined}
+                className={itemClass(activeSection === 'mista')}
+              >
                 Místa
               </Link>
             ))}
@@ -155,7 +167,12 @@ export const Subnavigation = ({
               currentPageFullSlug === pageChild.fullSlug ||
               currentPageFullSlug.startsWith(pageChild.fullSlug + '/')
             return (
-              <Link key={pageChild.id} href={pageChild.fullSlug} className={itemClass(isActive)}>
+              <Link
+                key={pageChild.id}
+                href={pageChild.fullSlug}
+                aria-current={isActive ? 'page' : undefined}
+                className={itemClass(isActive)}
+              >
                 {pageChild.title}
               </Link>
             )
@@ -165,6 +182,7 @@ export const Subnavigation = ({
           {isSubPlace && practicalInfoPage && (
             <Link
               href={practicalInfoPage.fullSlug}
+              aria-current={isCurrentPagePracticalInfo ? 'page' : undefined}
               className={itemClass(!!isCurrentPagePracticalInfo)}
             >
               Praktické informace
@@ -175,11 +193,19 @@ export const Subnavigation = ({
               only if the context place has articles. */}
           {hasArticles &&
             (isContextActive ? (
-              <a href="#clanky" className={itemClass(activeSection === 'clanky')}>
+              <a
+                href="#clanky"
+                aria-current={activeSection === 'clanky' ? true : undefined}
+                className={itemClass(activeSection === 'clanky')}
+              >
                 Články
               </a>
             ) : (
-              <Link href={sectionHref('clanky')} className={itemClass(activeSection === 'clanky')}>
+              <Link
+                href={sectionHref('clanky')}
+                aria-current={activeSection === 'clanky' ? true : undefined}
+                className={itemClass(activeSection === 'clanky')}
+              >
                 Články
               </Link>
             ))}

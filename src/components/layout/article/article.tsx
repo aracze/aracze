@@ -93,7 +93,11 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
 
       {/* Article Content + side advertisement (two-column on desktop) */}
       <div className="max-w-7xl mx-auto px-4 py-16 md:py-8 flex flex-col items-stretch lg:flex-row lg:justify-center gap-8 lg:gap-10">
-        <main className="flex-1 min-w-0 lg:max-w-[808px] lg:px-16">
+        <main
+          id="obsah"
+          tabIndex={-1}
+          className="flex-1 min-w-0 lg:max-w-[808px] lg:px-16 focus:outline-none"
+        >
           {/* Už sanitizované HTML z richTextToHtml (DOMPurify) vkládáme přímo —
               odstavce tak zůstávají PŘÍMÝMI potomky .prose (kvůli
               `.prose > p:first-of-type`) a nadpisy mají id přímo z richTextToHtml

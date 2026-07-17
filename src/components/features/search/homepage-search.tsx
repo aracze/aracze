@@ -50,7 +50,7 @@ export function HomepageSearch() {
             <button
               onClick={handleClear}
               className="text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Clear search"
+              aria-label="Vymazat hledání"
             >
               <X className="w-5 h-5" />
             </button>

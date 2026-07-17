@@ -91,7 +91,7 @@ export async function Footer() {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="text-[#1f1f1f] hover:text-white no-underline transition-colors"
+                  className="text-[#1f1f1f] hover:text-[#215491] no-underline transition-colors"
                 >
                   {item.label}
                 </Link>
