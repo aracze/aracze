@@ -1,3 +1,5 @@
+import { StaticHeroWave } from '@/components/features/static-hero-wave'
+
 /**
  * Okamžitá kostra při navigaci mezi obsahovými stránkami.
  *
@@ -6,8 +8,9 @@
  * musí být uvnitř segmentu. Bez tohoto souboru se při kliknutí v menu pár
  * sekund nedělo vůbec nic a web působil rozbitě.
  *
- * Tvar kopíruje skutečnou stránku (hero 315 px + podnavigace + text), aby
- * obsah po dotečení „neskákal".
+ * Tvar kopíruje skutečnou stránku (hero 315 px + vlnka + podnavigace + text),
+ * aby obsah po dotečení „neskákal". Vlnka `StaticHeroWave` je stejná jako
+ * v `HeroSection`, jinak by přechod z rovné hrany kostry na vlnku působil rušivě.
  */
 export default function LoadingSlugPage() {
   return (
@@ -22,6 +25,9 @@ export default function LoadingSlugPage() {
           <div className="h-10 w-64 md:w-96 rounded bg-white/20" />
           <div className="h-4 w-40 rounded bg-white/10" />
         </div>
+
+        {/* Vlnka na spodní hraně — stejná jako v HeroSection, ať přechod nesekne */}
+        <StaticHeroWave />
       </div>
 
       {/* Podnavigace */}
