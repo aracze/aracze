@@ -1,0 +1,40 @@
+# Dependabot — automatické hlídání a aktualizace závislostí.
+# Otevírá si VLASTNÍ PR (nešahá do tvých), týdně a seskupeně, ať jich nechodí moc.
+# Bezpečnostní záplaty přijdou i mimo tento rozvrh (Dependabot je řeší přednostně).
+# Docs: https://docs.github.com/code-security/dependabot
+version: 2
+updates:
+  # npm balíčky (pnpm-lock.yaml). Minor + patch se sloučí do jednoho PR;
+  # major verze chodí zvlášť (můžou obsahovat breaking changes).
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  # Verze GitHub Actions ve workflow souborech (ci.yml, cd.yml, codeql.yml…).
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  # Základní image v Dockerfile.
+  - package-ecosystem: 'docker'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 3

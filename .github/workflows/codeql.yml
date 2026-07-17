@@ -1,0 +1,39 @@
+# CodeQL — statická bezpečnostní analýza kódu (hledá zranitelnosti typu
+# injection, XSS, únik dat…). Zdarma pro veřejné repo; výsledky se objeví
+# v záložce Security → Code scanning. Doplňuje AI review, který tohle systematicky
+# nedělá. Docs: https://docs.github.com/code-security/code-scanning
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Týdenní přeběh (i bez změn) — pondělí 04:30 UTC.
+    - cron: '30 4 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze JS/TS
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          # JavaScript i TypeScript pokrývá jeden jazyk; `build-mode: none` =
+          # analýza rovnou ze zdrojů (u JS/TS není potřeba build).
+          languages: javascript-typescript
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript-typescript'
