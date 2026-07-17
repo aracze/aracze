@@ -74,6 +74,12 @@ let backupGenCounter = 0
 // větším nevyřízeném zbytku nerozjede najednou.
 const R2_RECONCILE_BATCH = 20
 
+// Timeout stažení z Cloudinary. Obrázky se tahají v jednotkách sekund; 15 s je
+// pojistka proti zaseknutému spojení — bez ní by záloha nikdy nedoběhla (status
+// by zůstal `pending` a položka by visela v `latestBackupGen`). Po timeoutu se
+// zapíše `error` a dorovnání to zkusí příště znovu.
+const R2_FETCH_TIMEOUT_MS = 15_000
+
 // Čisté přípony pro běžné MIME typy (klíč v R2).
 const R2_MIME_EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -150,7 +156,7 @@ async function backupMediaToR2(
     } else {
       payload.logger.info(`Zahajuji zálohování do R2 (stahuji z Cloudinary): ${r2Key}`)
 
-      const response = await fetch(url)
+      const response = await fetch(url, { signal: AbortSignal.timeout(R2_FETCH_TIMEOUT_MS) })
       if (!response.ok) {
         throw new Error(`Načtení z Cloudinary selhalo: ${response.statusText}`)
       }
@@ -241,54 +247,6 @@ async function reconcilePendingBackups(payload: Payload): Promise<void> {
     const errorMsg = error instanceof Error ? error.message : String(error)
     payload.logger.error(`R2 dorovnání (reconcile) selhalo: ${errorMsg}`)
   }
-}
-
-// Jednorázové narovnání CELÉHO backlogu (bez dávkového limitu) — volá ho admin
-// endpoint /api/r2-reconcile-all. Posbírá všechna média se stavem pending/error
-// a sekvenčně je projede s HEAD-checkem (co v R2 už je, jen dostane status
-// `success` bez přenosu). Běží na pozadí (endpoint ho pustí `void`em). Vrací
-// počet zpracovaných.
-export async function reconcileAllPendingBackups(payload: Payload): Promise<number> {
-  const pending: R2BackupMedia[] = []
-  let page = 1
-
-  // Sběr: pagination je stabilní, protože během sběru status neměníme.
-  for (;;) {
-    const res = await payload.find({
-      collection: 'media',
-      where: { r2BackupStatus: { in: ['pending', 'error'] } },
-      limit: 200,
-      page,
-      depth: 0,
-      overrideAccess: true,
-    })
-    for (const media of res.docs as unknown as Array<Record<string, unknown>>) {
-      const id = media.id as string | number
-      const cloudinaryPublicId = media.cloudinaryPublicId as string | undefined
-      const url = media.url as string | undefined
-      if (!cloudinaryPublicId || !url) continue
-      pending.push({
-        id,
-        cloudinaryPublicId,
-        url,
-        mimeType: media.mimeType as string | undefined,
-        cloudinaryFormat: media.cloudinaryFormat as string | undefined,
-        alt: media.alt as string | undefined,
-      })
-    }
-    if (!res.hasNextPage) break
-    page++
-  }
-
-  let processed = 0
-  for (const media of pending) {
-    if (latestBackupGen.has(media.id)) continue // právě běží (hook/upload)
-    await backupMediaToR2(payload, media, { skipIfInR2: true })
-    processed++
-  }
-
-  payload.logger.info(`R2 reconcile-all: zpracováno ${processed} z ${pending.length} nalezených.`)
-  return processed
 }
 
 export const Media: CollectionConfig = {
