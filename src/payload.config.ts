@@ -38,8 +38,6 @@ import { Footer } from './globals/Footer'
 import { dbDumpEndpoint } from './endpoints/dbDump'
 import { dbImportEndpoint } from './endpoints/dbImport'
 
-import { initDbEndpoint } from './endpoints/initDb'
-
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
@@ -144,16 +142,7 @@ export default buildConfig({
     prodMigrations: process.env.PAYLOAD_RUN_MIGRATIONS === 'true' ? migrations : undefined,
   }),
   sharp,
-  endpoints: [
-    dbDumpEndpoint,
-    dbImportEndpoint,
-    // /init-db dělá DROP SCHEMA public CASCADE — registruje se JEN když je
-    // ALLOW_INIT_DB=true (bootstrap prázdné DB); jinak endpoint vůbec neexistuje.
-    // POST (ne GET), ať ho nespustí prefetch/<img>/historie. Autorizace v handleru.
-    ...(process.env.ALLOW_INIT_DB === 'true'
-      ? [{ path: '/init-db', method: 'post' as const, handler: initDbEndpoint }]
-      : []),
-  ],
+  endpoints: [dbDumpEndpoint, dbImportEndpoint],
   plugins: [
     nestedDocsPlugin({
       collections: ['pages'],

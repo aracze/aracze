@@ -129,9 +129,8 @@ prvního administrátora**. Tím je CMS připravené.
 
 > Pozn.: Při změně datového modelu vygeneruj migraci
 > `pnpm payload migrate:create <nazev>` a commitni ji; při čistém deploy
-> (`PAYLOAD_RUN_MIGRATIONS=true`) ji nasazená verze při startu doběhne. Guarded
-> endpoint `POST /api/init-db` (dělá `DROP SCHEMA`, registruje se jen při
-> `ALLOW_INIT_DB=true`) slouží k bootstrapu úplně prázdné DB.
+> (`PAYLOAD_RUN_MIGRATIONS=true`) ji nasazená verze při startu doběhne, čímž se
+> úplně prázdná DB postaví od nuly.
 
 ---
 
