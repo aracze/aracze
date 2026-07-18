@@ -107,16 +107,17 @@ export async function createComment(
         overrideAccess: true,
         select: { relatedTo: true, type: true },
       })
-      const rel = (
-        parent as {
-          relatedTo?: { relationTo?: string; value?: number | { id: number } }
-        }
-      ).relatedTo
+      const p = parent as {
+        type?: string
+        relatedTo?: { relationTo?: string; value?: number | { id: number } }
+      }
+      const rel = p.relatedTo
       const relValue =
         rel && typeof rel.value === 'object' && rel.value
           ? Number(rel.value.id)
           : (rel?.value ?? null)
-      if (rel?.relationTo === 'articles' && relValue === articleId) {
+      // Rodič musí být komentář (ne recenze) a mířit na TENTÝŽ článek.
+      if (p.type === 'comment' && rel?.relationTo === 'articles' && relValue === articleId) {
         parentComment = parentId
       }
     } catch {

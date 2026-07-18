@@ -11,6 +11,9 @@ const absFmt = new Intl.DateTimeFormat('cs-CZ', {
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
+  // Pevná zóna — server běží v UTC (Docker/Vercel), bez toho by tooltip ukazoval
+  // UTC místo českého času.
+  timeZone: 'Europe/Prague',
 })
 
 export function formatCommentDate(iso: string | null): { relative: string; absolute: string } {

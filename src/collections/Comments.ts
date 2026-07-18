@@ -173,6 +173,15 @@ export const Comments: CollectionConfig = {
       label: 'Odpověď na',
       type: 'relationship',
       relationTo: 'comments',
+      // Bez hlubokého populace řetězu vláken (sebe-referenční relace).
+      maxDepth: 1,
+      // Zákaz „odpověď sám na sebe" (přímý cyklus). Delší cykly (A→B→A) neřešíme
+      // zde — vykreslení je proti nim odolné (rootOf má strop a self-detekci).
+      validate: (value: unknown, { id }: { id?: string | number }): true | string => {
+        if (value == null || id == null) return true
+        const parentId = typeof value === 'object' ? (value as { id?: number }).id : value
+        return parentId === id ? 'Komentář nemůže být odpovědí sám na sebe.' : true
+      },
       admin: {
         position: 'sidebar',
         description: 'Nechte prázdné u běžného komentáře; vyplněné = odpověď na jiný komentář.',

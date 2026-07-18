@@ -1,12 +1,10 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pencil, X } from 'lucide-react'
 import { createComment, type CommentFormState } from '@/lib/comment-actions'
 import { Turnstile, type TurnstileHandle } from './turnstile'
-
-const initialState: CommentFormState = { status: 'idle' }
 
 type ReplyTarget = { id: number; name: string }
 
@@ -25,15 +23,16 @@ export function CommentForm({
   turnstileSiteKey: string | null
 }) {
   const router = useRouter()
-  const [state, formAction, isPending] = useActionState(createComment, initialState)
-  const [renderedAt, setRenderedAt] = useState(0)
+  const [isPending, startTransition] = useTransition()
+  const [state, setState] = useState<CommentFormState>({ status: 'idle' })
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null)
+  // Čas načtení formuláře — jednou při mountu (lazy init), bez efektu i bez resetu:
+  // pro anti-bot timing stačí čas mountu (další odeslání jsou vždy dost daleko).
+  const [renderedAt] = useState(() => Date.now())
 
   const formRef = useRef<HTMLFormElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const turnstileRef = useRef<TurnstileHandle>(null)
-
-  useEffect(() => setRenderedAt(Date.now()), [])
 
   // „Odpovědět" u komentáře → zapamatuj cíl, předvyplň @jméno, zaměř a odroluj.
   useEffect(() => {
@@ -57,24 +56,35 @@ export function CommentForm({
     return () => window.removeEventListener('ara:comment-reply', onReply)
   }, [])
 
-  // Po úspěchu: vyčistit pole, zrušit režim odpovědi, resetovat Turnstile a čas.
-  useEffect(() => {
-    if (state.status === 'success') {
-      formRef.current?.reset()
-      turnstileRef.current?.reset()
-      setReplyTo(null)
-      setRenderedAt(Date.now())
-      router.refresh()
-    }
-  }, [state, router])
+  // Odeslání: úklid po úspěchu (reset pole, konec režimu odpovědi, refresh) běží
+  // ZDE v obsluze události, ne v efektu reagujícím na stav → žádný „setState
+  // synchronně v efektu" (jinak padá CI přes ESLint).
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    startTransition(async () => {
+      const result = await createComment(state, formData)
+      setState(result)
+      if (result.status === 'success') {
+        formRef.current?.reset()
+        turnstileRef.current?.reset()
+        setReplyTo(null)
+        router.refresh()
+      }
+    })
+  }
 
   const cancelReply = () => {
-    setReplyTo(null)
     const textarea = bodyRef.current
     if (textarea && replyTo) {
-      textarea.value = textarea.value.replace(new RegExp(`^@${replyTo.name}\\s*`), '')
+      // Bez regexu (jméno může obsahovat speciální znaky) — odstřihni známý prefix.
+      const prefix = `@${replyTo.name}`
+      if (textarea.value.startsWith(prefix)) {
+        textarea.value = textarea.value.slice(prefix.length).replace(/^\s+/, '')
+      }
       textarea.focus()
     }
+    setReplyTo(null)
   }
 
   return (
@@ -85,7 +95,7 @@ export function CommentForm({
 
       <form
         ref={formRef}
-        action={formAction}
+        onSubmit={handleSubmit}
         className="rounded-2xl border border-[#e6eaee] bg-[#f5f7f9] p-6 md:pr-[44px]"
       >
         <input type="hidden" name="articleId" value={articleId} />

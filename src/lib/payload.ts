@@ -651,13 +651,20 @@ async function fetchArticleCommentsUncached(
         { status: { not_equals: 'spam' } },
       ],
     },
-    sort: 'commentedAt',
     depth: 0,
     limit: 1000,
     pagination: false,
   })
 
-  const docs = res.docs as unknown as RawComment[]
+  // Řadíme v JS podle EFEKTIVNÍHO času `commentedAt ?? createdAt` (commentedAt je
+  // jen legacy a může být null; nové komentáře ho mají, ale display i tak fallbackuje
+  // na createdAt), s `id` jako rozhodčím. DB `sort: 'commentedAt'` by null hodnoty
+  // rozházel a rozbil chronologii, na které staví sestavení vláken níže.
+  const effectiveTime = (c: RawComment) => new Date(c.commentedAt ?? c.createdAt ?? 0).getTime()
+  const docs = (res.docs as unknown as RawComment[]).slice().sort((a, b) => {
+    const diff = effectiveTime(a) - effectiveTime(b)
+    return diff !== 0 ? diff : a.id - b.id
+  })
 
   const byId = new Map<number, CommentPublic>()
   const parentOf = new Map<number, number | null>()

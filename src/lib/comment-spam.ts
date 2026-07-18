@@ -13,11 +13,18 @@
  * když je zapnutý, tvrdě odmítne požadavek bez platného tokenu.
  */
 
-/** Zapnout Turnstile jen když je k dispozici tajný klíč (jinak jede honeypot). */
-export const isTurnstileEnabled = (): boolean => Boolean(process.env.TURNSTILE_SECRET_KEY)
+/**
+ * Turnstile je zapnutý JEN když jsou nastavené OBA klíče (site + secret).
+ * Půl konfigurace by web rozbila: jen secret → server odmítá vše bez tokenu,
+ * který se nemá kde vygenerovat; jen site → widget bez serverové ochrany.
+ * Při neúplné konfiguraci jede honeypot (viz `verifyTurnstile`).
+ */
+export const isTurnstileEnabled = (): boolean =>
+  Boolean(process.env.TURNSTILE_SITE_KEY && process.env.TURNSTILE_SECRET_KEY)
 
-/** Site key pro klienta (veřejný) — předává se z server komponenty jako prop. */
-export const getTurnstileSiteKey = (): string | null => process.env.TURNSTILE_SITE_KEY || null
+/** Site key pro klienta (veřejný) — jen když je pár kompletní, jinak null (bez widgetu). */
+export const getTurnstileSiteKey = (): string | null =>
+  isTurnstileEnabled() ? (process.env.TURNSTILE_SITE_KEY as string) : null
 
 // ————————————————————————————————————————————————————————————————
 // Rate-limit (in-memory, best-effort)
@@ -84,13 +91,13 @@ const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/sit
  * `true` (ochranu drží honeypot). Síťová chyba → `false` (raději odmítnout).
  */
 export async function verifyTurnstile(token: string | null, ip: string): Promise<boolean> {
-  const secret = process.env.TURNSTILE_SECRET_KEY
-  if (!secret) return true // Turnstile vypnutý → nevaliduje se
+  // Neúplná/žádná konfigurace → Turnstile vypnutý, nevaliduje se (drží honeypot).
+  if (!isTurnstileEnabled()) return true
   if (!token) return false
 
   try {
     const form = new URLSearchParams()
-    form.append('secret', secret)
+    form.append('secret', process.env.TURNSTILE_SECRET_KEY as string)
     form.append('response', token)
     if (ip) form.append('remoteip', ip)
 

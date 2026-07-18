@@ -125,6 +125,7 @@ async function run() {
   }
 
   let applied = 0
+  let failed = 0
   for (const link of valid) {
     try {
       await payload.update({
@@ -136,11 +137,16 @@ async function run() {
       })
       applied++
     } catch (err) {
+      failed++
       console.error(`❌ zápis #${link.child}:`, err)
     }
   }
-  console.log(`\n✅ Zapsáno vazeb: ${applied}/${valid.length}\n`)
-  process.exit(0)
+  console.log(
+    `\n✅ Zapsáno vazeb: ${applied}/${valid.length}${failed ? ` (selhalo: ${failed})` : ''}\n`,
+  )
+  // Nenulový exit při jakémkoliv selhání zápisu — ať automatizace nehlásí úspěch
+  // po částečné migraci (i když nebyly validní všechny vazby z mapy).
+  process.exit(failed > 0 || valid.length !== LINKS.length ? 1 : 0)
 }
 
 run().catch((err) => {
