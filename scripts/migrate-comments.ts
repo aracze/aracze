@@ -190,9 +190,8 @@ async function run() {
 
     // --- Cíl (relatedTo) ---
     let relatedTo:
-      | { relationTo: 'articles'; value: number }
-      | { relationTo: 'pages'; value: number }
-      | null = null
+      { relationTo: 'articles'; value: number } | { relationTo: 'pages'; value: number } | null =
+      null
 
     if (row.target_type === 'article') {
       let id = articlesByLegacyId.get(row.comment_ref)
