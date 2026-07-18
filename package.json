@@ -55,7 +55,7 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "remove-markdown": "^0.6.4",
-    "sharp": "0.35.3",
+    "sharp": "0.34.2",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7"
   },
