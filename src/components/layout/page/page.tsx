@@ -216,8 +216,7 @@ async function fetchAncestorChain(
 
   const parts = normalizedSlug.split('/')
   const chain: (
-    | PayloadPage
-    | { title: string; fullSlug: string; category?: never; isPlaceholder: true }
+    PayloadPage | { title: string; fullSlug: string; category?: never; isPlaceholder: true }
   )[] = []
 
   // We walk through all segments except the last one (which is the page itself)

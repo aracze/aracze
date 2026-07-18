@@ -13,8 +13,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 type TransactionRel =
-  | { relationTo: 'articles' | 'pages' | 'comments'; value: number | { id: number } }
-  | undefined
+  { relationTo: 'articles' | 'pages' | 'comments'; value: number | { id: number } } | undefined
 
 /**
  * Vypočítá `label` transakce = titulek navázaného cíle (u stránky/článku `title`,
