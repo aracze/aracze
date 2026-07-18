@@ -125,3 +125,41 @@ export const revalidateGlobalsAfterChange: GlobalAfterChangeHook = async ({ doc 
   await safeRevalidate(['root_pages', 'footer'])
   return doc
 }
+
+type CommentLikeDoc = {
+  relatedTo?: {
+    relationTo?: string | null
+    value?: number | string | { id?: number | string } | null
+  } | null
+}
+
+/** Tag výpisu komentářů/recenzí cíle (článek / stránka), na který komentář míří. */
+const commentTargetTags = (doc: CommentLikeDoc | undefined | null): string[] => {
+  const rel = doc?.relatedTo
+  if (!rel || typeof rel !== 'object') return []
+  const value = typeof rel.value === 'object' && rel.value ? rel.value.id : rel.value
+  if (value == null) return []
+  if (rel.relationTo === 'articles') return ['article_comments_' + value]
+  if (rel.relationTo === 'pages') return ['page_reviews_' + value]
+  return []
+}
+
+// Nový/upravený komentář (vč. veřejného vložení přes Local API a označení spam
+// v adminu) invaliduje výpis komentářů daného cíle. `previousDoc` pokrývá přesun
+// komentáře na jiný cíl.
+export const revalidateCommentAfterChange: CollectionAfterChangeHook = async ({
+  doc,
+  previousDoc,
+}) => {
+  await safeRevalidate([
+    'comments',
+    ...commentTargetTags(doc as CommentLikeDoc),
+    ...commentTargetTags(previousDoc as CommentLikeDoc),
+  ])
+  return doc
+}
+
+export const revalidateCommentAfterDelete: CollectionAfterDeleteHook = async ({ doc }) => {
+  await safeRevalidate(['comments', ...commentTargetTags(doc as CommentLikeDoc)])
+  return doc
+}

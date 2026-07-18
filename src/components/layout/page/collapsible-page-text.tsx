@@ -3,8 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-
-const DEFAULT_AVATAR = '/assets/avatar-white.jpg'
+import { UserAvatar } from '@/components/user-avatar'
 
 function getPreviewHtml(html: string): {
   previewHtml: string
@@ -46,7 +45,6 @@ export function CollapsiblePageTextWithContributor({
   collapsible?: boolean
 }) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [avatarSrc, setAvatarSrc] = useState(contributor?.avatarUrl || DEFAULT_AVATAR)
   const { previewHtml, shouldCollapse: canCollapse } = useMemo(
     () => getPreviewHtml(textHtml),
     [textHtml],
@@ -82,28 +80,20 @@ export function CollapsiblePageTextWithContributor({
           {contributor?.name && (
             <div className="sm:absolute sm:left-0 sm:top-1/2 sm:-translate-y-1/2">
               <div className="flex items-start">
-                <div className="mr-[15px] block h-[40px] w-[40px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-[0_3px_9px_rgba(0,0,0,0.22)]">
+                <div className="mr-[15px] shrink-0">
                   {contributor.profileHref ? (
                     <Link href={contributor.profileHref} className="block">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={avatarSrc}
-                        alt={contributor.name}
-                        width={34}
-                        height={34}
-                        className="h-[34px] w-[34px] rounded-full object-cover"
-                        onError={() => setAvatarSrc(DEFAULT_AVATAR)}
+                      <UserAvatar
+                        name={contributor.name}
+                        avatarUrl={contributor.avatarUrl}
+                        size={40}
                       />
                     </Link>
                   ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={avatarSrc}
-                      alt={contributor.name}
-                      width={34}
-                      height={34}
-                      className="h-[34px] w-[34px] rounded-full object-cover"
-                      onError={() => setAvatarSrc(DEFAULT_AVATAR)}
+                    <UserAvatar
+                      name={contributor.name}
+                      avatarUrl={contributor.avatarUrl}
+                      size={40}
                     />
                   )}
                 </div>
@@ -155,29 +145,13 @@ export function CollapsiblePageTextWithContributor({
         /* Matches legacy .contribution { margin-top: 30px } (default, non-placeToVisit) */
         <div className="mt-[30px]">
           <div className="flex items-center">
-            <div className="mr-[15px] block h-[40px] w-[40px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-[0_3px_9px_rgba(0,0,0,0.22)]">
+            <div className="mr-[15px] shrink-0">
               {contributor.profileHref ? (
                 <Link href={contributor.profileHref}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={avatarSrc}
-                    alt={contributor.name}
-                    width={34}
-                    height={34}
-                    className="h-[34px] w-[34px] rounded-full object-cover"
-                    onError={() => setAvatarSrc(DEFAULT_AVATAR)}
-                  />
+                  <UserAvatar name={contributor.name} avatarUrl={contributor.avatarUrl} size={40} />
                 </Link>
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={avatarSrc}
-                  alt={contributor.name}
-                  width={34}
-                  height={34}
-                  className="h-[34px] w-[34px] rounded-full object-cover"
-                  onError={() => setAvatarSrc(DEFAULT_AVATAR)}
-                />
+                <UserAvatar name={contributor.name} avatarUrl={contributor.avatarUrl} size={40} />
               )}
             </div>
             <div className="inline-block pt-[3px]">

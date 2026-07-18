@@ -128,10 +128,23 @@ storage credentials, the following variables drive user-visible features:
 | `NEXT_PUBLIC_SITE_URL`                                                                                 | Recommended | Public site URL for the sitemap and canonical links (default `https://www.ara.cz`). |
 | `NEXT_PUBLIC_PAYLOAD_BASE_URL`                                                                         | Recommended | Base URL used to build absolute image URLs (logos, avatars, social sharing).        |
 | `NEXT_PUBLIC_ADSENSE_CLIENT`, `NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT`, `NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT_2` | Optional    | Google AdSense units in article listings.                                           |
+| `TURNSTILE_SITE_KEY`                                                                                   | Optional    | Cloudflare Turnstile site key for the article comment form (anti-spam).             |
+| `TURNSTILE_SECRET_KEY`                                                                                 | Optional    | Cloudflare Turnstile secret key (server-side token verification).                   |
 
 > `NEXT_PUBLIC_*` variables are inlined into the client bundle at build time and
 > are therefore public. Keep secrets (e.g. `OPENWEATHER_API_KEY`, `PAYLOAD_SECRET`)
 > **without** the `NEXT_PUBLIC_` prefix so they stay server-only.
+
+> **Comment anti-spam (Cloudflare Turnstile).** Both `TURNSTILE_*` keys are read
+> **server-side at runtime** — the site key is handed to the browser through a
+> server component prop, so it is **not** `NEXT_PUBLIC_` and needs no rebuild. When
+> both keys are set, the comment form shows a Turnstile widget and the server
+> verifies the token. Turnstile is treated as an **all-or-nothing pair**: with
+> only one key set (or neither), it stays disabled and the form falls back to an
+> invisible honeypot + rate-limit + link heuristic (see `src/lib/comment-spam.ts`).
+> This avoids the broken half-states (secret-only rejects every submission;
+> site-only renders a widget with no server check). For production add **both**
+> keys to the server's runtime `.env` (`/opt/aracze/.env`).
 
 ---
 
@@ -198,6 +211,14 @@ The Payload config is tailored specifically for the project needs in `src/payloa
   - **Veřejný přístup**: Kolekce je nastavena tak, aby byly nahrané soubory veřejně čitelné.
   - **Zpracování obrázků**: Podporuje automatické generování náhledů, ořezy a optimalizaci (poháněno knihovnou Sharp).
   - Podporuje definici fokusu (focal point) pro inteligentní ořezy.
+
+- **Comments (Komentáře a recenze)**:
+  - Komentáře k článkům a recenze k místům/turistickým cílům (stránkám) — rozlišené polem `type` (`comment` / `review`); recenze má navíc hvězdičkové hodnocení. Cíl je polymorfní vazba `relatedTo` (článek / stránka).
+  - **Web**: pod každým článkem se v plné šířce zobrazuje výpis komentářů (**nejnovější vlákna nahoře**; odpovědi uvnitř vlákna chronologicky) + formulář. Data načítá `fetchArticleComments` (`src/lib/payload.ts`) a skládá je do **vláken**, vykreslují komponenty v `src/components/features/comments/`.
+  - **Vlákna**: sebe-referenční pole `parentComment` (odpověď na jiný komentář). Zobrazují se s jednou úrovní odsazení + spojovací linkou; odpověď na odpověď spadne také pod kořen. Autor článku (shoda `author` s `createdBy`) má u svých komentářů štítek „autor".
+  - **Vkládání z webu**: běží přes Server Action (`src/lib/comment-actions.ts`) a Local API s `overrideAccess: true` — kolekce má `create: isAdmin`, takže bezpečná pole (typ, stav, cíl, `parentComment`) vynucuje action. Tlačítko „Odpovědět" předá cíl → nové odpovědi mají skutečnou vazbu. Autor je anonymní (jen jméno); registrovaní autoři migrovaných komentářů se zobrazují přes virtuální `authorPublic` (bezpečná podmnožina — username + avatar).
+  - **Anti-spam**: honeypot + rate-limit + heuristika odkazů, volitelně Cloudflare Turnstile (`src/lib/comment-spam.ts`, viz `TURNSTILE_*` proměnné výše).
+  - Data se plní jednorázovým migračním skriptem `pnpm migrate:comments` z legacy MySQL databáze. Legacy web vlákna neměl — vazby odpovědí dopočítal `pnpm infer:replies` (kontextová analýza textů, `--apply` zapíše; ověřená mapa v `scripts/infer-comment-replies.ts`). V adminu lze `parentComment` kdykoliv ručně upravit.
 
 - **Transactions (Feather transakce)**:
   - Interní účetní záznamy „pírek" (feather) přenesené z původního webu — čtení i správa jsou omezené pouze na administrátory.

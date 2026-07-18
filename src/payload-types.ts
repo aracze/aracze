@@ -361,6 +361,19 @@ export interface Comment {
   authorName: string;
   author?: (number | null) | User;
   /**
+   * Nechte prázdné u běžného komentáře; vyplněné = odpověď na jiný komentář.
+   */
+  parentComment?: (number | null) | Comment;
+  authorPublic?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Vše se publikuje; spam se označí (skryje z veřejnosti).
    */
   status: 'published' | 'spam';
@@ -756,6 +769,8 @@ export interface CommentsSelect<T extends boolean = true> {
   relatedTo?: T;
   authorName?: T;
   author?: T;
+  parentComment?: T;
+  authorPublic?: T;
   status?: T;
   commentedAt?: T;
   legacyCommentId?: T;
