@@ -95,6 +95,7 @@ export interface ArticleFeaturedImage extends Omit<SharedImageComponent, 'image'
 }
 
 export interface Article {
+  id: number
   documentId: string
   title: string
   slug: string
@@ -147,6 +148,37 @@ export interface PagesResponse {
     } | null
     homepage: Homepage | null
   }
+}
+
+/**
+ * Normalizovaný komentář pro veřejný web. Skládá ho datová vrstva
+ * (fetchArticleComments) z kolekce `comments`: bezpečná pole + veřejný autor
+ * (username/avatar z virtuálního `authorPublic`). Nikdy neobsahuje e-mail,
+ * role ani interní vazby.
+ */
+export interface CommentPublic {
+  id: number
+  authorName: string
+  body: string
+  /** Datum vložení (legacy `commentedAt`, u nových = čas vytvoření). */
+  commentedAt: string | null
+  /** Username registrovaného autora (odkaz na profil), jinak null. */
+  authorUsername: string | null
+  /** URL avataru registrovaného autora, jinak null (frontend vykreslí iniciály). */
+  avatarUrl: string | null
+  /** true = autor tohoto článku (zobrazí štítek „autor"). */
+  isAuthor: boolean
+  /** ID komentáře, na který tento reaguje (odpověď), jinak null. */
+  parentId: number | null
+}
+
+/**
+ * Vlákno komentářů: kořenový komentář + jeho odpovědi (jedna úroveň zanoření).
+ * Odpovědi na odpovědi se zobrazují také pod kořenem (bez dalšího odsazování).
+ */
+export interface CommentThread {
+  comment: CommentPublic
+  replies: CommentPublic[]
 }
 
 export enum PageCategory {

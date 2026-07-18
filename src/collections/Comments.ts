@@ -1,6 +1,8 @@
 import type { CollectionConfig, Where } from 'payload'
 import { isAdmin } from '../access/isAdmin'
 import { populateCommentLabel } from '../hooks/populateCommentLabel'
+import { populateCommentAuthorPublic } from '../hooks/populateCommentAuthorPublic'
+import { revalidateCommentAfterChange, revalidateCommentAfterDelete } from '../hooks/revalidation'
 
 // Zápis (vkládání/úpravy/mazání) zatím jen pro adminy — stejný vzor jako u Users.
 // Veřejné odesílání z frontendu (jméno + captcha) se doplní později spolu s frontendem.
@@ -70,6 +72,12 @@ export const Comments: CollectionConfig = {
     create: isAdmin,
     update: isAdmin,
     delete: isAdmin,
+  },
+  // Změna komentáře (vč. veřejného vložení přes Local API i označení spam v adminu)
+  // okamžitě invaliduje cache výpisu komentářů daného článku/stránky.
+  hooks: {
+    afterChange: [revalidateCommentAfterChange],
+    afterDelete: [revalidateCommentAfterDelete],
   },
   fields: [
     {
@@ -154,6 +162,34 @@ export const Comments: CollectionConfig = {
       relationTo: 'users',
       admin: {
         position: 'sidebar',
+      },
+    },
+    {
+      // Vlákna: na který komentář tento reaguje (odpověď). Prázdné = kořenový
+      // komentář. Legacy web vazbu neměl (odpovědi byly samostatné komentáře) —
+      // dopočítá ji skript infer-comment-replies; nové odpovědi z webu ji nesou
+      // rovnou. Sebe-referenční relace v rámci stejné kolekce.
+      name: 'parentComment',
+      label: 'Odpověď na',
+      type: 'relationship',
+      relationTo: 'comments',
+      admin: {
+        position: 'sidebar',
+        description: 'Nechte prázdné u běžného komentáře; vyplněné = odpověď na jiný komentář.',
+      },
+    },
+    {
+      // Bezpečná podmnožina registrovaného autora (username + avatar) pro veřejný
+      // web — anonymní čtení nesmí populovat celý User (Users.read = isAdminOrSelf).
+      // Vzor stejný jako `createdByPublic` u článků/stránek.
+      name: 'authorPublic',
+      type: 'json',
+      virtual: true,
+      hooks: {
+        afterRead: [populateCommentAuthorPublic],
+      },
+      admin: {
+        hidden: true,
       },
     },
     {

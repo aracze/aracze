@@ -19,6 +19,7 @@
     "migrate:articles": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/migrate-articles.ts",
     "migrate:images": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/migrate-images.ts",
     "migrate:comments": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/migrate-comments.ts",
+    "infer:replies": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/infer-comment-replies.ts",
     "migrate:transactions": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/migrate-transactions.ts",
     "migrate:practical-info": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/migrate-practical-info.ts",
     "fix:links": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/fix-internal-links.ts",

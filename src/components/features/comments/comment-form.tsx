@@ -1,0 +1,191 @@
+'use client'
+
+import { useActionState, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Pencil, X } from 'lucide-react'
+import { createComment, type CommentFormState } from '@/lib/comment-actions'
+import { Turnstile, type TurnstileHandle } from './turnstile'
+
+const initialState: CommentFormState = { status: 'idle' }
+
+type ReplyTarget = { id: number; name: string }
+
+/**
+ * Formulář pro vložení komentáře / odpovědi. Odesílá přes Server Action.
+ * Ochrana: skrytý honeypot `website`, čas načtení `renderedAt` a volitelně
+ * Cloudflare Turnstile. Když uživatel klikne u komentáře na „Odpovědět", formulář
+ * si zapamatuje cíl (`parentId`) a předvyplní „@jméno" — vznikne skutečná vazba
+ * vlákna. Po úspěchu vyčistí pole a přes router.refresh() zobrazí nový komentář.
+ */
+export function CommentForm({
+  articleId,
+  turnstileSiteKey,
+}: {
+  articleId: number
+  turnstileSiteKey: string | null
+}) {
+  const router = useRouter()
+  const [state, formAction, isPending] = useActionState(createComment, initialState)
+  const [renderedAt, setRenderedAt] = useState(0)
+  const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null)
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const turnstileRef = useRef<TurnstileHandle>(null)
+
+  useEffect(() => setRenderedAt(Date.now()), [])
+
+  // „Odpovědět" u komentáře → zapamatuj cíl, předvyplň @jméno, zaměř a odroluj.
+  useEffect(() => {
+    const onReply = (e: Event) => {
+      const detail = (e as CustomEvent<{ commentId: number; authorName: string }>).detail
+      if (!detail) return
+      setReplyTo({ id: detail.commentId, name: detail.authorName })
+      const textarea = bodyRef.current
+      if (textarea) {
+        const prefix = `@${detail.authorName} `
+        if (!textarea.value.startsWith(`@${detail.authorName}`)) {
+          textarea.value = prefix + textarea.value
+        }
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        textarea.focus()
+        const end = textarea.value.length
+        textarea.setSelectionRange(end, end)
+      }
+    }
+    window.addEventListener('ara:comment-reply', onReply)
+    return () => window.removeEventListener('ara:comment-reply', onReply)
+  }, [])
+
+  // Po úspěchu: vyčistit pole, zrušit režim odpovědi, resetovat Turnstile a čas.
+  useEffect(() => {
+    if (state.status === 'success') {
+      formRef.current?.reset()
+      turnstileRef.current?.reset()
+      setReplyTo(null)
+      setRenderedAt(Date.now())
+      router.refresh()
+    }
+  }, [state, router])
+
+  const cancelReply = () => {
+    setReplyTo(null)
+    const textarea = bodyRef.current
+    if (textarea && replyTo) {
+      textarea.value = textarea.value.replace(new RegExp(`^@${replyTo.name}\\s*`), '')
+      textarea.focus()
+    }
+  }
+
+  return (
+    <div id="napsat-komentar" className="mt-10 scroll-mt-24">
+      <h3 className="mb-5 text-lg font-bold text-[#2c3643]">
+        {replyTo ? 'Napiš odpověď' : 'Napiš komentář'}
+      </h3>
+
+      <form
+        ref={formRef}
+        action={formAction}
+        className="rounded-2xl border border-[#e6eaee] bg-[#f5f7f9] p-6 md:pr-[44px]"
+      >
+        <input type="hidden" name="articleId" value={articleId} />
+        <input type="hidden" name="renderedAt" value={renderedAt} />
+        <input type="hidden" name="parentId" value={replyTo?.id ?? ''} />
+
+        {/* Honeypot — skryté pole; vyplní ho jen robot. Mimo tab pořadí i čteček. */}
+        <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
+          <label>
+            Nevyplňuj toto pole
+            <input type="text" name="website" tabIndex={-1} autoComplete="off" />
+          </label>
+        </div>
+
+        {replyTo && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+            <span>
+              Odpovídáš na <span className="font-semibold text-[#215491]">@{replyTo.name}</span>
+            </span>
+            <button
+              type="button"
+              onClick={cancelReply}
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-200 hover:text-[#2c3643]"
+            >
+              <X className="h-3.5 w-3.5" /> zrušit
+            </button>
+          </div>
+        )}
+
+        <div className="mb-4 max-w-xs">
+          <label
+            htmlFor="comment-name"
+            className="mb-1.5 block text-sm font-semibold text-gray-500"
+          >
+            Jméno
+          </label>
+          <input
+            id="comment-name"
+            name="authorName"
+            type="text"
+            required
+            maxLength={80}
+            placeholder="Tvé jméno"
+            className="w-full rounded-xl border-[1.5px] border-[#e6eaee] bg-white px-3.5 py-3 text-[15px] text-[#2c3643] outline-none transition focus:border-[#215491] focus:ring-[3px] focus:ring-[#e9f1f9]"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label
+            htmlFor="comment-body"
+            className="mb-1.5 block text-sm font-semibold text-gray-500"
+          >
+            {replyTo ? 'Odpověď' : 'Komentář'}
+          </label>
+          <textarea
+            id="comment-body"
+            ref={bodyRef}
+            name="body"
+            required
+            maxLength={5000}
+            rows={5}
+            placeholder="Napiš svůj komentář…"
+            className="min-h-[110px] w-full resize-y rounded-xl border-[1.5px] border-[#e6eaee] bg-white px-3.5 py-3 text-[15px] leading-relaxed text-[#2c3643] outline-none transition focus:border-[#215491] focus:ring-[3px] focus:ring-[#e9f1f9]"
+          />
+        </div>
+
+        {turnstileSiteKey && (
+          <div className="mb-4">
+            <Turnstile ref={turnstileRef} siteKey={turnstileSiteKey} />
+          </div>
+        )}
+
+        {state.status === 'error' && (
+          <p role="alert" className="mb-4 text-sm font-medium text-red-600">
+            {state.message}
+          </p>
+        )}
+        {state.status === 'success' && (
+          <p role="status" className="mb-4 text-sm font-medium text-green-700">
+            Děkujeme! Komentář byl přidán.
+          </p>
+        )}
+
+        <div className="flex items-center gap-3.5">
+          {/* Stejný ghost styl jako tlačítko v hlavičce sekce (identické). */}
+          <button
+            type="submit"
+            disabled={isPending}
+            className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-[#215491] px-6 py-2.5 text-[13px] font-bold tracking-wide text-[#215491] transition-colors hover:bg-[#215491] hover:text-white disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-[#215491]"
+          >
+            <Pencil className="h-[14px] w-[14px]" strokeWidth={2} />
+            {isPending ? 'Odesílám…' : replyTo ? 'Odeslat odpověď' : 'Vložit komentář'}
+          </button>
+          {!turnstileSiteKey && (
+            <span className="text-[12.5px] text-gray-500">
+              Chráněno proti spamu · bez opisování captchy
+            </span>
+          )}
+        </div>
+      </form>
+    </div>
+  )
+}

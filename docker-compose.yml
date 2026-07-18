@@ -18,7 +18,11 @@ services:
 
   postgres:
     restart: always
-    image: postgres:latest
+    # Stejná verze jako produkce (deploy/docker-compose.yml). Migrace ze staré
+    # Debian (glibc) na Alpine (musl) proběhla přes dump/restore, který přebuduje
+    # indexy se správným řazením — proto se image nesmí jen přehodit pod starým
+    # volume (collation nesoulad), ale naplnit čerstvý volume z dumpu.
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: yourpassword

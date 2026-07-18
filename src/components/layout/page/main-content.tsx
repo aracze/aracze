@@ -3,7 +3,6 @@ import { PageCategory, PageChild, RichTextRoot } from '@/types/payload'
 import Link from 'next/link'
 import { LocalTime } from '@/components/features/local-time'
 import { richTextToHtml } from '@/lib/rich-text-html'
-import { getPayloadURL } from '@/lib/utils'
 import { CollapsiblePageTextWithContributor } from './collapsible-page-text'
 import { ArticleAd, AdSenseScript } from '@/components/features/article-ad'
 
@@ -96,22 +95,9 @@ export const MainContent = ({
   const author = createdByPublic ?? null
   const authorName =
     author?.username || [author?.firstName, author?.lastName].filter(Boolean).join(' ') || null
-  // Absolutní URL avataru přes getPayloadURL() (vždy vrátí platnou base) + try/catch —
-  // přímé `new URL(url, undefined)` by při chybějící base shodilo render (TypeError).
-  // Stejný vzor jako v article.tsx.
-  const rawAvatarUrl = author?.avatar?.url
-  let avatarUrl = '/assets/avatar-white.jpg'
-  if (rawAvatarUrl) {
-    if (rawAvatarUrl.startsWith('/')) {
-      try {
-        avatarUrl = new URL(rawAvatarUrl, getPayloadURL()).toString()
-      } catch {
-        avatarUrl = '/assets/avatar-white.jpg'
-      }
-    } else {
-      avatarUrl = rawAvatarUrl
-    }
-  }
+  // Surová URL avataru — absolutní i fallback (papoušek) řeší UserAvatar
+  // v CollapsiblePageTextWithContributor. Null = bez fotky → papoušek.
+  const avatarUrl = author?.avatar?.url ?? null
   const profileHref = author?.username ? `/profil/${author.username}` : null
   const contributor = authorName
     ? {

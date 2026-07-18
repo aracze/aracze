@@ -1,0 +1,150 @@
+'use server'
+
+import { headers } from 'next/headers'
+import { getDb } from './db'
+import { isBotSubmission, isRateLimited, looksLikeSpam, verifyTurnstile } from './comment-spam'
+
+/**
+ * Veřejné vložení komentáře k článku.
+ *
+ * Zápis běží přes Payload Local API s `overrideAccess: true` (kolekce má
+ * `create: isAdmin`), takže tady MUSÍME sami vynutit bezpečná pole: pevně
+ * `type: 'comment'`, `status` řídí jen heuristika, cíl je vždy článek, žádný
+ * `author`/`rating`/`legacyCommentId`. Ochranu proti spamu řeší comment-spam.ts.
+ *
+ * Revalidaci cache výpisu (article_comments_<id>) obstará afterChange hook
+ * kolekce comments; klient po úspěchu zavolá router.refresh().
+ */
+
+export type CommentFormState =
+  { status: 'idle' } | { status: 'success' } | { status: 'error'; message: string }
+
+const MAX_NAME_LEN = 80
+const MAX_BODY_LEN = 5000
+
+export async function createComment(
+  _prev: CommentFormState,
+  formData: FormData,
+): Promise<CommentFormState> {
+  const now = Date.now()
+
+  const articleId = Number(formData.get('articleId'))
+  const authorName = String(formData.get('authorName') ?? '').trim()
+  const body = String(formData.get('body') ?? '').trim()
+  const honeypot = formData.get('website') as string | null
+  const renderedAt = Number(formData.get('renderedAt'))
+  const turnstileToken = formData.get('cf-turnstile-response') as string | null
+  const parentIdRaw = formData.get('parentId')
+  const parentId = parentIdRaw ? Number(parentIdRaw) : null
+
+  // Klientská IP (za reverzní proxy). Best-effort — slouží jen rate-limitu.
+  const h = await headers()
+  const ip = (h.get('x-forwarded-for')?.split(',')[0] ?? h.get('x-real-ip') ?? '').trim()
+
+  // 1) Honeypot / příliš rychlé odeslání → tichý „úspěch" (robot nic nepozná).
+  if (isBotSubmission(honeypot, renderedAt, now)) {
+    return { status: 'success' }
+  }
+
+  // 2) Validace vstupu (uživatelsky srozumitelné hlášky).
+  if (!Number.isInteger(articleId) || articleId <= 0) {
+    return { status: 'error', message: 'Neplatný článek.' }
+  }
+  if (authorName.length === 0) {
+    return { status: 'error', message: 'Vyplň prosím jméno.' }
+  }
+  if (authorName.length > MAX_NAME_LEN) {
+    return { status: 'error', message: 'Jméno je příliš dlouhé.' }
+  }
+  if (body.length === 0) {
+    return { status: 'error', message: 'Napiš prosím text komentáře.' }
+  }
+  if (body.length > MAX_BODY_LEN) {
+    return { status: 'error', message: 'Komentář je příliš dlouhý.' }
+  }
+
+  // 3) Cloudflare Turnstile (aktivní jen když je nastaven secret; jinak projde).
+  const humanVerified = await verifyTurnstile(turnstileToken, ip)
+  if (!humanVerified) {
+    return {
+      status: 'error',
+      message: 'Ověření proti robotům se nezdařilo. Zkus to prosím znovu.',
+    }
+  }
+
+  // 4) Rate-limit na IP (počítáme až po ověření člověka, ať boti nemrhají limitem).
+  if (isRateLimited(ip, now)) {
+    return {
+      status: 'error',
+      message: 'Příliš mnoho komentářů za krátkou dobu. Zkus to prosím za chvíli.',
+    }
+  }
+
+  const payload = await getDb()
+
+  // 5) Cíl musí být existující článek.
+  try {
+    await payload.findByID({
+      collection: 'articles',
+      id: articleId,
+      depth: 0,
+      overrideAccess: true,
+      select: { title: true },
+    })
+  } catch {
+    return { status: 'error', message: 'Článek nebyl nalezen.' }
+  }
+
+  // 6) Odpověď: rodičovský komentář musí patřit ke STEJNÉMU článku (jinak vazbu
+  //    zahodíme a uložíme jako kořenový komentář — ať uživatel o text nepřijde).
+  let parentComment: number | undefined
+  if (parentId && Number.isInteger(parentId) && parentId > 0) {
+    try {
+      const parent = await payload.findByID({
+        collection: 'comments',
+        id: parentId,
+        depth: 0,
+        overrideAccess: true,
+        select: { relatedTo: true, type: true },
+      })
+      const rel = (
+        parent as {
+          relatedTo?: { relationTo?: string; value?: number | { id: number } }
+        }
+      ).relatedTo
+      const relValue =
+        rel && typeof rel.value === 'object' && rel.value
+          ? Number(rel.value.id)
+          : (rel?.value ?? null)
+      if (rel?.relationTo === 'articles' && relValue === articleId) {
+        parentComment = parentId
+      }
+    } catch {
+      /* rodič neexistuje → kořenový komentář */
+    }
+  }
+
+  // 7) Heuristika obsahu → publikovat, nebo tiše skrýt jako spam (admin ho vidí).
+  const status = looksLikeSpam(body) ? 'spam' : 'published'
+
+  try {
+    await payload.create({
+      collection: 'comments',
+      overrideAccess: true,
+      data: {
+        type: 'comment',
+        body,
+        authorName,
+        relatedTo: { relationTo: 'articles', value: articleId },
+        parentComment,
+        status,
+        commentedAt: new Date(now).toISOString(),
+      },
+    })
+  } catch (err) {
+    console.error('[comment] vytvoření komentáře selhalo:', err)
+    return { status: 'error', message: 'Komentář se nepodařilo uložit. Zkus to prosím znovu.' }
+  }
+
+  return { status: 'success' }
+}

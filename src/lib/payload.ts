@@ -6,6 +6,8 @@ import {
   GlobalHeader,
   Homepage,
   GlobalFooter,
+  CommentPublic,
+  CommentThread,
 } from '@/types/payload'
 import { unstable_cache } from 'next/cache'
 import { cache } from 'react'
@@ -590,6 +592,138 @@ export const fetchArticleBySlug = cache(
       candidates[0]
     return { data: { articles: [chosen.article], validParentSlugs: chosen.validParentSlugs } }
   },
+)
+
+// ————————————————————————————————————————————————————————————————
+// Komentáře k článku (veřejný výpis)
+// ————————————————————————————————————————————————————————————————
+
+// Surový tvar komentáře z Local API (depth 0) — jen pole, která web kreslí.
+// `authorPublic` je virtuální (afterRead hook běží bez ohledu na depth/select).
+type RawComment = {
+  id: number
+  authorName: string
+  body: string
+  commentedAt?: string | null
+  createdAt?: string | null
+  author?: number | { id: number } | null
+  parentComment?: number | { id: number } | null
+  authorPublic?: { username?: string | null; avatar?: { url?: string | null } | null } | null
+}
+
+const relationIdOf = (v: number | { id: number } | null | undefined): number | null =>
+  typeof v === 'number' ? v : v && typeof v === 'object' ? Number(v.id) : null
+
+async function fetchArticleCommentsUncached(
+  articleId: number,
+): Promise<{ threads: CommentThread[]; count: number }> {
+  const payload = await getDb()
+
+  // Autor článku (pro štítek „autor" u jeho odpovědí). depth:0 → createdBy je id.
+  let articleAuthorId: number | null = null
+  try {
+    const art = await payload.findByID({
+      collection: 'articles',
+      id: articleId,
+      depth: 0,
+      overrideAccess: true,
+      select: { createdBy: true },
+    })
+    articleAuthorId = relationIdOf(
+      (art as { createdBy?: number | { id: number } | null }).createdBy,
+    )
+  } catch {
+    articleAuthorId = null
+  }
+
+  // overrideAccess: true → filtr si držíme sami (tento článek, typ komentář, bez
+  // spamu). Načítáme CHRONOLOGICKY (nejstarší první) — kvůli správnému sestavení
+  // vláken a pořadí odpovědí. Kořeny pak otočíme na nejnovější nahoře (viz níže),
+  // ale odpovědi UVNITŘ vlákna zůstanou chronologicky pod dotazem.
+  const res = await payload.find({
+    collection: 'comments',
+    overrideAccess: true,
+    where: {
+      and: [
+        { 'relatedTo.relationTo': { equals: 'articles' } },
+        { 'relatedTo.value': { equals: articleId } },
+        { type: { equals: 'comment' } },
+        { status: { not_equals: 'spam' } },
+      ],
+    },
+    sort: 'commentedAt',
+    depth: 0,
+    limit: 1000,
+    pagination: false,
+  })
+
+  const docs = res.docs as unknown as RawComment[]
+
+  const byId = new Map<number, CommentPublic>()
+  const parentOf = new Map<number, number | null>()
+  for (const c of docs) {
+    const authorId = relationIdOf(c.author)
+    byId.set(c.id, {
+      id: c.id,
+      authorName: c.authorName,
+      body: c.body,
+      commentedAt: c.commentedAt ?? c.createdAt ?? null,
+      authorUsername: c.authorPublic?.username ?? null,
+      avatarUrl: c.authorPublic?.avatar?.url ?? null,
+      isAuthor: authorId != null && authorId === articleAuthorId,
+      parentId: relationIdOf(c.parentComment),
+    })
+    parentOf.set(c.id, relationIdOf(c.parentComment))
+  }
+
+  // Kořen komentáře = projdeme řetěz `parentComment` nahoru (chybějící/smazaný
+  // rodič nebo cyklus → bereme jako kořen). Vlákna zplošťujeme na jednu úroveň:
+  // odpověď na odpověď se zobrazí také pod kořenem.
+  const rootOf = (id: number): number => {
+    let cur = id
+    for (let guard = 0; guard < 50; guard++) {
+      const p = parentOf.get(cur)
+      if (p == null || p === cur || !byId.has(p)) return cur
+      cur = p
+    }
+    return cur
+  }
+
+  // docs jsou chronologicky → kořen se vždy objeví před svými odpověďmi.
+  const threadsById = new Map<number, CommentThread>()
+  const rootOrder: number[] = []
+  const ensureThread = (rootId: number): CommentThread => {
+    let t = threadsById.get(rootId)
+    if (!t) {
+      t = { comment: byId.get(rootId)!, replies: [] }
+      threadsById.set(rootId, t)
+      rootOrder.push(rootId)
+    }
+    return t
+  }
+  for (const c of docs) {
+    const root = rootOf(c.id)
+    if (root === c.id) ensureThread(c.id)
+    else ensureThread(root).replies.push(byId.get(c.id)!)
+  }
+
+  // Kořeny otočíme na NEJNOVĚJŠÍ NAHOŘE (nejstarší dole). Odpovědi uvnitř vlákna
+  // zůstávají chronologicky (byly plněny v pořadí `docs`), aby odpověď navazovala
+  // na dotaz.
+  const threads = rootOrder.map((id) => threadsById.get(id)!).reverse()
+  return { threads, count: docs.length }
+}
+
+const fetchArticleCommentsCached = cached(
+  fetchArticleCommentsUncached,
+  'article-comments',
+  ([articleId]) => ['article_comments_' + articleId, 'comments'],
+)
+
+/** Veřejný výpis komentářů článku ve vláknech (chronologicky) + celkový počet. */
+export const fetchArticleComments = cache(
+  (articleId: number): Promise<{ threads: CommentThread[]; count: number }> =>
+    fetchArticleCommentsCached(articleId),
 )
 
 const fetchPageByFullSlugCached = cached(

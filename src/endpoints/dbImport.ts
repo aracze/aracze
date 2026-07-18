@@ -230,17 +230,23 @@ export const dbImportEndpoint: Endpoint = {
         // Direct pg_restore in production
         result = await runPgRestoreDirect(databaseUrl, filePath)
       } else {
-        // Local Docker logic
+        // Local Docker logic. Kontejner hledáme PŘEDNOSTNĚ podle compose štítku
+        // (`com.docker.compose.service`) a spouštíme přímo přes `docker exec -i`.
+        // To funguje bez ohledu na název compose projektu — po přejmenování repa
+        // běží kontejner pod starým projektem, takže `docker compose exec` ho
+        // v nové složce „nevidí" (a padal na EPIPE dřív, než se stihl fallback).
+        // `docker compose exec` zůstává jen jako záloha, když se kontejner podle
+        // štítku nenajde.
         const url = new URL(databaseUrl)
         url.hostname = dockerHost
         url.port = url.port || '5432'
 
-        result = await runPgRestoreDockerAuto(dockerService, url.toString(), filePath)
-        if (result.code !== 0) {
-          const containerId = dockerContainer || (await findContainerId(dockerService)) || undefined
-          if (containerId) {
-            result = await runPgRestoreDockerExec(containerId, url.toString(), filePath)
-          }
+        const containerId =
+          dockerContainer || (await findContainerId(dockerService).catch(() => null))
+        if (containerId) {
+          result = await runPgRestoreDockerExec(containerId, url.toString(), filePath)
+        } else {
+          result = await runPgRestoreDockerAuto(dockerService, url.toString(), filePath)
         }
       }
 
