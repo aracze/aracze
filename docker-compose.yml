@@ -29,6 +29,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: yourpassword
       POSTGRES_DB: aracze
+      # Výchozí collation = ICU cs-CZ → správné české řazení (glibc en_US řadí
+      # češtinu špatně). Uplatní se jen při initdb (čerstvý volume). LC_CTYPE zůstává
+      # en_US.utf8 (libc); porovnávání/řazení textu řídí ICU. ICU je i stabilnější
+      # než glibc (bez „collation version mismatch"/REINDEX při update image).
+      POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=cs-CZ --locale=en_US.utf8'
     volumes:
       - pgdata:/var/lib/postgresql
     ports:

@@ -7,16 +7,20 @@
 
 services:
   postgres:
-    image: postgres:18-alpine
+    image: postgres:18
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Debian (glibc) + ICU cs-CZ collation (české řazení). Uplatní se jen při initdb
+      # na čerstvém volume. Migrace z Alpine proběhla přes dump/restore (2026-07-19).
+      POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=cs-CZ --locale=en_US.utf8"
     volumes:
       # PostgreSQL 18+ image ukládá data do podadresáře; mount patří na
-      # /var/lib/postgresql (ne /…/data jako u <=17).
-      - pgdata:/var/lib/postgresql
+      # /var/lib/postgresql (ne /…/data jako u <=17). Nový volume pgdata_debian —
+      # starý pgdata (Alpine/musl) zůstal na serveru jako rollback (smazat po ověření).
+      - pgdata_debian:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 10s
@@ -60,4 +64,5 @@ services:
       - '80:3000'
 
 volumes:
-  pgdata:
+  pgdata: # starý Alpine/musl volume — ponechán jako rollback po migraci, smazat po ověření
+  pgdata_debian:
