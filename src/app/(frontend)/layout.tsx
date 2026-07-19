@@ -12,6 +12,7 @@ import { isProduction } from '@/lib/utils'
 import { Header } from '@/components/layout/header/header'
 import { sanitizeHeaderLogoSvg } from '@/lib/rich-text-html'
 import { Footer } from '@/components/layout/footer/footer'
+import { NavigationProgress } from '@/components/layout/navigation-progress'
 import { WebVitals } from '@/components/features/web-vitals'
 import { fetchRootPages } from '@/lib/payload'
 
@@ -82,6 +83,9 @@ export default async function RootLayout({
           Přeskočit na obsah
         </a>
         {!isProduction() && <WebVitals />}
+
+        {/* Progress bar pro pomalejší přechody mezi stránkami (rychlé proběhnou bez něj). */}
+        <NavigationProgress />
 
         {/* HLAVNÍ KONTEJNER: flex rozložení pro menu a obsah */}
         <div className="flex flex-col min-h-screen">
