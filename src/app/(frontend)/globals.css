@@ -784,3 +784,72 @@
     }
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Navigační progress bar (<NavigationProgress />, src/components/layout/)
+ *
+ * Tenká linka u horní hrany okna při pomalejších přechodech mezi stránkami.
+ * Logiku (kdy se ukáže a zmizí) řídí komponenta; tady je jen vzhled a animace.
+ * ------------------------------------------------------------------------- */
+
+/* „Trickle": rychlý rozjezd, pak zpomalující se dojezd k 92 % — dokud navigace
+   nedoběhne. Na 100 % bar dotáhne až třída --done. */
+@keyframes nav-progress-trickle {
+  0% {
+    width: 0%;
+  }
+  15% {
+    width: 42%;
+  }
+  45% {
+    width: 68%;
+  }
+  100% {
+    width: 92%;
+  }
+}
+
+.nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 300; /* nad headerem (z-200), pod skip linkem (z-400) */
+  pointer-events: none;
+}
+
+.nav-progress__bar {
+  height: 100%;
+  /* Fallback šířka pro prefers-reduced-motion (animace je tam vypnutá). */
+  width: 60%;
+  background: linear-gradient(90deg, #215491, #3c6eaa);
+  /* Jemná záře, ať je linka čitelná i na tmavém hero snímku pod průhledným headerem. */
+  box-shadow:
+    0 0 10px rgba(60, 110, 170, 0.7),
+    0 0 4px rgba(60, 110, 170, 0.9);
+  animation: nav-progress-trickle 8s cubic-bezier(0.15, 0.65, 0.35, 1) forwards;
+}
+
+/* Navigace doběhla: dojezd na 100 % a pak celý bar zeslábne (opacity s odkladem,
+   aby zmizel až po dojetí šířky). */
+.nav-progress--done {
+  opacity: 0;
+  transition: opacity 200ms ease-in 150ms;
+}
+
+.nav-progress--done .nav-progress__bar {
+  animation: none;
+  width: 100%;
+  transition: width 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress__bar {
+    animation: none;
+    transition: none;
+  }
+  .nav-progress--done {
+    transition: none;
+  }
+}
