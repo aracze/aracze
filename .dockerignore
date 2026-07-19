@@ -4,6 +4,8 @@ node_modules
 .env
 .env.local
 .vercel
+# Lokální DB zálohy (db-dump-*.dump) — nepatří do build kontextu ani do obrazu
+*.dump
 *.log
 npm-debug.log*
 yarn-debug.log*
