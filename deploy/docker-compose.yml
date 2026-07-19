@@ -15,7 +15,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       # Debian (glibc) + ICU cs-CZ collation (české řazení). Uplatní se jen při initdb
       # na čerstvém volume. Migrace z Alpine proběhla přes dump/restore (2026-07-19).
-      POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=cs-CZ --locale=en_US.utf8"
+      POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=cs-CZ --locale=en_US.utf8'
     volumes:
       # PostgreSQL 18+ image ukládá data do podadresáře; mount patří na
       # /var/lib/postgresql (ne /…/data jako u <=17). Nový volume pgdata_debian —
