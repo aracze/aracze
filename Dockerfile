@@ -1,11 +1,22 @@
 # To use this Dockerfile, you have to set `output: 'standalone'` in your next.config.mjs file.
 # From https://github.com/vercel/next.js/blob/canary/examples/with-docker/Dockerfile
 
-# Alpine 3.23 kvůli postgresql18-client — produkční DB běží na PostgreSQL 18
-# a pg_dump odmítá dumpovat novější server, než je verze klienta. Starší Alpine
-# (3.22) měl ve stabilních repozitářích jen klienta 17 → dump/import na produkci padal.
-FROM node:22-alpine3.23 AS base
-RUN apk add --no-cache libc6-compat postgresql18-client
+# Debian „slim" (glibc) místo Alpine (musl): glibc je robustnější pro nativní
+# knihovny (sharp/libvips) — Alpine/musl nám produkci jednou shodil. DB image
+# zůstává Alpine (viz deploy/docker-compose.yml + ICU collation pro české řazení).
+#
+# postgresql-client-18 (zálohy/import DB přes admin dbDump/dbImport) — produkční DB
+# běží na PostgreSQL 18 a pg_dump odmítá dumpovat novější server, než je klient.
+# Debian bookworm má v základu starší klienty, proto oficiální PGDG repozitář.
+FROM node:24-bookworm-slim AS base
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl ca-certificates \
+  && mkdir -p /etc/apt/keyrings \
+  && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /etc/apt/keyrings/pgdg.asc \
+  && echo "deb [signed-by=/etc/apt/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client-18 \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies only when needed
 FROM base AS deps
