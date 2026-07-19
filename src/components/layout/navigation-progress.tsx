@@ -94,6 +94,10 @@ function NavigationProgressInner() {
   useEffect(() => {
     window.clearTimeout(showTimer.current)
     window.clearTimeout(failsafeTimer.current)
+    // Změna pathname/searchParams JE externí signál routeru (přesně to, k čemu
+    // efekty jsou) — a komponenta renderuje jen prázdný div/null, takže jeden
+    // re-render navíc za navigaci nic nestojí.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus((prev) => {
       if (prev === 'idle') return prev // první mount / nesledovaná navigace
       if (prev === 'pending') return 'idle' // stihlo se to pod prahem — bar se vůbec neukázal
