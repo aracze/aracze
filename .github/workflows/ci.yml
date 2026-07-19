@@ -8,7 +8,9 @@ jobs:
 
     services:
       postgres:
-        image: postgres:latest
+        # Stejná major verze jako produkce (deploy/docker-compose.yml) — `latest`
+        # by po vydání PostgreSQL 19 začal potichu testovat jinou verzi než prod.
+        image: postgres:18-alpine
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_DB: payload
@@ -22,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6

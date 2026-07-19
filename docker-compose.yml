@@ -1,6 +1,6 @@
 services:
   payload:
-    image: node:22-alpine
+    image: node:24-alpine
     ports:
       - '3000:3000'
     volumes:
@@ -8,7 +8,9 @@ services:
       - node_modules:/home/node/app/node_modules
       - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /home/node/app/
-    command: sh -c "apk add --no-cache docker-cli docker-compose && corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
+    # corepack bez `prepare pnpm@latest` — verzi pnpm určuje pole `packageManager`
+    # v package.json, aby kontejner používal stejnou verzi jako lockfile.
+    command: sh -c "apk add --no-cache docker-cli docker-compose && corepack enable && pnpm install && pnpm dev"
     depends_on:
       - postgres
     env_file:
@@ -18,11 +20,11 @@ services:
 
   postgres:
     restart: always
-    # Stejná verze jako produkce (deploy/docker-compose.yml). Migrace ze staré
-    # Debian (glibc) na Alpine (musl) proběhla přes dump/restore, který přebuduje
-    # indexy se správným řazením — proto se image nesmí jen přehodit pod starým
-    # volume (collation nesoulad), ale naplnit čerstvý volume z dumpu.
-    image: postgres:18-alpine
+    # Stejná verze jako produkce (deploy/docker-compose.yml). Debian (glibc) místo
+    # Alpine (musl): výchozí/nejlépe podporovaná varianta oficiálního image, robustnější
+    # locale. POZOR: image nejde jen přehodit pod starým volume (nesoulad collation
+    # musl↔glibc) — nutný čerstvý volume + restore z dumpu (přebuduje indexy pod glibc).
+    image: postgres:18
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: yourpassword
