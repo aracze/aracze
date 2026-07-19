@@ -3,7 +3,7 @@
 
 # Debian „slim" (glibc) místo Alpine (musl): glibc je robustnější pro nativní
 # knihovny (sharp/libvips) — Alpine/musl nám produkci jednou shodil. DB image
-# zůstává Alpine (viz deploy/docker-compose.yml + ICU collation pro české řazení).
+# (postgres) je také Debian + ICU cs-CZ collation (viz deploy/docker-compose.yml).
 #
 # postgresql-client-18 (zálohy/import DB přes admin dbDump/dbImport) — produkční DB
 # běží na PostgreSQL 18 a pg_dump odmítá dumpovat novější server, než je klient.
