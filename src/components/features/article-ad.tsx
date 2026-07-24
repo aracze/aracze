@@ -19,6 +19,12 @@ const AD_VARIANTS = {
     width: 160,
     height: 600,
   },
+  // "Highlights 300x250" – menší box vedle recenzí (méně než 2 recenze)
+  box: {
+    slot: process.env.NEXT_PUBLIC_ADSENSE_REVIEWS_SLOT || '2488499643',
+    width: 300,
+    height: 250,
+  },
 } as const
 
 /**

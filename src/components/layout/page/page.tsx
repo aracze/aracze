@@ -5,7 +5,13 @@ import { HeroSection } from './hero-section'
 import { Subnavigation } from './subnavigation'
 import { MainContent } from './main-content'
 import { PlacesToVisit } from './places-to-visit'
-import { fetchPageLightByFullSlug, fetchMediaUrlsByIds, pageHasArticlesBySlug } from '@/lib/payload'
+import { ReviewsSection } from '@/components/features/reviews/reviews-section'
+import {
+  fetchPageLightByFullSlug,
+  fetchMediaUrlsByIds,
+  fetchPageReviews,
+  pageHasArticlesBySlug,
+} from '@/lib/payload'
 import { fetchExchangeRate } from '@/lib/exchange-rate'
 import { buildPageTitle, rootPageCategories } from '@/lib/page-title'
 import { getPayloadURL } from '@/lib/utils'
@@ -54,6 +60,12 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
     shouldFetchExchangeRate && effectiveCurrencyCode
       ? fetchExchangeRate(effectiveCurrencyCode)
       : Promise.resolve(null)
+  // Recenze mají jen turistické cíle (jako na legacy webu). Dotaz startuje hned,
+  // await až v poslední vlně s ostatními.
+  const reviewsPromise =
+    page.category === PageCategory.Turisticky_cil
+      ? fetchPageReviews(Number(page.id))
+      : Promise.resolve(null)
   const [breadcrumbs, menuContext] = await Promise.all([
     getBreadcrumbs(page),
     fetchMenuContext(page, safeRootPage),
@@ -66,7 +78,7 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
   // "Místa"/"Články" v sekundárním menu patří kontextovému místu (např. Chorvatsko),
   // ne aktuální podstránce (Vstupní podmínky). Data kontextové stránky načítáme jen když
   // se menu vůbec renderuje (jinak zbytečný fetch pro rubriky/statické stránky).
-  const [practicalInfoSourceChildren, contextFlags, exchangeData] = await Promise.all([
+  const [practicalInfoSourceChildren, contextFlags, exchangeData, reviewsData] = await Promise.all([
     fetchPracticalInfoSourceChildren(page, safeRootPage, menuContext.isSubPlace),
     (async (): Promise<{ hasPlaces: boolean; hasArticles: boolean }> => {
       if (!showSubnavigation) return { hasPlaces: false, hasArticles: false }
@@ -91,6 +103,7 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
       }
     })(),
     exchangePromise,
+    reviewsPromise,
   ])
   const contextHasPlaces = contextFlags.hasPlaces
   const contextHasArticles = contextFlags.hasArticles
@@ -161,6 +174,15 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
           genitive={page.detail?.genitive}
           createdByPublic={page.createdByPublic}
         />
+
+        {/* Recenze — jen turistické cíle (parita s legacy webem) */}
+        {reviewsData && (
+          <ReviewsSection
+            pageId={Number(page.id)}
+            pageTitle={page.title}
+            reviews={reviewsData.reviews}
+          />
+        )}
 
         {/* 3. PLACES TO VISIT SECTION */}
         {pageChildren.length > 0 && (

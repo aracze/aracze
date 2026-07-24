@@ -8,6 +8,7 @@ import {
   GlobalFooter,
   CommentPublic,
   CommentThread,
+  ReviewPublic,
 } from '@/types/payload'
 import { unstable_cache } from 'next/cache'
 import { cache } from 'react'
@@ -604,6 +605,7 @@ type RawComment = {
   id: number
   authorName: string
   body: string
+  rating?: number | null
   commentedAt?: string | null
   createdAt?: string | null
   author?: number | { id: number } | null
@@ -731,6 +733,67 @@ const fetchArticleCommentsCached = cached(
 export const fetchArticleComments = cache(
   (articleId: number): Promise<{ threads: CommentThread[]; count: number }> =>
     fetchArticleCommentsCached(articleId),
+)
+
+// ————————————————————————————————————————————————————————————————
+// Recenze turistického cíle (veřejný výpis)
+// ————————————————————————————————————————————————————————————————
+
+async function fetchPageReviewsUncached(pageId: number): Promise<{ reviews: ReviewPublic[] }> {
+  const payload = await getDb()
+
+  // overrideAccess: true → filtr si držíme sami (tato stránka, typ recenze, bez
+  // spamu) — stejný vzor jako komentáře článku. Recenze nemají vlákna, stačí
+  // plochý seznam.
+  const res = await payload.find({
+    collection: 'comments',
+    overrideAccess: true,
+    where: {
+      and: [
+        { 'relatedTo.relationTo': { equals: 'pages' } },
+        { 'relatedTo.value': { equals: pageId } },
+        { type: { equals: 'review' } },
+        { status: { not_equals: 'spam' } },
+      ],
+    },
+    depth: 0,
+    limit: 1000,
+    pagination: false,
+  })
+
+  // Nejnovější nahoře (legacy: comments.reverse()). Řadíme v JS podle efektivního
+  // času `commentedAt ?? createdAt` (commentedAt může být null) s `id` jako rozhodčím.
+  const effectiveTime = (c: RawComment) => new Date(c.commentedAt ?? c.createdAt ?? 0).getTime()
+  const docs = (res.docs as unknown as RawComment[]).slice().sort((a, b) => {
+    const diff = effectiveTime(b) - effectiveTime(a)
+    return diff !== 0 ? diff : b.id - a.id
+  })
+
+  const reviews: ReviewPublic[] = docs.map((c) => ({
+    id: c.id,
+    authorName: c.authorName,
+    body: c.body,
+    // Kolekce hodnocení u recenze vynucuje (1–5); fallback jen pro jistotu typu.
+    rating: c.rating ?? 5,
+    reviewedAt: c.commentedAt ?? c.createdAt ?? null,
+    authorUsername: c.authorPublic?.username ?? null,
+    avatarUrl: c.authorPublic?.avatar?.url ?? null,
+  }))
+
+  return { reviews }
+}
+
+const fetchPageReviewsCached = cached(
+  fetchPageReviewsUncached,
+  'page-reviews',
+  // Tag `page_reviews_<id>` invaliduje afterChange/afterDelete hook kolekce
+  // comments (viz src/hooks/revalidation.ts) — nová recenze se projeví okamžitě.
+  ([pageId]) => ['page_reviews_' + pageId, 'comments'],
+)
+
+/** Veřejný výpis recenzí turistického cíle (nejnovější nahoře). */
+export const fetchPageReviews = cache((pageId: number): Promise<{ reviews: ReviewPublic[] }> =>
+  fetchPageReviewsCached(pageId),
 )
 
 const fetchPageByFullSlugCached = cached(
