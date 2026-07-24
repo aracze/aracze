@@ -363,12 +363,20 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({
         marker = new googleApi.maps.Marker(markerOptions)
       }
 
-      marker.addListener('click', () => {
+      // AdvancedMarkerElement má vlastní událost `gmp-click` — obyčejný
+      // 'click' na něm funguje, ale Maps API kvůli němu hlásí deprecation
+      // warning do konzole. Klasický Marker zůstává u 'click'.
+      const openInfoWindow = () => {
         const content = buildInfoWindowContent(m)
         infoWindow.setContent(content)
         // Objektová forma open() funguje pro Marker i AdvancedMarkerElement.
         infoWindow.open({ anchor: marker, map })
-      })
+      }
+      if (useAdvancedMarkers) {
+        marker.addEventListener('gmp-click', openInfoWindow)
+      } else {
+        marker.addListener('click', openInfoWindow)
+      }
 
       markersRef.current.push(marker)
     }
