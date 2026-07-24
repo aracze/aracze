@@ -1,18 +1,16 @@
 import React from 'react'
 import { ReviewPublic } from '@/types/payload'
 import { getTurnstileSiteKey } from '@/lib/comment-spam'
-import { UserAvatar } from '@/components/user-avatar'
 import { AdSenseScript, ArticleAd } from '@/components/features/article-ad'
 import { ReviewItem } from './review-item'
 import { ReviewRatingBox } from './review-rating-box'
-import { WriteReviewButton } from './write-review-button'
 
 /**
- * Sekce recenzí turistického cíle — parita s legacy webem:
+ * Sekce recenzí turistického cíle (jednotný styl s inline recenzemi na
+ * stránce místa):
  *  1. lišta „Byl jsi zde? Ohodnoť to!" s hvězdičkovým vstupem a sbaleným
  *     formulářem (přes celou šířku obsahu),
- *  2. výpis recenzí (nejnovější nahoře) + závěrečný řádek „Tvé jméno /
- *     Doporučuji navštívit …" s tlačítkem,
+ *  2. výpis recenzí (nejnovější nahoře, jemné oddělovače),
  *  3. reklamní sloupec vpravo (300×250 při méně než 2 recenzích, jinak 300×600
  *     — stejná logika i sloty jako legacy).
  *
@@ -37,26 +35,21 @@ export function ReviewsSection({
 
         <div className="flex flex-col gap-8 lg:flex-row lg:gap-10">
           <div className="min-w-0 flex-1">
-            <div className="mt-10 border-t border-[#d7d7d7]">
-              {reviews.map((review) => (
-                <ReviewItem key={review.id} review={review} itemReviewed={pageTitle} />
+            <div className="mt-8">
+              {reviews.length === 0 && (
+                <p className="py-4 text-[14px] text-gray-500">
+                  Zatím tu není žádná recenze. Buď první, kdo se podělí o zážitek!
+                </p>
+              )}
+              {reviews.map((review, i) => (
+                <ReviewItem
+                  key={review.id}
+                  review={review}
+                  itemReviewed={pageTitle}
+                  // Jemné oddělovače (jako inline výpis); poslední recenze bez linky.
+                  className={i === reviews.length - 1 ? 'border-b-0' : 'border-[#eceff2]'}
+                />
               ))}
-
-              {/* Výzva k vlastní recenzi (legacy „proposal" řádek) */}
-              <div className="flex flex-wrap items-center gap-4 border-b border-[#d7d7d7] py-4">
-                <div className="shrink-0">
-                  <UserAvatar name="Tvé jméno" avatarUrl={null} size={45} />
-                </div>
-                <div className="min-w-0">
-                  <div className="pb-1 pt-2 text-[17px] tracking-[1px] text-[#565656]">
-                    Tvé jméno
-                  </div>
-                  <div className="text-[#2c3643]">Doporučuji navštívit …</div>
-                </div>
-                <div className="ml-auto">
-                  <WriteReviewButton />
-                </div>
-              </div>
             </div>
           </div>
 

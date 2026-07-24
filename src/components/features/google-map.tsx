@@ -16,6 +16,8 @@ interface GoogleMapProps {
   centerLat: number
   centerLng: number
   zoom: number
+  /** Výška mapy (CSS hodnota). Bez zadání vysoká mapa vedle výpisu cílů. */
+  height?: string
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
@@ -190,7 +192,13 @@ function loadGoogleMaps(): Promise<void> {
   return mapsReadyPromise
 }
 
-export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, centerLng, zoom }) => {
+export const GoogleMap: React.FC<GoogleMapProps> = ({
+  markers,
+  centerLat,
+  centerLng,
+  zoom,
+  height,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
@@ -496,7 +504,7 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({ markers, centerLat, center
     <div
       ref={containerRef}
       className="w-full rounded-lg"
-      style={{ height: 'calc(100vh - 40px)', minHeight: '400px' }}
+      style={height ? { height } : { height: 'calc(100vh - 40px)', minHeight: '400px' }}
     >
       {loadError ? (
         <div className="h-full w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]">

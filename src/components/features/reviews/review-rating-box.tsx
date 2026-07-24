@@ -1,16 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition, type FormEvent } from 'react'
+import { useRef, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Star } from 'lucide-react'
 import { createReview, type ReviewFormState } from '@/lib/review-actions'
 import { Turnstile, type TurnstileHandle } from '@/components/features/comments/turnstile'
+import { StarInput } from './star-input'
 
 /**
  * Lišta „Byl jsi zde? Ohodnoť to!" + sbalený formulář recenze (legacy
- * `.rating-review`). Hvězdičky v liště JSOU vstup hodnocení — kliknutí nastaví
- * počet hvězd a rozbalí formulář (stejně jako raty + collapse na starém webu).
- * Tlačítko „Napiš vlastní recenzi" pod výpisem posílá event `ara:review-open`.
+ * `.rating-review`, vizuál sjednocený s inline recenzemi na stránce místa).
+ * Hvězdičky v liště JSOU vstup hodnocení — kliknutí nastaví počet hvězd
+ * a rozbalí formulář (stejně jako raty + collapse na starém webu).
  *
  * Ochrana: skrytý honeypot `website`, čas načtení `renderedAt` a volitelně
  * Cloudflare Turnstile — stejné vrstvy jako u komentářů. Po úspěchu se přes
@@ -28,7 +28,6 @@ export function ReviewRatingBox({
   const [state, setState] = useState<ReviewFormState>({ status: 'idle' })
   const [open, setOpen] = useState(false)
   const [rating, setRating] = useState(0)
-  const [hover, setHover] = useState(0)
   // Čas načtení — jednou při mountu (anti-bot timing, viz komentáře).
   const [renderedAt] = useState(() => Date.now())
 
@@ -42,17 +41,6 @@ export function ReviewRatingBox({
     // Fokus až po vykreslení rozbaleného formuláře.
     window.setTimeout(() => bodyRef.current?.focus(), 100)
   }
-
-  // „Napiš vlastní recenzi" (řádek pod výpisem) → naroluj na lištu a otevři formulář.
-  useEffect(() => {
-    const onOpen = () => {
-      boxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setOpen(true)
-      window.setTimeout(() => bodyRef.current?.focus(), 400)
-    }
-    window.addEventListener('ara:review-open', onOpen)
-    return () => window.removeEventListener('ara:review-open', onOpen)
-  }, [])
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -77,46 +65,29 @@ export function ReviewRatingBox({
     })
   }
 
-  const shownStars = hover || rating
-
   return (
-    <div ref={boxRef} id="ohodnotit" className="scroll-mt-24 border border-[#d7d7d7]">
+    <div
+      ref={boxRef}
+      id="ohodnotit"
+      className="scroll-mt-24 overflow-hidden rounded-xl border border-[#e3e9ef]"
+    >
       {/* Hlavička lišty — nadpis, hvězdičkový vstup, tlačítko vpravo */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
-        <h2 className="text-[16px] font-bold text-[#004d94]">Byl jsi zde? Ohodnoť to!</h2>
+        <h2 className="text-[16px] font-bold text-[#215491]">Byl jsi zde? Ohodnoť to!</h2>
 
-        <div className="flex items-center" aria-label="Tvé hodnocení (1–5 hvězdiček)">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              type="button"
-              aria-pressed={rating === n}
-              aria-label={`Ohodnotit ${n} z 5 hvězdiček`}
-              onMouseEnter={() => setHover(n)}
-              onMouseLeave={() => setHover(0)}
-              onFocus={() => setHover(n)}
-              onBlur={() => setHover(0)}
-              onClick={() => {
-                setRating(n)
-                openForm()
-              }}
-              className="p-0.5"
-            >
-              <Star
-                aria-hidden="true"
-                className={`h-[19px] w-[19px] transition-colors ${
-                  n <= shownStars ? 'fill-[#f5a623] text-[#f5a623]' : 'fill-none text-[#9aa6b1]'
-                }`}
-                strokeWidth={1.5}
-              />
-            </button>
-          ))}
-        </div>
+        <StarInput
+          value={rating}
+          onSelect={(n) => {
+            setRating(n)
+            openForm()
+          }}
+          size={19}
+        />
 
         <button
           type="button"
           onClick={openForm}
-          className="ml-auto rounded-2xl bg-[#115094] px-5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#0d3f75]"
+          className="ml-auto whitespace-nowrap rounded-full border-[1.5px] border-[#215491] px-5 py-1.5 text-[13px] font-bold text-[#215491] transition-colors hover:bg-[#215491] hover:text-white"
         >
           Napsat recenzi
         </button>
