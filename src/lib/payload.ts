@@ -105,6 +105,10 @@ const PAGE_CHILDREN_SELECT = {
   text: true,
   detail: true,
   featuredImage: true,
+  // Autor cíle pro výpis „Co vidět…" (avatar + jméno u rozbaleného textu).
+  // Virtuální createdByPublic potřebuje createdBy v datech, jinak vrací null.
+  createdBy: true,
+  createdByPublic: true,
 } as const
 
 const PAGE_ARTICLES_SELECT = {
@@ -794,6 +798,131 @@ const fetchPageReviewsCached = cached(
 /** Veřejný výpis recenzí turistického cíle (nejnovější nahoře). */
 export const fetchPageReviews = cache((pageId: number): Promise<{ reviews: ReviewPublic[] }> =>
   fetchPageReviewsCached(pageId),
+)
+
+/** Souhrn recenzí jedné stránky: počet + průměrné hodnocení (pro výpisy cílů). */
+export type PageReviewStats = { count: number; avg: number }
+
+async function fetchPageReviewStatsUncached(
+  pageIds: number[],
+): Promise<Record<number, PageReviewStats>> {
+  if (pageIds.length === 0) return {}
+  const payload = await getDb()
+
+  // Jeden hromadný dotaz pro všechny cíle ve výpisu (žádný dotaz per dítě).
+  // Vrací se plain objekt (ne Map) — unstable_cache výsledek serializuje.
+  const res = await payload.find({
+    collection: 'comments',
+    overrideAccess: true,
+    where: {
+      and: [
+        { 'relatedTo.relationTo': { equals: 'pages' } },
+        { 'relatedTo.value': { in: pageIds } },
+        { type: { equals: 'review' } },
+        { status: { not_equals: 'spam' } },
+      ],
+    },
+    depth: 0,
+    limit: 0,
+    pagination: false,
+    select: { rating: true, relatedTo: true },
+  })
+
+  const sums = new Map<number, { count: number; total: number }>()
+  for (const doc of res.docs as unknown as Array<{
+    rating?: number | null
+    relatedTo?: { relationTo?: string; value?: number | { id: number } | null } | null
+  }>) {
+    const pageId = relationIdOf(doc.relatedTo?.value ?? null)
+    if (pageId == null || doc.rating == null) continue
+    const s = sums.get(pageId) ?? { count: 0, total: 0 }
+    s.count += 1
+    s.total += doc.rating
+    sums.set(pageId, s)
+  }
+
+  const stats: Record<number, PageReviewStats> = {}
+  for (const [pageId, s] of sums) {
+    stats[pageId] = { count: s.count, avg: s.total / s.count }
+  }
+  return stats
+}
+
+const fetchPageReviewStatsCached = cached(
+  fetchPageReviewStatsUncached,
+  'page-review-stats',
+  // Nová recenze cíle invaliduje hookem tag page_reviews_<id> → souhrn se přepočítá.
+  ([pageIds]) => ['comments', ...pageIds.map((id) => 'page_reviews_' + id)],
+)
+
+/** Souhrny recenzí pro sadu stránek (hvězdičky + počet ve výpisu cílů). */
+export const fetchPageReviewStats = cache(
+  (pageIds: number[]): Promise<Record<number, PageReviewStats>> =>
+    fetchPageReviewStatsCached(pageIds),
+)
+
+// ————————————————————————————————————————————————————————————————
+// Sousední turistické cíle (pás „Další vyhledávaná Místa…" na detailu cíle)
+// ————————————————————————————————————————————————————————————————
+
+/** Sourozenec cíle pro doporučující pás — jen pole, která karta kreslí. */
+export type RelatedTouristPoint = {
+  id: number
+  title: string
+  fullSlug: string
+  /** ID media obrázku (URL doplní fetchMediaUrlsByIds), null = bez fotky. */
+  imageId: number | null
+}
+
+async function fetchTouristPointSiblingsUncached(
+  parentFullSlug: string,
+  excludeId: number,
+): Promise<RelatedTouristPoint[]> {
+  const payload = await getDb()
+
+  const res = await payload.find({
+    collection: 'pages',
+    overrideAccess: false,
+    where: {
+      and: [
+        { 'parent.fullSlug': { equals: '/' + parentFullSlug.replace(/^\/+/, '') } },
+        { category: { equals: 'Turistický cíl' } },
+        { id: { not_equals: excludeId } },
+      ],
+    },
+    depth: 0,
+    // Legacy zobrazoval max 4 karty; pár navíc jako rezerva, kdyby některé
+    // neměly fotku a UI chtělo vybírat.
+    limit: 8,
+    select: { title: true, fullSlug: true, featuredImage: true },
+    joins: false,
+  })
+
+  return (
+    res.docs as unknown as Array<{
+      id: number
+      title: string
+      fullSlug: string
+      featuredImage?: { image?: number | { id: number } | null } | null
+    }>
+  ).map((doc) => ({
+    id: doc.id,
+    title: doc.title,
+    fullSlug: doc.fullSlug,
+    imageId: relationIdOf(doc.featuredImage?.image ?? null),
+  }))
+}
+
+const fetchTouristPointSiblingsCached = cached(
+  fetchTouristPointSiblingsUncached,
+  'tourist-siblings',
+  () => ['pages'],
+)
+
+/** Sousední cíle stejného místa (bez aktuálního) pro pás doporučení. */
+export const fetchTouristPointSiblings = cache(
+  (parentFullSlug: string, excludeId: number): Promise<RelatedTouristPoint[]> =>
+    fetchTouristPointSiblingsCached(parentFullSlug, excludeId),
 )
 
 const fetchPageByFullSlugCached = cached(

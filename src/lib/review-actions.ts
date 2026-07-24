@@ -2,8 +2,9 @@
 
 import { headers } from 'next/headers'
 import { getDb } from './db'
+import { fetchPageReviews } from './payload'
 import { isBotSubmission, isRateLimited, looksLikeSpam, verifyTurnstile } from './comment-spam'
-import { PageCategory } from '@/types/payload'
+import { PageCategory, ReviewPublic } from '@/types/payload'
 
 /**
  * Veřejné vložení recenze turistického cíle (stránka kategorie Turistický cíl).
@@ -20,6 +21,39 @@ import { PageCategory } from '@/types/payload'
 
 export type ReviewFormState =
   { status: 'idle' } | { status: 'success' } | { status: 'error'; message: string }
+
+/**
+ * Líné načtení recenzí cíle pro inline blok ve výpisu „Co vidět…" — volá se
+ * z klienta až po rozbalení cíle, ať stránka se všemi cíli zůstane rychlá.
+ * Vrací jen veřejná data (ReviewPublic); u draft stránek nic (stejná logika
+ * jako anonymní přístupová práva kolekce comments).
+ */
+export async function getPageReviews(
+  pageId: number,
+): Promise<{ reviews: ReviewPublic[] } | { error: string }> {
+  if (!Number.isInteger(pageId) || pageId <= 0) {
+    return { error: 'Neplatná stránka.' }
+  }
+
+  const payload = await getDb()
+  try {
+    const page = (await payload.findByID({
+      collection: 'pages',
+      id: pageId,
+      depth: 0,
+      overrideAccess: true,
+      select: { _status: true },
+    })) as { _status?: string | null }
+    if (page._status === 'draft') {
+      return { error: 'Stránka nebyla nalezena.' }
+    }
+  } catch {
+    return { error: 'Stránka nebyla nalezena.' }
+  }
+
+  const { reviews } = await fetchPageReviews(pageId)
+  return { reviews }
+}
 
 const MAX_NAME_LEN = 80
 const MAX_BODY_LEN = 5000

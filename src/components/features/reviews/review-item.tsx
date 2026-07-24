@@ -2,6 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import { ReviewPublic } from '@/types/payload'
 import { formatReviewDate } from '@/lib/relative-time'
+import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/user-avatar'
 import { StarRating } from './star-rating'
 
@@ -14,9 +15,12 @@ import { StarRating } from './star-rating'
 export function ReviewItem({
   review,
   itemReviewed,
+  className,
 }: {
   review: ReviewPublic
   itemReviewed: string
+  /** Doladění vzhledu podle kontextu (např. jemnější/žádný oddělovač v inline výpisu). */
+  className?: string
 }) {
   const date = formatReviewDate(review.reviewedAt)
   const profileHref = review.authorUsername ? `/profil/${review.authorUsername}` : null
@@ -26,7 +30,7 @@ export function ReviewItem({
   return (
     <article
       id={`recenze-${review.id}`}
-      className="flex gap-4 border-b border-[#d7d7d7] py-4"
+      className={cn('flex gap-4 border-b border-[#d7d7d7] py-4', className)}
       itemScope
       itemType="https://schema.org/Review"
     >
@@ -53,8 +57,15 @@ export function ReviewItem({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[#a6b0b9]">
-          <span itemProp="reviewRating" itemScope itemType="https://schema.org/Rating">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] leading-none text-[#a6b0b9]">
+          {/* inline-flex: bez něj se hvězdičky (SVG) zarovnají na účaří textu
+              a vůči datu „uskakují" nahoru — flex je vycentruje na střed řádku. */}
+          <span
+            itemProp="reviewRating"
+            itemScope
+            itemType="https://schema.org/Rating"
+            className="inline-flex items-center"
+          >
             <meta itemProp="ratingValue" content={String(review.rating)} />
             <meta itemProp="bestRating" content="5" />
             <StarRating rating={review.rating} />

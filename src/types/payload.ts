@@ -63,6 +63,8 @@ export interface PageChild {
   }
   // Odvozeno ze schématu (superset — web čte jen latitude/longitude/zoom/adresu).
   detail?: GeneratedPage['detail']
+  /** Bezpečný veřejný autor (virtuální pole) — výpis cílů zobrazuje avatar + jméno. */
+  createdByPublic?: Page['createdByPublic']
 }
 
 export interface RichTextRoot {
