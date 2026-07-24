@@ -112,22 +112,26 @@ export default async function PageRoute({ params }: Props) {
     return (
       <>
         <Page page={resolution.page} />
-        <div className="mx-auto w-full max-w-7xl px-4 pb-12 pt-4">
-          <AdSenseScript />
-          <LeaderboardAd />
-        </div>
+        <BottomAdStrip />
       </>
     )
   if (resolution.kind === 'article')
     return (
       <>
         <Article article={resolution.article} contextSlug={resolution.parentSlug} />
-        <div className="mx-auto w-full max-w-7xl px-4 pb-12 pt-4">
-          <AdSenseScript />
-          <LeaderboardAd />
-        </div>
+        <BottomAdStrip />
       </>
     )
 
   notFound()
+}
+
+/** Spodní responzivní reklamní pruh pod obsahem stránky/článku. */
+function BottomAdStrip() {
+  return (
+    <div className="mx-auto w-full max-w-7xl px-4 pb-12 pt-4">
+      <AdSenseScript />
+      <LeaderboardAd />
+    </div>
+  )
 }

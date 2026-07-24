@@ -9,10 +9,9 @@ import { Turnstile, type TurnstileHandle } from '@/components/features/comments/
 import { ReviewItem } from './review-item'
 import { StarInput } from './star-input'
 
-/** Event „vyplň hodnocení a otevři formulář" — posílá ho hlavička cíle
- * (hvězdičky u „Ohodnoť jako první"); detail nese pageId a počet hvězd. */
-export const INLINE_REVIEW_RATE_EVENT = 'ara:inline-review-rate'
-export type InlineReviewRateDetail = { pageId: number; rating: number }
+/** Požadavek „vyplň hodnocení a otevři formulář" z hlavičky cíle („Ohodnoť
+ * jako první"). Nonce odlišuje opakovaná kliknutí; rating 0 = jen otevřít. */
+export type InlineReviewRateRequest = { rating: number; nonce: number }
 
 /** Kolik recenzí ukázat hned; zbytek schová „Zobrazit další". */
 const INITIAL_VISIBLE = 3
@@ -33,10 +32,13 @@ export function InlineReviews({
   pageId,
   pageTitle,
   turnstileSiteKey,
+  rateRequest = null,
 }: {
   pageId: number
   pageTitle: string
   turnstileSiteKey: string | null
+  /** Předvyplnění z hlavičky cíle („Ohodnoť jako první") — viz typ výše. */
+  rateRequest?: InlineReviewRateRequest | null
 }) {
   const router = useRouter()
   const [reviews, setReviews] = useState<ReviewPublic[] | null>(null)
@@ -89,19 +91,19 @@ export function InlineReviews({
     openForm()
   }
 
-  // „Ohodnoť jako první" v hlavičce cíle: hlavička pošle event s pageId a počtem
-  // hvězd (0 = jen otevřít formulář) — formulář se předvyplní a dostane fokus.
+  // „Ohodnoť jako první" v hlavičce cíle: prop s hodnocením + nonce — funguje
+  // i při prvním mountu (na rozdíl od eventu nehrozí, že proletí dřív, než se
+  // formulář připojí). setState běží až v timeoutu (ESLint zakazuje synchronní
+  // setState v efektu — stejný vzor jako rozbalení z kotvy).
   useEffect(() => {
-    const onRate = (e: Event) => {
-      const detail = (e as CustomEvent<InlineReviewRateDetail>).detail
-      if (!detail || detail.pageId !== pageId) return
-      if (detail.rating > 0) setRating(detail.rating)
+    if (!rateRequest) return
+    const t = window.setTimeout(() => {
+      if (rateRequest.rating > 0) setRating(rateRequest.rating)
       setFormOpen(true)
       window.setTimeout(() => bodyRef.current?.focus(), 100)
-    }
-    window.addEventListener(INLINE_REVIEW_RATE_EVENT, onRate)
-    return () => window.removeEventListener(INLINE_REVIEW_RATE_EVENT, onRate)
-  }, [pageId])
+    }, 0)
+    return () => window.clearTimeout(t)
+  }, [rateRequest])
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()

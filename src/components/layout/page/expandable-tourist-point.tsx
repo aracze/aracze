@@ -10,8 +10,7 @@ import { StarRating } from '@/components/features/reviews/star-rating'
 import { StarInput } from '@/components/features/reviews/star-input'
 import {
   InlineReviews,
-  INLINE_REVIEW_RATE_EVENT,
-  type InlineReviewRateDetail,
+  type InlineReviewRateRequest,
 } from '@/components/features/reviews/inline-reviews'
 import { UserAvatar } from '@/components/user-avatar'
 
@@ -69,8 +68,10 @@ export function ExpandableTouristPoint({
   author = null,
 }: ExpandableTouristPointProps) {
   const [expanded, setExpanded] = useState(false)
+  const [rateRequest, setRateRequest] = useState<InlineReviewRateRequest | null>(null)
   const articleRef = useRef<HTMLElement>(null)
   const reviewsRef = useRef<HTMLDivElement>(null)
+  const rateNonceRef = useRef(0)
 
   const showRating = !!reviewCount && reviewCount > 0 && reviewAvg != null
   // Kotva cíle = poslední segment slugu (např. golden-gate-bridge).
@@ -104,19 +105,16 @@ export function ExpandableTouristPoint({
     )
   }
 
-  // „Ohodnoť jako první": rozbal cíl a pošli formuláři vybraný počet hvězd
-  // (0 = jen otevřít). Event letí až po mountu InlineReviews (timeout), spolu
-  // s narolováním na blok recenzí.
+  // „Ohodnoť jako první": rozbal cíl a předej formuláři vybraný počet hvězd
+  // (0 = jen otevřít) přes prop — nonce zajistí reakci i na opakované kliknutí.
   const rateFirst = (stars: number) => {
+    rateNonceRef.current += 1
+    setRateRequest({ rating: stars, nonce: rateNonceRef.current })
     setExpanded(true)
-    window.setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent<InlineReviewRateDetail>(INLINE_REVIEW_RATE_EVENT, {
-          detail: { pageId: Number(id), rating: stars },
-        }),
-      )
-      reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 120)
+    window.setTimeout(
+      () => reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      100,
+    )
   }
 
   // Sbalený stav: cíle bez delšího textu rozbalují jen recenze — popisek to říká.
@@ -313,6 +311,7 @@ export function ExpandableTouristPoint({
               pageId={Number(id)}
               pageTitle={title}
               turnstileSiteKey={turnstileSiteKey}
+              rateRequest={rateRequest}
             />
           </div>
         )}
