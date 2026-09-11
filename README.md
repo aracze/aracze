@@ -716,6 +716,22 @@ jedna instance deleguje klik z `<body>` (pokryje i rozbalovací texty a přechod
 jádro knihovny se stahuje až při prvním kliknutí. Titulek v lightboxu se přebírá z popisku
 pod fotkou (`.image-caption`), fotky bez rozměrů v DB mají fallback z náhledu.
 
+### Zásuvky v kartě Nice-to-know — ikony skládané z typů
+
+Karta „Elektřina“ v bloku Praktické informace (Nice-to-know) skládá ikonu zásuvky z ikon
+jednotlivých typů podle **titulku karty** („Zásuvka typu C & J“) — pravidla (co se čte, kdy se
+při třech a víc typech některé vypustí, geometrie kaskády) jsou u `parseOutletTypes`,
+`outletTypesToShow` a `outletIconsHtml` v `src/lib/rich-text-html.ts`. Dřív web ukazoval všude
+pevný typ C a legacy měl ručně složený obrázek jen pro část kombinací. **Nový typ zásuvky** =
+přidat `public/assets/outlets/Type<X>.svg` (185 × 185, bílá výplň, aby přední ikona překryla
+zadní; `TypeA`–`TypeL` jsou z legacy webu, `TypeN` dokreslený z `TypeC`) a řádek do tabulky
+`OUTLET_TYPES` (i s tím, do kterých zásuvek jeho zástrčka pasuje).
+Údaje karet prošly 11. 9. 2026 kontrolou proti přehledu IEC: `scripts/zasuvky-karty-opravy.sql`
+opravuje typy u Bulharska, Rakouska, Madeiry, Chorvatska, Sardinie a Sicílie, napětí Turecka a
+Ukrajiny (230 V), tvar výčtu u Dánska a Monaka a všude „hz“ → „Hz“; přepisuje `pages`, poslední
+publikovanou verzi i rozpracovaný draft, zálohuje do `zaloha.texts_zasuvky_2026_09_11`. V DEV
+spuštěno; **prod = stejný skript + force-recreate `cms`** (viz hlavička skriptu).
+
 ### Collections
 
 - **Users (Správa uživatelů)**:
