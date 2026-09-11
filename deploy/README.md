@@ -135,27 +135,15 @@ docker compose pull
 docker compose up -d
 ```
 
-**Inicializace schématu.** V produkci `prodMigrations` standardně NEBĚŽÍ — Payload
-by na schématu importovaném z dumpu (viz 3b) detekoval drift a start by zamrzl.
-Schéma nastav jednou ze dvou cest:
+**Inicializace schématu.** Produkční image má Payload `push` vypnutý a Payload
+migrace projekt nepoužívá (zastaralá „initial" migrace byla odstraněna v září
+2026). Schéma i data přinese **import dumpu z lokálu (viz 3b)** — to je
+jediná podporovaná cesta; prázdnou produkční DB bez dumpu appka sama nepostaví.
+Pozdější změny datového modelu se na prod dorovnávají ručním SQL (viz hlavní
+README, sekce „Jednorázové doběhy proti produkční databázi“).
 
-- **Přenos dat z lokálu (doporučeno, viz 3b):** naimportuj dump z lokální DB —
-  přinese schéma i data najednou.
-- **Čistý deploy bez dumpu (migrace):** v `/opt/aracze/.env` nastav
-  `PAYLOAD_RUN_MIGRATIONS=true` a restartuj `cms`. Payload při startu spustí
-  migrace ze `src/migrations`. Ověření v logu:
-
-  ```bash
-  docker compose logs cms | grep -i migrat   # "Migrated: ..._initial"
-  ```
-
-Pak otevři `https://ara.cz/admin` — Payload nabídne **vytvoření
-prvního administrátora**. Tím je CMS připravené.
-
-> Pozn.: Při změně datového modelu vygeneruj migraci
-> `pnpm payload migrate:create <nazev>` a commitni ji; při čistém deploy
-> (`PAYLOAD_RUN_MIGRATIONS=true`) ji nasazená verze při startu doběhne, čímž se
-> úplně prázdná DB postaví od nuly.
+Po importu otevři `https://ara.cz/admin` — přihlásíš se účtem z dumpu (u prázdného
+dumpu Payload nabídne **vytvoření prvního administrátora**). Tím je CMS připravené.
 
 ---
 
@@ -168,18 +156,9 @@ do produkce. CMS má na to vestavěné endpointy (`pg_dump --format=c`, resp.
 1. **Lokálně** vytvoř dump (endpoint `dbDump`) — stáhne soubor `.dump`.
 2. Nahraj ho do produkce (endpoint `dbImport`) — ten provede `DROP SCHEMA` a
    obnoví lokální schéma i data.
-3. Protože import přepíše schéma lokálním (bez záznamu o migraci), po importu
-   označíme počáteční migraci jako provedenou, aby ji CMS při restartu
-   nespouštěl znovu:
-
-   ```bash
-   docker compose exec -T postgres psql -U postgres -d aracze -c \
-     "CREATE TABLE IF NOT EXISTS payload_migrations (id serial PRIMARY KEY, name varchar, batch numeric, updated_at timestamptz DEFAULT now() NOT NULL, created_at timestamptz DEFAULT now() NOT NULL); \
-      INSERT INTO payload_migrations (name, batch) SELECT '20260709_134221_initial', 1 \
-      WHERE NOT EXISTS (SELECT 1 FROM payload_migrations WHERE name = '20260709_134221_initial');"
-   ```
-
-> Tento krok proběhne jednou, až bude aplikace nasazená. Provedu ho s tebou.
+3. Restartuj `cms` (`docker compose up -d --force-recreate cms`), aby zahodil
+   cache obsahu z doby před importem. Nic dalšího není potřeba — Payload
+   migrace se nepoužívají, takže se žádný záznam o migraci nedoplňuje.
 
 ## 4) Běžné nasazení další verze
 

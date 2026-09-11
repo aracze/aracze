@@ -21,7 +21,6 @@ import { seoPlugin } from '@payloadcms/plugin-seo'
 import { cloudinaryStorage } from 'payload-storage-cloudinary'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 
-import { migrations } from './migrations'
 import { buildPageUrl } from './lib/page-url'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
@@ -152,13 +151,11 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URL || '',
     },
+    // Schéma vzniká v dev přes `push` a do produkce se přenáší importem
+    // databázového dumpu (admin dbDump/dbImport); změny schématu na prod se
+    // dorovnávají ručním SQL (viz README). Payload migrace projekt nepoužívá —
+    // jediná zastaralá „initial" migrace byla odstraněna 11. 9. 2026.
     push: process.env.NODE_ENV !== 'production',
-    // Schéma v produkci spravujeme importem databázového dumpu z lokálu
-    // (admin dbDump/dbImport). prodMigrations proto standardně NEBĚŽÍ — jinak
-    // by Payload na importovaném (dev-push) schématu detekoval drift a čekal na
-    // interaktivní odpověď, čímž by start zamrzl. Migrace lze zapnout proměnnou
-    // PAYLOAD_RUN_MIGRATIONS=true (např. pro čistý deploy bez dumpu).
-    prodMigrations: process.env.PAYLOAD_RUN_MIGRATIONS === 'true' ? migrations : undefined,
   }),
   sharp,
   endpoints: [
