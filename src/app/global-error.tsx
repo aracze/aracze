@@ -39,7 +39,7 @@ export default function GlobalError({
             gap: '1rem',
             padding: '5rem 1rem',
             textAlign: 'center',
-            color: '#1a3f6c',
+            color: '#1a3366',
           }}
         >
           <p
@@ -49,7 +49,7 @@ export default function GlobalError({
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.15em',
-              color: '#215491',
+              color: '#224386',
             }}
           >
             Chyba
@@ -73,7 +73,7 @@ export default function GlobalError({
                 border: 'none',
                 cursor: 'pointer',
                 borderRadius: '9999px',
-                background: '#215491',
+                background: '#224386',
                 color: '#fff',
                 fontWeight: 600,
                 padding: '0.625rem 1.5rem',
@@ -89,8 +89,8 @@ export default function GlobalError({
               href="/"
               style={{
                 borderRadius: '9999px',
-                border: '1px solid #215491',
-                color: '#215491',
+                border: '1px solid #224386',
+                color: '#224386',
                 fontWeight: 600,
                 padding: '0.625rem 1.5rem',
                 textDecoration: 'none',

@@ -89,7 +89,7 @@ export function renderAraEmail(content: AraEmailContent): string {
 </td>
 </tr>
 <tr>
-<td align="center" style="font-family:${FONT};font-size:21px;line-height:1.3;font-weight:bold;color:#1a3f6c;padding-bottom:12px;">${title}</td>
+<td align="center" style="font-family:${FONT};font-size:21px;line-height:1.3;font-weight:bold;color:#1a3366;padding-bottom:12px;">${title}</td>
 </tr>
 <tr>
 <td align="center" style="padding-bottom:16px;">
@@ -101,13 +101,13 @@ export function renderAraEmail(content: AraEmailContent): string {
 </tr>
 <tr>
 <td align="center" style="padding-bottom:26px;">
-<a href="${buttonUrl}" style="display:inline-block;background-color:#215491;color:#ffffff;font-family:${FONT};font-size:13px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;text-decoration:none;border-radius:999px;padding:13px 34px;">${buttonLabel}</a>
+<a href="${buttonUrl}" style="display:inline-block;background-color:#224386;color:#ffffff;font-family:${FONT};font-size:13px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;text-decoration:none;border-radius:999px;padding:13px 34px;">${buttonLabel}</a>
 </td>
 </tr>
 <tr>
 <td style="background-color:#eef3fb;border-radius:10px;padding:12px 16px;font-family:${FONT};font-size:13px;line-height:1.55;color:#5b666e;text-align:left;">
 Tlačítko nefunguje? Zkopíruj si do prohlížeče tuhle adresu:<br>
-<a href="${buttonUrl}" style="color:#215491;word-break:break-all;">${buttonUrl}</a>
+<a href="${buttonUrl}" style="color:#224386;word-break:break-all;">${buttonUrl}</a>
 </td>
 </tr>
 <tr>
