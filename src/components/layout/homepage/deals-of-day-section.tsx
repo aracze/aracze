@@ -47,11 +47,11 @@ export function DealsOfDaySection({
     // max-w-5xl = stejná šířka jako ostatní panely homepage (Inspirace…).
     <section className="mx-auto max-w-5xl">
       <div className="mb-10 flex flex-col items-center text-center">
-        <h2 className="font-heading mb-3 text-3xl font-bold tracking-tight text-[#1a3f6c]">
+        <h2 className="font-heading mb-3 text-3xl font-bold tracking-tight text-brand-deep">
           Dnešní akční nabídky
         </h2>
-        <div className="mb-5 h-[1px] w-[30px] rounded-full bg-[#d45145]"></div>
-        <p className="max-w-xl text-[17px] leading-relaxed text-gray-400">
+        <div className="mb-5 h-[1px] w-[30px] rounded-full bg-accent"></div>
+        <p className="max-w-xl text-[17px] leading-relaxed text-ink-3">
           Akční letenky a zájezdy z Česka pro {todayLabel()}.
         </p>
       </div>
@@ -139,9 +139,9 @@ function DealTile({
       href={deal.deepLink}
       target="_blank"
       rel="nofollow sponsored noopener"
-      className="group block overflow-hidden rounded-xl border border-[#e6ebf1] bg-white text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]"
+      className="group block overflow-hidden rounded-xl border border-line bg-white text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]"
     >
-      <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#e6ebf1]">
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-surface-2">
         {deal.imageUrl && (
           <DealCardImage
             src={deal.imageUrl}
@@ -156,7 +156,7 @@ function DealTile({
         {/* Sleva z Invia feedu — hlavní lákadlo kurátorovaných zájezdů, proto
             výrazně na fotce (vzor úvodky invia.cz); bez slevy se štítek nekreslí. */}
         {typeof deal.discount === 'number' && deal.discount > 0 && (
-          <span className="absolute top-2 right-2 z-10 rounded-full bg-[#d45145] px-2.5 py-0.5 text-[11.5px] font-bold text-white">
+          <span className="absolute top-2 right-2 z-10 rounded-full bg-accent px-2.5 py-0.5 text-[11.5px] font-bold text-white">
             −{deal.discount}&nbsp;%
           </span>
         )}
@@ -169,13 +169,11 @@ function DealTile({
         )}
       </div>
       <div className="px-3 pt-2.5 pb-3">
-        <p className="truncate text-[14.5px] leading-snug font-bold text-[#252a31]">
-          {tileTitle(deal)}
-        </p>
-        <p className="text-[16px] leading-snug font-semibold text-[#1a3f6c] transition-colors group-hover:text-[#2a5a9c]">
+        <p className="truncate text-[14.5px] leading-snug font-bold text-ink">{tileTitle(deal)}</p>
+        <p className="text-[16px] leading-snug font-semibold text-brand-deep transition-colors group-hover:text-brand">
           {priceCzk(deal.price)}
         </p>
-        <p className="truncate text-[11.5px] leading-normal text-[#74808f]">{metaLine}</p>
+        <p className="truncate text-[11.5px] leading-normal text-ink-3">{metaLine}</p>
       </div>
     </a>
   )

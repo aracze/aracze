@@ -47,7 +47,7 @@ export async function ReviewsSection({
           <div className="min-w-0 flex-1">
             <div className="mt-8">
               {reviews.length === 0 && (
-                <p className="py-4 text-[14px] text-gray-500">
+                <p className="py-4 text-[14px] text-ink-3">
                   Zatím tu není žádná recenze. Buď první, kdo se podělí o zážitek!
                 </p>
               )}
@@ -56,7 +56,7 @@ export async function ReviewsSection({
                   key={review.id}
                   review={review}
                   // Jemné oddělovače (jako inline výpis); poslední recenze bez linky.
-                  className={i === reviews.length - 1 ? 'border-b-0' : 'border-[#eceff2]'}
+                  className={i === reviews.length - 1 ? 'border-b-0' : 'border-line'}
                 />
               ))}
             </div>

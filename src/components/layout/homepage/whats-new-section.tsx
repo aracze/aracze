@@ -34,14 +34,14 @@ const KIND_META: Record<
     verb: 'přidává nové místo',
     noAuthor: 'Nové místo',
     Icon: MapPin,
-    badgeBg: 'bg-[#215491]',
+    badgeBg: 'bg-brand',
   },
-  review: { verb: 'hodnotí', noAuthor: 'Recenze', Icon: Star, badgeBg: 'bg-[#d97706]' },
+  review: { verb: 'hodnotí', noAuthor: 'Recenze', Icon: Star, badgeBg: 'bg-warn' },
   comment: {
     verb: 'komentuje článek',
     noAuthor: 'Komentář k článku',
     Icon: MessageCircle,
-    badgeBg: 'bg-[#2f7d9a]',
+    badgeBg: 'bg-brand',
   },
 }
 
@@ -89,10 +89,10 @@ export function WhatsNewSection({
                 setFilter(f.key)
                 setVisibleCount(PAGE_SIZE)
               }}
-              className={`px-3.5 py-1 rounded-full text-[12.5px] font-semibold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215491]/50 ${
+              className={`px-3.5 py-1 rounded-full text-[12.5px] font-semibold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${
                 filter === f.key
-                  ? 'bg-[#215491] border-[#215491] text-white'
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-800'
+                  ? 'bg-brand border-brand text-white'
+                  : 'bg-white border-line text-ink-2 hover:border-line-strong hover:text-ink'
               }`}
             >
               {f.label}
@@ -106,7 +106,7 @@ export function WhatsNewSection({
           <ActivityRow key={item.key} item={item} first={index === 0} renderedAt={renderedAt} />
         ))}
         {shown.length === 0 && (
-          <p className="py-6 text-center text-sm text-gray-400">Zatím tu nic není.</p>
+          <p className="py-6 text-center text-sm text-ink-3">Zatím tu nic není.</p>
         )}
       </div>
 
@@ -141,8 +141,8 @@ function ActivityRow({
     // vnořené <a> jsou nevalidní, takže jméno autora je samostatný odkaz NAD
     // překryvem (z-10).
     <div
-      className={`group relative flex items-start gap-3.5 py-3 px-2.5 rounded-xl hover:bg-gray-50 transition-colors ${
-        first ? '' : 'border-t border-gray-100'
+      className={`group relative flex items-start gap-3.5 py-3 px-2.5 rounded-xl hover:bg-surface transition-colors ${
+        first ? '' : 'border-t border-line'
       }`}
     >
       <span className="relative shrink-0">
@@ -164,7 +164,7 @@ function ActivityRow({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block text-[15.5px] leading-snug text-gray-600">
+        <span className="block text-[15.5px] leading-snug text-ink-2">
           {item.authorName ? (
             <>
               {item.authorUsername ? (
@@ -172,12 +172,12 @@ function ActivityRow({
                 // odkazy jednotně jen barvou (titulek ztmavne, autor zmodrá).
                 <Link
                   href={`/profil/${item.authorUsername}`}
-                  className="relative z-10 font-bold text-gray-900 transition-colors hover:text-[#215491]"
+                  className="relative z-10 font-bold text-ink transition-colors hover:text-brand"
                 >
                   {item.authorName}
                 </Link>
               ) : (
-                <b className="font-bold text-gray-900">{item.authorName}</b>
+                <b className="font-bold text-ink">{item.authorName}</b>
               )}{' '}
               {verb}{' '}
             </>
@@ -188,13 +188,13 @@ function ActivityRow({
               (autoři); u celoklikacího řádku stačí pozadí + ztmavení barvy. */}
           <Link
             href={item.href}
-            className="font-bold text-[#215491] transition-colors group-hover:text-[#1a4579] after:absolute after:inset-0"
+            className="font-bold text-brand transition-colors group-hover:text-brand-deep after:absolute after:inset-0"
           >
             {item.title}
           </Link>
           {item.kind === 'review' && item.rating != null && (
             <span
-              className="ml-1.5 text-[13px] tracking-[0.08em] text-[#d97706]"
+              className="ml-1.5 text-[13px] tracking-[0.08em] text-warn"
               aria-label={`hodnocení ${item.rating} z 5`}
             >
               {'★'.repeat(item.rating)}
@@ -202,8 +202,8 @@ function ActivityRow({
           )}
         </span>
         {(item.context || item.text) && (
-          <span className="block text-sm text-gray-400 truncate mt-0.5">
-            {item.context && <span className="text-gray-500 font-semibold">{item.context}</span>}
+          <span className="block text-sm text-ink-3 truncate mt-0.5">
+            {item.context && <span className="text-ink-3 font-semibold">{item.context}</span>}
             {item.context && item.text && ' — '}
             {item.text && (item.kind === 'place' ? item.text : `„${item.text}"`)}
           </span>
@@ -214,7 +214,7 @@ function ActivityRow({
         <time
           dateTime={item.date ?? undefined}
           title={absolute}
-          className="shrink-0 pt-0.5 text-[13px] text-gray-400 whitespace-nowrap"
+          className="shrink-0 pt-0.5 text-[13px] text-ink-3 whitespace-nowrap"
         >
           {relative}
         </time>

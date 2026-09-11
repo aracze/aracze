@@ -184,7 +184,7 @@ export function ArticleAd({
   useLazyAd(boxRef)
 
   return (
-    <div ref={boxRef} className={`rounded-[15px] bg-[#f6f6f6] p-5 ${className}`}>
+    <div ref={boxRef} className={`rounded-[15px] bg-surface-quiet p-5 ${className}`}>
       <ins
         className="adsbygoogle mx-auto block"
         style={{ display: 'block', width, height }}

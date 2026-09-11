@@ -11,7 +11,7 @@ import { isCloudinary } from '@/lib/cloudinary-loader'
  * kopie s miniaturami 40/46/48 px, rohy 8/12 a titulky černé/modré/šedomodré.
  *
  * Rozhodnutí uživatele (29. 8. 2026, artifact „Výpisy článků", sekce 8):
- *  · rohy miniatur 12 px, titulek modrý #1a3f6c (při najetí #215491) — tučnost
+ *  · rohy miniatur 12 px, titulek modrý `brand-deep` (při najetí `brand`) — tučnost
  *    podle velikosti, viz `thumbTitleClass`; řádky odděluje tenká linka;
  *  · DVĚ velikosti: `md` 48 px pro seznamy k prohlížení, `sm` 44 px pro hustý
  *    rejstřík (panel rubriky s 18+ položkami) — jedna velikost by rejstřík
@@ -55,14 +55,17 @@ export function Thumb({
     )
   }
   return (
-    <span aria-hidden="true" className={cn(box, 'flex items-center justify-center bg-[#1a3f6c]/5')}>
+    <span
+      aria-hidden="true"
+      className={cn(box, 'flex items-center justify-center bg-brand-deep/5')}
+    >
       {fallback}
     </span>
   )
 }
 
 /**
- * Třída titulku řádku — modrý (#1a3f6c), při najetí na řádek světlejší modrá.
+ * Třída titulku řádku — modrý (`brand-deep`), při najetí na řádek světlejší modrá.
  * Tučnost podle velikosti řádku, stejné pravidlo jako u fotodlaždic:
  *  · `md` (48 px — hledání, Co je nového) tučný 700 / 15 px: titulek soutěží
  *    s druhým šedým řádkem a polotučný se tam ztrácel;
@@ -72,7 +75,7 @@ export function Thumb({
  */
 function thumbTitleClass(size: ThumbSize = 'md') {
   return cn(
-    'leading-snug text-[#1a3f6c] transition-colors group-hover:text-[#215491]',
+    'leading-snug text-brand-deep transition-colors group-hover:text-brand',
     size === 'sm' ? 'font-semibold text-[14px]' : 'font-bold text-[15px]',
   )
 }
@@ -116,7 +119,7 @@ export function ThumbRow({
       onClick={onClick}
       className={cn(
         'group flex items-center gap-3 py-2.5',
-        hoverBg && 'rounded-lg px-2 transition-colors hover:bg-gray-50',
+        hoverBg && 'rounded-lg px-2 transition-colors hover:bg-surface',
         className,
       )}
     >

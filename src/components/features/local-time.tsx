@@ -80,7 +80,7 @@ export function LocalTime({
   const wrapper = stacked
     ? `flex flex-col items-center gap-1.5 ${className}`
     : `flex items-baseline justify-center gap-2 py-1 h-[42px] ${className}`
-  const microClass = 'text-[10px] font-bold uppercase tracking-[0.1em] text-[#67747c]'
+  const microClass = 'text-[10px] font-bold uppercase tracking-[0.1em] text-ink-3'
 
   if (!data) {
     return (
@@ -106,7 +106,7 @@ export function LocalTime({
     return (
       <div className={wrapper}>
         <span className={`${microClass} flex h-[15px] items-center`}>{data.day}</span>
-        <span className="text-[26px] leading-none tracking-[0.01rem] text-[#333] tabular-nums">
+        <span className="text-[26px] leading-none tracking-[0.01rem] text-ink tabular-nums">
           {data.time}
         </span>
         {data.offset && (
@@ -121,9 +121,7 @@ export function LocalTime({
   return (
     <div className={wrapper}>
       <span className={microClass}>{data.day}</span>
-      <span className="text-[26px] tracking-[0.01rem] text-[#333] px-2 tabular-nums">
-        {data.time}
-      </span>
+      <span className="text-[26px] tracking-[0.01rem] text-ink px-2 tabular-nums">{data.time}</span>
       {data.offset && <span className={microClass}>{data.offset}</span>}
     </div>
   )

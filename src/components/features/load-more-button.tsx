@@ -23,13 +23,13 @@ type Variant = 'pill' | 'text'
 const VARIANT: Record<Variant, { button: string; icon: string }> = {
   pill: {
     button:
-      'inline-flex items-center gap-2 rounded-full border-2 border-[#215491]/30 px-7 py-3 text-sm font-bold uppercase tracking-wider text-[#215491] font-heading transition-all hover:border-[#215491] hover:bg-[#215491] hover:text-white',
+      'inline-flex items-center gap-2 rounded-full border-2 border-brand/30 px-7 py-3 text-sm font-bold uppercase tracking-wider text-brand font-heading transition-all hover:border-brand hover:bg-brand hover:text-white',
     icon: 'h-4 w-4',
   },
   text: {
     // py-2: dotyková plocha ≥ 24 px (WCAG 2.5.8) i u holého textu.
     button:
-      'inline-flex items-center gap-1.5 py-2 text-[13px] font-semibold text-[#1a3f6c] transition-colors hover:text-[#215491] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215491]/50 rounded',
+      'inline-flex items-center gap-1.5 py-2 text-[13px] font-semibold text-brand-deep transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded',
     icon: 'h-3.5 w-3.5',
   },
 }

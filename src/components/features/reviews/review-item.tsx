@@ -30,7 +30,7 @@ export function ReviewItem({
   return (
     <article
       id={`recenze-${review.id}`}
-      className={cn('flex gap-4 border-b border-[#d7d7d7] py-4', className)}
+      className={cn('flex gap-4 border-b border-line py-4', className)}
     >
       <div className="shrink-0 pt-2">
         {profileHref ? (
@@ -43,7 +43,7 @@ export function ReviewItem({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="pb-1 pt-2 text-[17px] tracking-[1px] text-[#565656]">
+        <div className="pb-1 pt-2 text-[17px] tracking-[1px] text-ink-2">
           {profileHref ? (
             <Link href={profileHref} className="hover:underline">
               {review.authorName}
@@ -53,7 +53,7 @@ export function ReviewItem({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] leading-none text-[#a6b0b9]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] leading-none text-ink-3">
           {/* inline-flex: bez něj se hvězdičky (SVG) zarovnají na účaří textu
               a vůči datu „uskakují" nahoru — flex je vycentruje na střed řádku. */}
           <span className="inline-flex items-center">
@@ -67,7 +67,7 @@ export function ReviewItem({
         </div>
 
         {/* Text recenze je čistý plaintext (migrace HTML neobsahuje) — zalomení řádků zachováme. */}
-        <p className="mt-2 whitespace-pre-line break-words leading-relaxed text-[#2c3643]">
+        <p className="mt-2 whitespace-pre-line break-words leading-relaxed text-ink">
           {review.body}
         </p>
       </div>

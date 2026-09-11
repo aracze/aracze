@@ -36,7 +36,7 @@ export function AuthPageShell({
     <>
       {/* Nižší hero než na obsahových stránkách (je to jen rám formuláře), ale
           dost vysoké na to, aby se titulek nelepil na menu webu. */}
-      <section className="relative h-[260px] w-full bg-[#3b444f]">
+      <section className="relative h-[260px] w-full bg-dusk">
         <div className="absolute inset-0 overflow-hidden">
           <StaticHeroImage imageUrl={AUTH_COVER_URL} alt="" styleCss="object-position: 50% 42%" />
         </div>
@@ -54,7 +54,7 @@ export function AuthPageShell({
           <h1 className="text-center font-heading text-[30px] font-semibold text-white md:text-[36px]">
             {title}
           </h1>
-          <div className="mt-3 h-px w-[30px] rounded-full bg-[#D7E1EF]" />
+          <div className="mt-3 h-px w-[30px] rounded-full bg-brand-tint" />
         </div>
         <StaticHeroWave />
       </section>
@@ -64,23 +64,23 @@ export function AuthPageShell({
           <div className="mx-auto mb-6 max-w-[430px]">
             <Link
               href={backHref}
-              className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-[#8a939b] transition-colors hover:text-[#215491]"
+              className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-ink-3 transition-colors hover:text-brand"
             >
               <ArrowLeft className="h-4 w-4" />
               {backLabel ?? 'Zpět'}
             </Link>
           </div>
         )}
-        <div className="mx-auto max-w-[430px] rounded-2xl bg-white p-7 shadow-[0_10px_34px_rgba(15,30,50,0.10)] ring-1 ring-[#eef1f4] sm:p-8">
+        <div className="mx-auto max-w-[430px] rounded-2xl bg-white p-7 shadow-[0_10px_34px_rgba(15,30,50,0.10)] ring-1 ring-line sm:p-8">
           {/* Papoušek a věta „proč to dělám" jsou UVNITŘ karty, stejně jako
               v přihlašovacím okně — obsah je pak v okně i na stránce totožný
               a nadpis se neopakuje dvakrát (ten je ve fotce nahoře). */}
           {subtitle && (
             <div className="mb-6 flex flex-col items-center">
-              <span className="mb-3.5 grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-[#2f7d9a] to-[#215491]">
+              <span className="mb-3.5 grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-brand to-brand">
                 <Image src="/assets/avatar-parrot.png" alt="" width={32} height={32} unoptimized />
               </span>
-              <p className="max-w-[300px] text-center text-[14.5px] leading-relaxed text-[#8a939b]">
+              <p className="max-w-[300px] text-center text-[14.5px] leading-relaxed text-ink-3">
                 {subtitle}
               </p>
             </div>

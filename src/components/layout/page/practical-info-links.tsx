@@ -78,15 +78,15 @@ export function PracticalInfoLinks({ genitive, items }: PracticalInfoLinksProps)
       <div className="mx-auto max-w-7xl px-4 md:px-12">
         {/* Nadpis ve stejném vzoru jako sousední sekce („Příprava do…", články). */}
         <div className="mb-12 flex flex-col items-center text-center">
-          <h2 className="font-heading mb-3 text-3xl font-bold tracking-tight text-[#1a3f6c]">
+          <h2 className="font-heading mb-3 text-3xl font-bold tracking-tight text-brand-deep">
             Praktické informace {genitive}
           </h2>
-          <div className="h-[1px] w-[30px] rounded-full bg-[#d45145]"></div>
+          <div className="h-[1px] w-[30px] rounded-full bg-accent"></div>
         </div>
 
         {/* Ikony na kruhovém podkladu (volba uživatele 28. 8. 2026) — kruhy
-            přebírají barvy karet sekce Příprava do… (podklad #f3f6fa, rámeček
-            #e0e8f1), ať se sekce od zbytku webu neliší. Hover = nadzvednutí
+            přebírají barvy karet sekce Příprava do… (podklad `surface`, rámeček
+            `line`), ať se sekce od zbytku webu neliší. Hover = nadzvednutí
             se stínem jako u karet. Mezery: od xl drží všech 8 dlaždic jednu
             řadu (8×96 + 7×56 = 1160 < 1184 vnitřní šířky max-w-7xl); pod xl
             platí menší mezera (40 px), takže běžných 7 dlaždic drží řadu už
@@ -95,10 +95,10 @@ export function PracticalInfoLinks({ genitive, items }: PracticalInfoLinksProps)
           {items.map(({ def, href }) => (
             <li key={def.category}>
               <Link href={href} className="group flex w-24 flex-col items-center gap-4">
-                <span className="flex size-[88px] items-center justify-center rounded-full border border-[#e0e8f1] bg-[#f3f6fa] text-[#1a3f6c] transition-all duration-300 [--sun-mask:#f3f6fa] group-hover:-translate-y-0.5 group-hover:text-[#2a5a9c] group-hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]">
+                <span className="flex size-[88px] items-center justify-center rounded-full border border-line bg-surface text-brand-deep transition-all duration-300 [--sun-mask:var(--color-surface)] group-hover:-translate-y-0.5 group-hover:text-brand group-hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]">
                   {def.icon}
                 </span>
-                <span className="text-[16px] leading-none font-semibold text-[#333d49] transition-colors group-hover:text-[#2a5a9c]">
+                <span className="text-[16px] leading-none font-semibold text-ink transition-colors group-hover:text-brand">
                   {def.label}
                 </span>
               </Link>

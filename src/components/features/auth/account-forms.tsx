@@ -16,9 +16,9 @@ import {
  */
 
 const inputClass =
-  'w-full rounded-xl border-[1.5px] border-[#e6eaee] bg-white px-3.5 py-3 text-[15px] text-[#2c3643] outline-none transition focus:border-[#215491] focus:ring-[3px] focus:ring-[#e9f1f9]'
+  'w-full rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-[15px] text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint'
 
-const labelClass = 'mb-1.5 block text-sm font-semibold text-gray-500'
+const labelClass = 'mb-1.5 block text-sm font-semibold text-ink-3'
 
 function Message({ state }: { state: AccountFormState }) {
   if (state.status === 'idle') return null
@@ -27,7 +27,7 @@ function Message({ state }: { state: AccountFormState }) {
     <p
       role={error ? 'alert' : 'status'}
       className={`mb-4 rounded-xl px-4 py-3 text-[14px] font-medium ${
-        error ? 'bg-[#fdeceb] text-[#a3271d]' : 'bg-[#e8f5ee] text-[#1f6b45]'
+        error ? 'bg-err-bg text-err' : 'bg-ok-bg text-ok'
       }`}
     >
       {state.message}
@@ -91,7 +91,7 @@ export function ChangePasswordForm() {
       <button
         type="submit"
         disabled={pending}
-        className="mt-5 whitespace-nowrap rounded-full bg-[#215491] px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#1a3f6c] disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-5 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? 'Měním…' : 'Změnit heslo'}
       </button>
@@ -112,7 +112,7 @@ export function DeleteAccountForm({ publicName }: { publicName: string }) {
   if (!open) {
     return (
       <>
-        <p className="mb-4 max-w-[560px] text-[14.5px] leading-relaxed text-[#5b666e]">
+        <p className="mb-4 max-w-[560px] text-[14.5px] leading-relaxed text-ink-2">
           Účet zmizí i s profilem. Tvoje komentáře a recenze v diskusích zůstanou — jen přestanou
           být propojené s účtem, takže se budou chovat jako od nepřihlášeného. Smazat je celé nejde
           proto, že by z diskusí zmizely i odpovědi ostatních.
@@ -120,7 +120,7 @@ export function DeleteAccountForm({ publicName }: { publicName: string }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-full border-2 border-[#e3c4c0] px-6 py-2 font-heading text-[12.5px] font-bold uppercase tracking-wider text-[#a3271d] transition-colors hover:border-[#a3271d]"
+          className="rounded-full border-2 border-err/30 px-6 py-2 font-heading text-[12.5px] font-bold uppercase tracking-wider text-err transition-colors hover:border-err"
         >
           Chci smazat účet
         </button>
@@ -131,7 +131,7 @@ export function DeleteAccountForm({ publicName }: { publicName: string }) {
   return (
     <form action={formAction} className="max-w-[520px]">
       <Message state={state} />
-      <div className="rounded-2xl bg-[#fdf4f3] p-5">
+      <div className="rounded-2xl bg-err-bg p-5">
         <div className="mb-4">
           <label htmlFor={passwordId} className={labelClass}>
             Pro jistotu zadej heslo
@@ -149,14 +149,14 @@ export function DeleteAccountForm({ publicName }: { publicName: string }) {
 
         <label
           htmlFor={removeNameId}
-          className="mb-3 flex cursor-pointer items-start gap-2.5 text-[14px] leading-snug text-[#2c3643]"
+          className="mb-3 flex cursor-pointer items-start gap-2.5 text-[14px] leading-snug text-ink"
         >
           <input
             id={removeNameId}
             name="removeName"
             type="checkbox"
             value="1"
-            className="mt-0.5 h-4 w-4 shrink-0 accent-[#a3271d]"
+            className="mt-0.5 h-4 w-4 shrink-0 accent-err"
           />
           <span>
             Odstranit u příspěvků i moje jméno <b>{publicName}</b> — nahradí se za „Smazaný
@@ -166,7 +166,7 @@ export function DeleteAccountForm({ publicName }: { publicName: string }) {
 
         <label
           htmlFor={confirmId}
-          className="flex cursor-pointer items-start gap-2.5 text-[14px] leading-snug text-[#2c3643]"
+          className="flex cursor-pointer items-start gap-2.5 text-[14px] leading-snug text-ink"
         >
           <input
             id={confirmId}
@@ -174,7 +174,7 @@ export function DeleteAccountForm({ publicName }: { publicName: string }) {
             type="checkbox"
             value="1"
             required
-            className="mt-0.5 h-4 w-4 shrink-0 accent-[#a3271d]"
+            className="mt-0.5 h-4 w-4 shrink-0 accent-err"
           />
           <span>Rozumím, že smazání účtu už nejde vzít zpět.</span>
         </label>
@@ -184,14 +184,14 @@ export function DeleteAccountForm({ publicName }: { publicName: string }) {
         <button
           type="submit"
           disabled={pending}
-          className="whitespace-nowrap rounded-full bg-[#a3271d] px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#821f17] disabled:cursor-not-allowed disabled:opacity-60"
+          className="whitespace-nowrap rounded-full bg-err px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? 'Mažu…' : 'Smazat účet'}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-[14px] text-[#8a939b] underline decoration-[#c9d4e0] hover:text-[#215491]"
+          className="text-[14px] text-ink-3 underline decoration-line-strong hover:text-brand"
         >
           Zrušit
         </button>

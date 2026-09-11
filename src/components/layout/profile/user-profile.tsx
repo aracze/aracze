@@ -127,7 +127,7 @@ export function UserProfile({
           okraje — horní čtvrtinu tak zakrývala navigační lišta (65 px), najetí
           na fotku otevíralo menu a klik neprošel. Vyšší hlavička drží avatar
           na stejném místě (74 px) jako na veřejném profilu. */}
-      <section className={`relative w-full bg-[#3b444f] ${editing ? 'h-[375px]' : 'h-[315px]'}`}>
+      <section className={`relative w-full bg-dusk ${editing ? 'h-[375px]' : 'h-[315px]'}`}>
         <div className="absolute inset-0 overflow-hidden">
           <StaticHeroImage
             imageUrl={DEFAULT_COVER_URL}
@@ -217,7 +217,7 @@ export function UserProfile({
                 @{profile.username}
               </p>
             ) : (
-              <div className="relative mt-4 h-px w-[30px] rounded-full bg-[#D7E1EF]" />
+              <div className="relative mt-4 h-px w-[30px] rounded-full bg-brand-tint" />
             )}
           </div>
         </div>
@@ -236,10 +236,10 @@ export function UserProfile({
                 místě — profil zůstává profilem, jen jeho části jdou psát. */}
             {editing && (
               <div className="mx-auto max-w-[560px] text-left">
-                <div className="relative rounded-xl border-2 border-dashed border-[#c9d4e0] p-3 transition-colors focus-within:border-[#215491] hover:border-[#9fb3c8]">
+                <div className="relative rounded-xl border-2 border-dashed border-line-strong p-3 transition-colors focus-within:border-brand hover:border-line-strong">
                   <label
                     htmlFor="profil-o-mne"
-                    className="absolute -top-2.5 left-3 bg-white px-1.5 text-[11px] font-bold uppercase tracking-wider text-[#8a939b]"
+                    className="absolute -top-2.5 left-3 bg-white px-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-3"
                   >
                     O mně
                   </label>
@@ -250,19 +250,19 @@ export function UserProfile({
                     maxLength={MAX_DESCRIPTION}
                     defaultValue={profile.description ?? ''}
                     placeholder="Napiš pár vět o sobě…"
-                    className="w-full resize-y bg-transparent text-center text-[17px] leading-relaxed text-[#4a4a4a] outline-none placeholder:text-[#b6c0ca]"
+                    className="w-full resize-y bg-transparent text-center text-[17px] leading-relaxed text-ink-2 outline-none placeholder:text-ink-3"
                   />
                 </div>
 
                 <div className="mt-4 flex items-center justify-center gap-2">
-                  <Globe aria-hidden="true" className="h-4 w-4 shrink-0 text-[#215491]" />
+                  <Globe aria-hidden="true" className="h-4 w-4 shrink-0 text-brand" />
                   <input
                     name="myWebUrl"
                     defaultValue={profile.myWebUrl ?? ''}
                     maxLength={MAX_URL}
                     placeholder="www.mujweb.cz"
                     aria-label="Webové stránky"
-                    className="w-[250px] rounded-md border-2 border-dashed border-[#c9d4e0] bg-transparent px-2 py-1 text-center text-[15px] text-[#215491] outline-none transition-colors placeholder:text-[#b6c0ca] hover:border-[#9fb3c8] focus:border-[#215491]"
+                    className="w-[250px] rounded-md border-2 border-dashed border-line-strong bg-transparent px-2 py-1 text-center text-[15px] text-brand outline-none transition-colors placeholder:text-ink-3 hover:border-line-strong focus:border-brand"
                   />
                 </div>
 
@@ -272,18 +272,18 @@ export function UserProfile({
               </div>
             )}
             {!editing && profile.description && (
-              <p className="whitespace-pre-line text-[17px] leading-relaxed text-[#4a4a4a]">
+              <p className="whitespace-pre-line text-[17px] leading-relaxed text-ink-2">
                 {profile.description}
               </p>
             )}
             {!editing && profile.myWebUrl && (
               <p className="mt-4 flex items-center justify-center gap-2 text-[15px]">
-                <Globe aria-hidden="true" className="h-4 w-4 shrink-0 text-[#215491]" />
+                <Globe aria-hidden="true" className="h-4 w-4 shrink-0 text-brand" />
                 <a
                   href={websiteHref(profile.myWebUrl)}
                   target="_blank"
                   rel="nofollow noopener noreferrer"
-                  className="text-[#215491] hover:underline"
+                  className="text-brand hover:underline"
                 >
                   {websiteLabel(profile.myWebUrl)}
                 </a>
@@ -296,7 +296,7 @@ export function UserProfile({
               <p className="mt-6">
                 <Link
                   href={`/profil/${encodeURIComponent(profile.username)}?upravit=1`}
-                  className="inline-flex items-center gap-2 rounded-full border-2 border-[#c9d4e0] px-6 py-2 font-heading text-[12.5px] font-bold uppercase tracking-wider text-[#5b666e] transition-colors hover:border-[#215491] hover:text-[#215491]"
+                  className="inline-flex items-center gap-2 rounded-full border-2 border-line-strong px-6 py-2 font-heading text-[12.5px] font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
                 >
                   <Pencil aria-hidden="true" className="h-[13px] w-[13px]" strokeWidth={2.2} />
                   Upravit profil
@@ -315,12 +315,12 @@ export function UserProfile({
                     <li key={s.href}>
                       <a
                         href={s.href}
-                        className="flex min-w-[96px] flex-col items-center gap-0.5 rounded-lg px-4 py-2 hover:bg-[#f0f4f9]"
+                        className="flex min-w-[96px] flex-col items-center gap-0.5 rounded-lg px-4 py-2 hover:bg-surface"
                       >
-                        <span className="font-heading text-[24px] font-bold leading-tight text-[#215491] tabular-nums">
+                        <span className="font-heading text-[24px] font-bold leading-tight text-brand tabular-nums">
                           {s.count}
                         </span>
-                        <span className="text-[13px] text-[#5b666e]">{s.label}</span>
+                        <span className="text-[13px] text-ink-2">{s.label}</span>
                       </a>
                     </li>
                   ))}
@@ -457,11 +457,11 @@ export function UserProfile({
 function SectionHeading({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="mb-12 flex flex-col items-center text-center">
-      <h2 className="mb-3 font-heading text-3xl font-bold tracking-tight text-[#1a3f6c]">
+      <h2 className="mb-3 font-heading text-3xl font-bold tracking-tight text-brand-deep">
         {title}
       </h2>
-      <div className="mb-5 h-[1px] w-[30px] rounded-full bg-[#d45145]" />
-      <p className="max-w-xl text-[17px] leading-relaxed text-gray-400">{subtitle}</p>
+      <div className="mb-5 h-[1px] w-[30px] rounded-full bg-accent" />
+      <p className="max-w-xl text-[17px] leading-relaxed text-ink-3">{subtitle}</p>
     </div>
   )
 }
@@ -485,7 +485,7 @@ function CardSection({
   children: React.ReactNode[]
 }) {
   return (
-    <section id={id} className={`w-full py-16 ${shaded ? 'bg-gray-50/50' : 'bg-white'}`}>
+    <section id={id} className={`w-full py-16 ${shaded ? 'bg-surface/50' : 'bg-white'}`}>
       <div className="mx-auto max-w-7xl px-4 md:px-12">
         <SectionHeading title={title} subtitle={subtitle} />
         <ProfileCardGrid moreNoun={moreNoun}>{children}</ProfileCardGrid>

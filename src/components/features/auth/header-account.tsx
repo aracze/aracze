@@ -236,7 +236,7 @@ function LoginTrigger({
       {open && (
         <>
           {/* Ztmavení pozadí — modál stojí nad obsahem stránky. */}
-          <div className="fixed inset-0 z-[300] bg-[#0a1626]/55 animate-in fade-in duration-150 motion-reduce:animate-none" />
+          <div className="fixed inset-0 z-[300] bg-night/55 animate-in fade-in duration-150 motion-reduce:animate-none" />
           <div className="fixed inset-0 z-[310] grid place-items-center overflow-y-auto p-4">
             <div
               ref={panelRef}
@@ -254,7 +254,7 @@ function LoginTrigger({
                   triggerRef.current?.focus()
                 }}
                 aria-label="Zavřít"
-                className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full text-[#8a939b] transition-colors hover:bg-[#f0f4f9] hover:text-[#2c3643]"
+                className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full text-ink-3 transition-colors hover:bg-surface hover:text-ink"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -264,7 +264,7 @@ function LoginTrigger({
                 <button
                   type="button"
                   onClick={() => setView('login')}
-                  className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[13px] font-semibold text-[#8a939b] transition-colors hover:text-[#215491]"
+                  className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[13px] font-semibold text-ink-3 transition-colors hover:text-brand"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Zpět
@@ -276,7 +276,7 @@ function LoginTrigger({
               <div className="mb-6 flex flex-col items-center">
                 {/* Kolečko 48 px, papoušek 32 px = poměr 0,667 (stejný jako
                     v hlavičce). Menší kolečko s poměrem 0,64 působilo drobně. */}
-                <span className="mb-3.5 grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-[#2f7d9a] to-[#215491]">
+                <span className="mb-3.5 grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-brand to-brand">
                   <Image
                     src="/assets/avatar-parrot.png"
                     alt=""
@@ -285,10 +285,10 @@ function LoginTrigger({
                     unoptimized
                   />
                 </span>
-                <h2 id={titleId} className="font-heading text-[20px] font-bold text-[#1a3f6c]">
+                <h2 id={titleId} className="font-heading text-[20px] font-bold text-brand-deep">
                   {HEADINGS[view].title}
                 </h2>
-                <p className="mt-1.5 text-center text-[14.5px] leading-relaxed text-[#8a939b]">
+                <p className="mt-1.5 text-center text-[14.5px] leading-relaxed text-ink-3">
                   {HEADINGS[view].subtitle}
                 </p>
               </div>
@@ -344,14 +344,14 @@ function AccountMenu({ user }: { user: CurrentUser }) {
           ref={panelRef}
           className="absolute right-0 top-[calc(100%+10px)] z-[300] w-[248px] overflow-hidden rounded-xl bg-white shadow-[0_12px_32px_rgba(15,30,50,0.20)] ring-1 ring-black/5 animate-in fade-in slide-in-from-top-1 duration-150 motion-reduce:animate-none"
         >
-          <div className="flex items-center gap-3 border-b border-[#eef1f4] px-4 py-3.5">
+          <div className="flex items-center gap-3 border-b border-line px-4 py-3.5">
             <UserAvatar name={user.displayName} avatarUrl={user.avatarUrl} size={40} />
             <span className="min-w-0">
-              <span className="block truncate font-heading text-[15px] font-bold text-[#1a3f6c]">
+              <span className="block truncate font-heading text-[15px] font-bold text-brand-deep">
                 {user.displayName}
               </span>
               {user.username && (
-                <span className="block truncate text-[13px] text-[#8a939b]">@{user.username}</span>
+                <span className="block truncate text-[13px] text-ink-3">@{user.username}</span>
               )}
             </span>
           </div>
@@ -361,9 +361,9 @@ function AccountMenu({ user }: { user: CurrentUser }) {
             <Link
               href={user.profileHref}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-4 py-3 text-[14.5px] text-[#2c3643] transition-colors hover:bg-[#f5f8fb]"
+              className="flex items-center gap-3 px-4 py-3 text-[14.5px] text-ink transition-colors hover:bg-surface"
             >
-              <UserIcon className="h-4 w-4 text-[#215491]" aria-hidden="true" />
+              <UserIcon className="h-4 w-4 text-brand" aria-hidden="true" />
               Můj profil
             </Link>
           )}
@@ -371,20 +371,20 @@ function AccountMenu({ user }: { user: CurrentUser }) {
           <Link
             href="/nastaveni"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-3 px-4 py-3 text-[14.5px] text-[#2c3643] transition-colors hover:bg-[#f5f8fb]"
+            className="flex items-center gap-3 px-4 py-3 text-[14.5px] text-ink transition-colors hover:bg-surface"
           >
-            <Settings className="h-4 w-4 text-[#215491]" aria-hidden="true" />
+            <Settings className="h-4 w-4 text-brand" aria-hidden="true" />
             Nastavení účtu
           </Link>
 
           {/* Odhlášení je FORMULÁŘ (POST), ne odkaz — odhlášení je změna stavu
               a nemá se dát vyvolat prostým navštívením adresy. */}
-          <form action={logoutAction} className="border-t border-[#eef1f4]">
+          <form action={logoutAction} className="border-t border-line">
             <button
               type="submit"
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[14.5px] text-[#2c3643] transition-colors hover:bg-[#f5f8fb]"
+              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[14.5px] text-ink transition-colors hover:bg-surface"
             >
-              <LogOut className="h-4 w-4 text-[#215491]" aria-hidden="true" />
+              <LogOut className="h-4 w-4 text-brand" aria-hidden="true" />
               Odhlásit se
             </button>
           </form>

@@ -173,12 +173,12 @@ export function InlineReviews({
           neodřízne ho od cíle (plné linky jsou vyhrazené oddělovačům MEZI cíli).
           Odlehčená ozvěna lišty „Byl jsi zde?" z detailu cíle; obrysové tlačítko
           je stejné jako u komentářů pod články. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e3e9ef] bg-white px-4 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white px-4 py-2.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h3 className="text-[15px] font-bold text-[#215491]">
+          <h3 className="text-[15px] font-bold text-brand">
             Byl jsi zde? Ohodnoť to!
             {reviews && reviews.length > 0 && (
-              <span className="ml-2 font-normal text-[#7e93a8]">
+              <span className="ml-2 font-normal text-ink-3">
                 · {reviews.length} {reviewsCountLabel(reviews.length)}
               </span>
             )}
@@ -192,7 +192,7 @@ export function InlineReviews({
         <button
           type="button"
           onClick={openForm}
-          className="whitespace-nowrap rounded-full border-[1.5px] border-[#215491] px-5 py-1.5 text-[13px] font-bold text-[#215491] transition-colors hover:bg-[#215491] hover:text-white"
+          className="whitespace-nowrap rounded-full border-[1.5px] border-brand px-5 py-1.5 text-[13px] font-bold text-brand transition-colors hover:bg-brand hover:text-white"
         >
           Napsat recenzi
         </button>
@@ -202,7 +202,7 @@ export function InlineReviews({
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="mt-4 rounded-xl border border-[#e6eaee] bg-[#fafafa] px-4 py-5"
+          className="mt-4 rounded-xl border border-line bg-surface px-4 py-5"
         >
           <input type="hidden" name="pageId" value={pageId} />
           <input type="hidden" name="renderedAt" value={renderedAt} />
@@ -220,7 +220,7 @@ export function InlineReviews({
           {signedAs ? (
             <div className="mb-4 flex items-center gap-3">
               <UserAvatar name={signedAs.displayName} avatarUrl={signedAs.avatarUrl} size={34} />
-              <p className="text-[14px] text-[#2c3643]">
+              <p className="text-[14px] text-ink">
                 Píšeš jako <b>{signedAs.displayName}</b>
               </p>
             </div>
@@ -228,7 +228,7 @@ export function InlineReviews({
             <div className="mb-4 max-w-xs">
               <label
                 htmlFor={`inline-review-name-${pageId}`}
-                className="mb-1.5 block text-sm font-semibold text-gray-500"
+                className="mb-1.5 block text-sm font-semibold text-ink-3"
               >
                 Jméno
               </label>
@@ -239,21 +239,21 @@ export function InlineReviews({
                 required
                 maxLength={80}
                 placeholder="Tvé jméno"
-                className="w-full rounded-xl border-[1.5px] border-[#e6eaee] bg-white px-3.5 py-3 text-[15px] text-[#2c3643] outline-none transition focus:border-[#215491] focus:ring-[3px] focus:ring-[#e9f1f9]"
+                className="w-full rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-[15px] text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
               />
               <LoginHint backTo={`${pathname}#recenze`} noun="recenze" />
             </div>
           )}
 
           <div className="mb-3">
-            <span className="mb-1.5 block text-sm font-semibold text-gray-500">Tvé hodnocení</span>
+            <span className="mb-1.5 block text-sm font-semibold text-ink-3">Tvé hodnocení</span>
             <StarInput value={rating} onSelect={setRating} />
           </div>
 
           <div className="mb-4">
             <label
               htmlFor={`inline-review-body-${pageId}`}
-              className="mb-1.5 block text-sm font-semibold text-gray-500"
+              className="mb-1.5 block text-sm font-semibold text-ink-3"
             >
               Recenze
             </label>
@@ -265,7 +265,7 @@ export function InlineReviews({
               maxLength={5000}
               rows={5}
               placeholder="Poděl se o své zkušenosti a zážitky a buď inspirací pro ostatní cestovatele. Odkazy či jiné html prvky nelze vkládat pro snížení spamu bez přidané hodnoty."
-              className="min-h-[100px] w-full resize-y rounded-xl border-[1.5px] border-[#e6eaee] bg-white px-3.5 py-3 text-[15px] leading-relaxed text-[#2c3643] outline-none transition focus:border-[#215491] focus:ring-[3px] focus:ring-[#e9f1f9]"
+              className="min-h-[100px] w-full resize-y rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-[15px] leading-relaxed text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
             />
           </div>
 
@@ -292,12 +292,12 @@ export function InlineReviews({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-[#215491] px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#1a3f6c] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isPending ? 'Odesílám…' : 'Vložit recenzi'}
             </button>
             {!turnstileSiteKey && authResolved && !signedAs && (
-              <span className="text-[12.5px] text-gray-500">
+              <span className="text-[12.5px] text-ink-3">
                 Chráněno proti spamu · bez opisování captchy
               </span>
             )}
@@ -307,15 +307,15 @@ export function InlineReviews({
 
       <div className="mt-2">
         {reviews === null && !loadError && (
-          <p className="py-4 text-[14px] text-gray-500">Načítám recenze…</p>
+          <p className="py-4 text-[14px] text-ink-3">Načítám recenze…</p>
         )}
         {loadError && (
-          <p className="py-4 text-[14px] text-gray-500">
+          <p className="py-4 text-[14px] text-ink-3">
             Recenze se nepodařilo načíst. Zkus to prosím později.
           </p>
         )}
         {reviews && reviews.length === 0 && (
-          <p className="py-4 text-[14px] text-gray-500">
+          <p className="py-4 text-[14px] text-ink-3">
             Zatím tu není žádná recenze. Buď první, kdo se podělí o zážitek!
           </p>
         )}
@@ -326,9 +326,7 @@ export function InlineReviews({
             // Jemnější oddělovače uvnitř karty cíle; poslední recenze bez linky,
             // ať se nesráží s (světlejším) oddělovačem mezi cíli.
             className={
-              i === visibleReviews.length - 1 && hiddenCount === 0
-                ? 'border-b-0'
-                : 'border-[#eceff2]'
+              i === visibleReviews.length - 1 && hiddenCount === 0 ? 'border-b-0' : 'border-line'
             }
           />
         ))}

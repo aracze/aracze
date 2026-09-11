@@ -142,11 +142,11 @@ export function DealsSection({ genitive, placeTitle, placeImageUrl, deals }: Dea
       <div className="mx-auto max-w-7xl px-4 md:px-12">
         {/* Nadpis ve stejném vzoru jako sousední sekce („Co vidět…", Příprava). */}
         <div className="mb-12 flex flex-col items-center text-center">
-          <h2 className="font-heading mb-3 text-3xl font-bold tracking-tight text-[#1a3f6c]">
+          <h2 className="font-heading mb-3 text-3xl font-bold tracking-tight text-brand-deep">
             Akční nabídky {genitive}
           </h2>
-          <div className="mb-5 h-[1px] w-[30px] rounded-full bg-[#d45145]"></div>
-          <p className="max-w-xl text-[17px] leading-relaxed text-gray-400">
+          <div className="mb-5 h-[1px] w-[30px] rounded-full bg-accent"></div>
+          <p className="max-w-xl text-[17px] leading-relaxed text-ink-3">
             Ceny se obnovují každý den, tak ať ti nabídka neuteče.
           </p>
         </div>
@@ -184,11 +184,11 @@ export function DealsSection({ genitive, placeTitle, placeImageUrl, deals }: Dea
 export function Badge({ kind, onPhoto = false }: { kind: 'flight' | 'tour'; onPhoto?: boolean }) {
   const palette = onPhoto
     ? kind === 'flight'
-      ? 'bg-white/95 text-[#1a3f6c]'
-      : 'bg-white/95 text-[#b8433a]'
+      ? 'bg-white/95 text-brand-deep'
+      : 'bg-white/95 text-accent'
     : kind === 'flight'
-      ? 'bg-[#eaf1f8] text-[#1a3f6c]'
-      : 'bg-[#fdf0ec] text-[#b8433a]'
+      ? 'bg-brand-tint text-brand-deep'
+      : 'bg-accent-bg text-accent-ink'
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10.5px] font-bold tracking-[0.09em] uppercase ${palette}`}
@@ -212,7 +212,7 @@ export function Badge({ kind, onPhoto = false }: { kind: 'flight' | 'tour'; onPh
 export function UsualPriceBadge({ percent }: { percent: number }) {
   return (
     <span
-      className="inline-flex items-center rounded-full bg-[#1a3f6c] px-2.5 py-0.5 text-[10.5px] font-bold tracking-[0.02em] text-white"
+      className="inline-flex items-center rounded-full bg-brand-deep px-2.5 py-0.5 text-[10.5px] font-bold tracking-[0.02em] text-white"
       title={`O ${percent} % levnější než obvyklá cena za posledních 90 dní`}
     >
       −{percent}&nbsp;% než&nbsp;obvykle
@@ -235,7 +235,7 @@ function Route({
 }) {
   return (
     <span
-      className={`flex items-center gap-1.5 leading-snug font-bold text-[#252a31] ${className ?? ''}`}
+      className={`flex items-center gap-1.5 leading-snug font-bold text-ink ${className ?? ''}`}
     >
       {departure || 'Praha'}
       <SwapIcon className="h-4 w-4" />
@@ -271,9 +271,9 @@ function DealRowCard({
       href={href}
       target="_blank"
       rel="nofollow sponsored noopener"
-      className="group flex gap-3.5 rounded-xl border border-[#e6ebf1] bg-white p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]"
+      className="group flex gap-3.5 rounded-xl border border-line bg-white p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]"
     >
-      <div className="relative min-h-[104px] w-[152px] shrink-0 overflow-hidden rounded-[9px] bg-[#e6ebf1]">
+      <div className="relative min-h-[104px] w-[152px] shrink-0 overflow-hidden rounded-[9px] bg-surface-2">
         {imageUrl && <DealCardImage src={imageUrl} alt={placeTitle} aspect="3:2" sizes="152px" />}
       </div>
       <div className="flex min-w-0 flex-col justify-center gap-0.5">
@@ -282,10 +282,10 @@ function DealRowCard({
           {belowUsual != null && <UsualPriceBadge percent={belowUsual} />}
         </span>
         <Route placeTitle={placeTitle} departure={departure} className="text-[15px]" />
-        <p className="text-[17px] leading-snug font-semibold text-[#1a3f6c] transition-colors group-hover:text-[#2a5a9c]">
+        <p className="text-[17px] leading-snug font-semibold text-brand-deep transition-colors group-hover:text-brand">
           {priceLine}
         </p>
-        <p className="truncate text-[12px] leading-normal text-[#74808f]">{metaLine}</p>
+        <p className="truncate text-[12px] leading-normal text-ink-3">{metaLine}</p>
       </div>
     </a>
   )

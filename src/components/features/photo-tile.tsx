@@ -33,8 +33,8 @@ export const PHOTO_TILE_FRAME =
 /** Náhradní podklad bez fotky — jeden pro dlaždice i karty článků. */
 export function NoPreview() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1a3f6c]/5 to-[#1a3f6c]/10">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1a3f6c]/20">
+    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-brand-deep/5 to-brand-deep/10">
+      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-deep/20">
         Bez náhledu
       </span>
     </div>

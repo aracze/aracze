@@ -138,7 +138,7 @@ function buildInfoWindowContent(marker: MapMarker): string {
          alt="${safeTitle}"
          style="display:block;width:100%;height:126px;object-fit:cover;"
        />`
-    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:126px;background:linear-gradient(135deg,#d9e6f5,#f2f7fd);color:#6f89aa;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Bez náhledu</div>`
+    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:126px;background:linear-gradient(135deg,var(--color-surface-2),var(--color-surface));color:var(--color-ink-3);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Bez náhledu</div>`
 
   return `<div style="width:220px;">
     <a href="${safeLink}" style="text-decoration:none;color:inherit;display:block;">
@@ -147,8 +147,8 @@ function buildInfoWindowContent(marker: MapMarker): string {
           <span style="position:absolute;left:8px;top:8px;background:rgba(26,63,108,.88);color:#fff;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:700;letter-spacing:.03em;">Místo</span>
         </div>
         <div style="padding:10px 12px 10px;font-family:'Open Sans',Arial,sans-serif;">
-          <div style="color:#1a3f6c;font-size:15px;line-height:1.25;font-weight:800;margin:0 0 6px;">${safeTitle}</div>
-          <div style="display:inline-flex;align-items:center;gap:5px;color:#1a3f6c;font-size:11px;font-weight:700;">
+          <div style="color:var(--color-brand-deep);font-size:15px;line-height:1.25;font-weight:800;margin:0 0 6px;">${safeTitle}</div>
+          <div style="display:inline-flex;align-items:center;gap:5px;color:var(--color-brand-deep);font-size:11px;font-weight:700;">
             Zobrazit detail <span aria-hidden="true">→</span>
           </div>
         </div>
@@ -369,7 +369,7 @@ export const MapLibreMap: React.FC<MapLibreMapProps> = ({
           } else {
             // Bez fotky: plné kolečko v barvě webu.
             el.style.cssText +=
-              'border-radius:50%;border:3px solid #fff;background:#215491;box-shadow:0 1px 4px rgba(0,0,0,.35);'
+              'border-radius:50%;border:3px solid #fff;background:var(--color-brand);box-shadow:0 1px 4px rgba(0,0,0,.35);'
           }
           el.addEventListener('click', (e) => {
             e.stopPropagation()
@@ -485,15 +485,15 @@ export const MapLibreMap: React.FC<MapLibreMapProps> = ({
       style={height ? { height } : { height: 'calc(100vh - 40px)', minHeight: '400px' }}
     >
       {loadError ? (
-        <div className="h-full w-full rounded-lg border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]">
-          <p className="font-semibold text-[#1a3f6c] mb-2">Mapa není dostupná</p>
+        <div className="h-full w-full rounded-lg border border-line bg-surface p-6 text-center text-sm text-ink-2">
+          <p className="font-semibold text-brand-deep mb-2">Mapa není dostupná</p>
           <p>{loadError}</p>
         </div>
       ) : (
         <div className="relative h-full w-full rounded-lg overflow-hidden">
           {!loaded && (
-            <div className="absolute inset-0 z-10 border border-[#e4e4e4] bg-[#f8fafc] p-6 text-center text-sm text-[#4f5f74]">
-              <p className="font-semibold text-[#1a3f6c]">Načítám mapu…</p>
+            <div className="absolute inset-0 z-10 border border-line bg-surface p-6 text-center text-sm text-ink-2">
+              <p className="font-semibold text-brand-deep">Načítám mapu…</p>
             </div>
           )}
           {/* Kontejner mapy musí být v DOM už během inicializace (MapLibre do

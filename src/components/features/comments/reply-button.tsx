@@ -17,7 +17,7 @@ export function ReplyButton({ commentId, authorName }: { commentId: number; auth
           new CustomEvent('ara:comment-reply', { detail: { commentId, authorName } }),
         )
       }}
-      className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-gray-500 transition-colors hover:text-[#215491]"
+      className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-3 transition-colors hover:text-brand"
     >
       <CornerUpLeft className="h-3.5 w-3.5" strokeWidth={2} />
       Odpovědět

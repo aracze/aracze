@@ -27,7 +27,7 @@ export function StarInput({
   const [hover, setHover] = useState(0)
   const shown = hover || value
   const emptyClass =
-    appearance === 'filled' ? 'fill-[#d9dee3] text-[#d9dee3]' : 'fill-none text-[#9aa6b1]'
+    appearance === 'filled' ? 'fill-line-strong text-line-strong' : 'fill-none text-ink-3'
 
   return (
     <div
@@ -57,7 +57,7 @@ export function StarInput({
           <Star
             aria-hidden="true"
             style={{ width: size, height: size }}
-            className={`transition-colors ${n <= shown ? 'fill-[#f5a623] text-[#f5a623]' : emptyClass}`}
+            className={`transition-colors ${n <= shown ? 'fill-star text-star' : emptyClass}`}
             strokeWidth={appearance === 'filled' ? 0 : 1.5}
           />
         </button>

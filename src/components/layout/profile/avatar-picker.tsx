@@ -105,7 +105,7 @@ export function AvatarPicker({ name, avatarUrl }: { name: string; avatarUrl: str
         className="group relative cursor-pointer rounded-full ring-offset-2 ring-offset-transparent peer-focus-visible:ring-2 peer-focus-visible:ring-white"
       >
         <UserAvatar name={name} avatarUrl={zobrazena} size={84} />
-        <span className="pointer-events-none absolute inset-[3px] grid place-items-center rounded-full bg-[#0a1626]/55 transition-colors group-hover:bg-[#0a1626]/70">
+        <span className="pointer-events-none absolute inset-[3px] grid place-items-center rounded-full bg-night/55 transition-colors group-hover:bg-night/70">
           <Camera className="h-6 w-6 text-white" strokeWidth={2} aria-hidden="true" />
         </span>
       </label>

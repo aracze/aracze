@@ -30,7 +30,7 @@ export default function NotFound() {
 
       <div className="mx-auto w-full max-w-6xl px-4 py-12 md:py-14">
         <div className="mx-auto flex max-w-[36rem] flex-col items-center gap-5 text-center">
-          <p className="text-[#5b666e]">
+          <p className="text-ink-2">
             Taková stránka na webu není. Zkus napsat, kam se chceš podívat.
           </p>
 

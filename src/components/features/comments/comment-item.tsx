@@ -26,8 +26,8 @@ export function CommentItem({
   const avatar = <UserAvatar name={comment.authorName} avatarUrl={comment.avatarUrl} size={42} />
 
   const cardClasses = isReply
-    ? 'relative bg-white border border-[#e6eaee]'
-    : 'bg-[#f5f7f9] border border-[#e6eaee]'
+    ? 'relative bg-white border border-line'
+    : 'bg-surface border border-line'
 
   return (
     <article
@@ -37,7 +37,7 @@ export function CommentItem({
       {isReply && (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute -left-[26px] -top-4 h-[42px] w-[22px] rounded-bl-[14px] border-b-2 border-l-2 border-[#cfd8e0]"
+          className="pointer-events-none absolute -left-[26px] -top-4 h-[42px] w-[22px] rounded-bl-[14px] border-b-2 border-l-2 border-line-strong"
         />
       )}
 
@@ -52,14 +52,14 @@ export function CommentItem({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           {profileHref ? (
-            <Link href={profileHref} className="font-bold text-[#215491] hover:underline">
+            <Link href={profileHref} className="font-bold text-brand hover:underline">
               {comment.authorName}
             </Link>
           ) : (
-            <span className="font-bold text-[#215491]">{comment.authorName}</span>
+            <span className="font-bold text-brand">{comment.authorName}</span>
           )}
           {comment.isAuthor && (
-            <span className="rounded-full bg-[#e9f1f9] px-2 py-px text-[11px] font-bold uppercase tracking-wide text-[#215491]">
+            <span className="rounded-full bg-brand-tint px-2 py-px text-[11px] font-bold uppercase tracking-wide text-brand">
               autor
             </span>
           )}
@@ -67,7 +67,7 @@ export function CommentItem({
             <time
               dateTime={comment.commentedAt ?? undefined}
               title={absolute}
-              className="text-[13.5px] text-gray-500"
+              className="text-[13.5px] text-ink-3"
             >
               · {relative}
             </time>
@@ -75,7 +75,7 @@ export function CommentItem({
         </div>
 
         {/* Text komentáře je čistý plaintext (žádné HTML) — zalomení řádků zachováme. */}
-        <p className="mt-2 whitespace-pre-line break-words leading-relaxed text-[#2c3643]">
+        <p className="mt-2 whitespace-pre-line break-words leading-relaxed text-ink">
           {comment.body}
         </p>
 

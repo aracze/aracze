@@ -30,7 +30,7 @@ function parseObjectPosition(styleCss?: string): string {
 }
 
 export const StaticHeroImage = ({ imageUrl, alt, styleCss, blurDataURL }: StaticHeroImageProps) => {
-  // Bez obrázku necháme prosvítat tmavé pozadí sekce (bg-[#3b444f]).
+  // Bez obrázku necháme prosvítat tmavé pozadí sekce (bg-dusk).
   if (!imageUrl) return null
 
   return (

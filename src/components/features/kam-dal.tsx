@@ -17,10 +17,10 @@ const POPULAR_DESTINATIONS = [
 export function KamDal() {
   return (
     <div className="flex flex-wrap items-center justify-center gap-2">
-      <span className="text-[13px] font-medium text-[#8a939b]">Kam dál:</span>
+      <span className="text-[13px] font-medium text-ink-3">Kam dál:</span>
       <Link
         href="/"
-        className="rounded-full border border-[#215491] bg-[#e9f1f9] px-4 py-1 text-[13px] font-semibold text-[#215491] transition-colors hover:bg-[#dbe8f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215491]/50"
+        className="rounded-full border border-brand bg-brand-tint px-4 py-1 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
       >
         Úvodní stránka
       </Link>
@@ -28,7 +28,7 @@ export function KamDal() {
         <Link
           key={destination.href}
           href={destination.href}
-          className={`rounded-full border border-[#c9d4e0] bg-[#f5f7f9] px-4 py-1 text-[13px] font-semibold text-[#215491] transition-colors hover:border-[#215491]/40 hover:bg-[#e9f1f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215491]/50 ${
+          className={`rounded-full border border-line-strong bg-surface px-4 py-1 text-[13px] font-semibold text-brand transition-colors hover:border-brand/40 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${
             destination.mobile ? '' : 'hidden sm:inline-block'
           }`}
         >

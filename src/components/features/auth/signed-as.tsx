@@ -19,12 +19,12 @@ export function SignedAsRow({ user }: { user: CurrentUser }) {
   return (
     <div className="mb-4 flex items-center gap-3">
       <UserAvatar name={user.publicName} avatarUrl={user.avatarUrl} size={34} />
-      <p className="text-[14px] text-[#2c3643]">
+      <p className="text-[14px] text-ink">
         Píšeš jako <b>{user.publicName}</b>
         {user.profileHref && (
           <>
             {' · '}
-            <Link href={user.profileHref} className="font-semibold text-[#215491] hover:underline">
+            <Link href={user.profileHref} className="font-semibold text-brand hover:underline">
               tvůj profil
             </Link>
           </>
@@ -46,7 +46,7 @@ export function LoginHint({
   // jako by příspěvek psal někdo jiný). Formulace „na jednom místě" schválně
   // opakuje slib z přihlašovacího okna, ať uživatel slyší totéž dvakrát.
   return (
-    <p className="mt-1.5 text-[12.5px] leading-snug text-[#9aa4ad]">
+    <p className="mt-1.5 text-[12.5px] leading-snug text-ink-3">
       <LoginHintLink backTo={backTo} /> a měj {noun === 'recenze' ? 'recenze' : 'komentáře'} u sebe
       na jednom místě.
     </p>

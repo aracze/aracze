@@ -185,7 +185,7 @@ export function Header({
         }
       }}
       className={`absolute top-0 left-0 w-full z-[200] transition-colors duration-300 ${
-        activeDropdown || mobileOpen ? 'bg-[#215491]' : 'bg-transparent'
+        activeDropdown || mobileOpen ? 'bg-brand' : 'bg-transparent'
       } group/header`}
     >
       <div
@@ -251,11 +251,11 @@ export function Header({
                     onClick={() => setActiveDropdown(null)}
                     aria-haspopup={hasChildren || undefined}
                     aria-expanded={hasChildren ? activeDropdown === String(pageId) : undefined}
-                    className="px-4 xl:px-5 text-white hover:text-gray-100 transition-colors tracking-wide text-[15px] font-semibold font-heading flex items-center gap-1 whitespace-nowrap"
+                    className="px-4 xl:px-5 text-white hover:text-white/90 transition-colors tracking-wide text-[15px] font-semibold font-heading flex items-center gap-1 whitespace-nowrap"
                   >
                     {page.title}
                     {hasChildren && (
-                      <span className="inline-block border-white hover:border-gray-100 border-t-4 border-l-4 border-r-4 border-l-transparent border-r-transparent border-white/60" />
+                      <span className="inline-block border-white hover:border-line border-t-4 border-l-4 border-r-4 border-l-transparent border-r-transparent border-white/60" />
                     )}
                   </Link>
                 </div>
@@ -267,7 +267,7 @@ export function Header({
             <Search />
             <Link
               href="/rady-na-cestu"
-              className="hidden lg:block px-5 py-1.5 border-2 border-white/50 rounded-full text-white text-[13px] font-bold hover:bg-white hover:text-[#215491] transition-all uppercase tracking-wider font-heading whitespace-nowrap"
+              className="hidden lg:block px-5 py-1.5 border-2 border-white/50 rounded-full text-white text-[13px] font-bold hover:bg-white hover:text-brand transition-all uppercase tracking-wider font-heading whitespace-nowrap"
             >
               Rady na cestu
             </Link>
@@ -298,7 +298,7 @@ export function Header({
           // `hidden lg:block`: dropdown se otevírá jen z počítačového menu, ale
           // stav `activeDropdown` může přežít zmenšení okna pod lg — panel by
           // pak visel nad mobilní hlavičkou bez menu, které ho otevřelo.
-          className="hidden lg:block absolute left-0 right-0 w-full bg-[#215490] border-b-2 border-[#1A4579] shadow-2xl transition-all duration-300 top-[65px] z-[150] pointer-events-auto animate-in fade-in slide-in-from-top-1 duration-200"
+          className="hidden lg:block absolute left-0 right-0 w-full bg-brand border-b-2 border-brand-deep shadow-2xl transition-all duration-300 top-[65px] z-[150] pointer-events-auto animate-in fade-in slide-in-from-top-1 duration-200"
           onMouseEnter={() => handleMouseEnter(String(activePage.id))}
           onMouseLeave={handleMouseLeave}
         >
@@ -312,7 +312,7 @@ export function Header({
                       key={child.id || `child-${index}`}
                       href={child.fullSlug}
                       onClick={() => setActiveDropdown(null)}
-                      className="text-[14px] text-gray-800 py-1 px-3 -mx-3 transition-all inline-block w-full [text-shadow:1px_2px_3px_rgb(255,255,255)] hover:text-white hover:bg-[#3C6EAA] hover:rounded-sm hover:no-underline hover:shadow-none hover:[text-shadow:none]"
+                      className="text-[14px] text-ink py-1 px-3 -mx-3 transition-all inline-block w-full [text-shadow:1px_2px_3px_rgb(255,255,255)] hover:text-white hover:bg-brand hover:rounded-sm hover:no-underline hover:shadow-none hover:[text-shadow:none]"
                     >
                       {child.title}
                     </Link>
@@ -338,7 +338,7 @@ export function Header({
           <div
             id="mobile-menu"
             ref={mobilePanelRef}
-            className="fixed top-[65px] right-0 bottom-0 z-[150] w-[85%] max-w-sm overflow-y-auto overscroll-contain bg-[#215491] text-white shadow-2xl animate-in slide-in-from-right duration-200 motion-reduce:animate-none [padding-bottom:env(safe-area-inset-bottom)] [padding-right:env(safe-area-inset-right)]"
+            className="fixed top-[65px] right-0 bottom-0 z-[150] w-[85%] max-w-sm overflow-y-auto overscroll-contain bg-brand text-white shadow-2xl animate-in slide-in-from-right duration-200 motion-reduce:animate-none [padding-bottom:env(safe-area-inset-bottom)] [padding-right:env(safe-area-inset-right)]"
           >
             <nav aria-label="Mobilní navigace" className="py-2">
               <ul className="flex flex-col divide-y divide-white/10">
@@ -352,7 +352,7 @@ export function Header({
                     <li key={pageId}>
                       <div
                         className={`relative flex items-center transition-colors duration-150 motion-reduce:transition-none hover:bg-white/5 active:bg-white/10 ${
-                          expanded ? 'sticky top-0 z-10 bg-[#215491] shadow-md' : ''
+                          expanded ? 'sticky top-0 z-10 bg-brand shadow-md' : ''
                         }`}
                       >
                         {/* Vizuální akcent pro aktivní stránku / aktivní sekci. */}
@@ -428,7 +428,7 @@ export function Header({
                     href="/rady-na-cestu"
                     onClick={() => setMobileOpen(false)}
                     aria-current={isActivePath('/rady-na-cestu') ? 'page' : undefined}
-                    className="block rounded-full border-2 border-white/50 py-2.5 text-center font-heading text-[13px] font-bold tracking-wider text-white uppercase transition-colors duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-white hover:text-[#215491] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none motion-reduce:transition-none"
+                    className="block rounded-full border-2 border-white/50 py-2.5 text-center font-heading text-[13px] font-bold tracking-wider text-white uppercase transition-colors duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-white hover:text-brand focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none motion-reduce:transition-none"
                   >
                     Rady na cestu
                   </Link>

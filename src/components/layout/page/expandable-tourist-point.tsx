@@ -141,7 +141,7 @@ export function ExpandableTouristPoint({
           className={`flex flex-wrap items-center gap-x-12 gap-y-1 ${address || websiteUrl ? 'mb-2' : 'mb-2'}`}
         >
           <Link href={fullSlug} className="inline-flex items-center gap-2">
-            <h2 className="text-[22px] sm:text-[26px] font-bold text-[#1a3f6c] leading-snug hover:text-[#2a5a9c] transition-colors">
+            <h2 className="text-[22px] sm:text-[26px] font-bold text-brand-deep leading-snug hover:text-brand transition-colors">
               {title}
             </h2>
             {analyticsViews != null && <AnalyticsDebugBadge views={analyticsViews} />}
@@ -156,19 +156,19 @@ export function ExpandableTouristPoint({
             <button
               type="button"
               onClick={openReviews}
-              className="inline-flex items-center gap-2 text-[13px] text-[#888] hover:text-[#1a3f6c] transition-colors"
+              className="inline-flex items-center gap-2 text-[13px] text-ink-3 hover:text-brand-deep transition-colors"
             >
               <RatingSummary avg={reviewAvg!} count={reviewCount!} size={14} />
             </button>
           ) : (
-            <span className="inline-flex items-center gap-2 text-[13px] text-[#888]">
+            <span className="inline-flex items-center gap-2 text-[13px] text-ink-3">
               {/* Stejná velikost i plný styl jako průměr u ohodnocených cílů —
                   hlavičky v seznamu vypadají jednotně a nekřičí. */}
               <StarInput value={0} onSelect={rateFirst} size={14} appearance="filled" />
               <button
                 type="button"
                 onClick={() => rateFirst(0)}
-                className="hover:text-[#1a3f6c] transition-colors"
+                className="hover:text-brand-deep transition-colors"
               >
                 Ohodnoť jako první
               </button>
@@ -178,12 +178,12 @@ export function ExpandableTouristPoint({
 
         {/* Rychlá fakta: adresa a oficiální web (tichý řádek s ikonami, vzor Google Maps) */}
         {(address || websiteUrl) && (
-          <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13.5px] leading-snug text-[#6b7681]">
+          <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13.5px] leading-snug text-ink-3">
             {address && (
               <span className="inline-flex items-center gap-1.5">
                 <MapPin
                   aria-hidden="true"
-                  className="h-[15px] w-[15px] shrink-0 text-[#9aa6b1]"
+                  className="h-[15px] w-[15px] shrink-0 text-ink-3"
                   strokeWidth={1.8}
                 />
                 {address}
@@ -194,11 +194,11 @@ export function ExpandableTouristPoint({
                 href={websiteHref(websiteUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 font-semibold text-[#215491] hover:underline"
+                className="inline-flex items-center gap-1.5 font-semibold text-brand hover:underline"
               >
                 <Globe
                   aria-hidden="true"
-                  className="h-[15px] w-[15px] shrink-0 text-[#9aa6b1]"
+                  className="h-[15px] w-[15px] shrink-0 text-ink-3"
                   strokeWidth={1.8}
                 />
                 {websiteLabel(websiteUrl)}
@@ -233,7 +233,7 @@ export function ExpandableTouristPoint({
           // zalomí. Obal s display:contents nechá odstavce z HTML chovat se
           // jako přímé děti (kvůli selektorům i toku řádků).
           <div
-            className={`text-[16px] text-[#4a4a4a] leading-[1.85] tracking-[0.01rem] mb-4 [&_p]:mb-4 [&_p:last-child]:mb-0 ${author ? '[&_p:last-child]:inline' : ''}`}
+            className={`text-[16px] text-ink-2 leading-[1.85] tracking-[0.01rem] mb-4 [&_p]:mb-4 [&_p:last-child]:mb-0 ${author ? '[&_p:last-child]:inline' : ''}`}
           >
             {hasMoreContent ? (
               <div className="contents" dangerouslySetInnerHTML={{ __html: fullHtml }} />
@@ -241,14 +241,14 @@ export function ExpandableTouristPoint({
               previewText
             )}
             {author && (
-              <span className="ml-3 inline-flex items-center gap-2 whitespace-nowrap text-[13.5px] italic text-[#8b959f]">
+              <span className="ml-3 inline-flex items-center gap-2 whitespace-nowrap text-[13.5px] italic text-ink-3">
                 {author.profileHref ? (
                   <Link href={author.profileHref} className="hover:underline">
-                    —&nbsp;<span className="font-semibold text-[#565656]">{author.name}</span>
+                    —&nbsp;<span className="font-semibold text-ink-2">{author.name}</span>
                   </Link>
                 ) : (
                   <span>
-                    —&nbsp;<span className="font-semibold text-[#565656]">{author.name}</span>
+                    —&nbsp;<span className="font-semibold text-ink-2">{author.name}</span>
                   </span>
                 )}
                 <UserAvatar
@@ -261,7 +261,7 @@ export function ExpandableTouristPoint({
             )}
           </div>
         ) : (
-          <p className="text-[16px] text-[#4a4a4a] leading-[1.85] tracking-[0.01rem] mb-4">
+          <p className="text-[16px] text-ink-2 leading-[1.85] tracking-[0.01rem] mb-4">
             {previewText}
           </p>
         )}
@@ -271,7 +271,7 @@ export function ExpandableTouristPoint({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#1a3f6c] hover:text-[#d45145] transition-colors"
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-deep hover:text-accent transition-colors"
           >
             {expanded ? 'Zobrazit méně' : collapsedLabel}
             <svg
@@ -287,7 +287,7 @@ export function ExpandableTouristPoint({
 
           <Link
             href={fullSlug}
-            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#888] hover:text-[#1a3f6c] transition-colors"
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-3 hover:text-brand-deep transition-colors"
           >
             Otevřít stránku
             <svg

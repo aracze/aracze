@@ -9,7 +9,7 @@ import type { TeamMemberPublic, TeamSectionData } from '@/types/payload'
  *
  * Renderuje se UVNITŘ čtecího sloupce (viz MainContent → belowText), takže
  * navazuje na text stejnou šířkou i rytmem — nadpis proto vypadá jako běžný
- * `h2` v prose (Poppins bold 22 px, #005580).
+ * `h2` v prose (Poppins bold 22 px, `prose-heading`).
  *
  * Obsah karet si autoři spravují SAMI ve svých profilech (jméno, fotka). Čísla
  * jsou počty publikovaných příspěvků a vedou na příslušnou sekci profilu —
@@ -64,7 +64,7 @@ export function TeamSection({ members, faces, remainingContributors }: TeamSecti
       <section aria-labelledby="nas-tym" className="mt-10">
         <h2
           id="nas-tym"
-          className="font-heading text-[22px] font-bold leading-[1.25] tracking-tight text-[#005580]"
+          className="font-heading text-[22px] font-bold leading-[1.25] tracking-tight text-prose-heading"
         >
           Náš tým
         </h2>
@@ -76,21 +76,21 @@ export function TeamSection({ members, faces, remainingContributors }: TeamSecti
             return (
               <li
                 key={member.username}
-                className="flex flex-col items-center rounded-xl border border-[#e3e9ef] px-5 py-6 text-center"
+                className="flex flex-col items-center rounded-xl border border-line px-5 py-6 text-center"
               >
                 <Link href={profileHref} className="block" tabIndex={-1} aria-hidden="true">
                   <UserAvatar name={displayName} avatarUrl={member.avatarUrl} size={84} />
                 </Link>
                 <Link
                   href={profileHref}
-                  className="mt-3 font-heading text-[18px] font-semibold tracking-tight text-[#115194] hover:underline"
+                  className="mt-3 font-heading text-[18px] font-semibold tracking-tight text-brand hover:underline"
                 >
                   {displayName}
                 </Link>
                 {/* Uživatelské jméno neopakujeme, když je zároveň zobrazeným jménem
                   (autor s nevyplněným polem „Jméno") — jinak by tam stálo dvakrát. */}
                 {displayName !== member.username && (
-                  <span className="mt-0.5 text-[13px] text-[#8a939b]">@{member.username}</span>
+                  <span className="mt-0.5 text-[13px] text-ink-3">@{member.username}</span>
                 )}
                 {/* Medailonek z profilu tu ZÁMĚRNĚ není: tři karty s odstavcem
                   textu daly pod dvě věty úvodu blok vyšší než celá stránka.
@@ -101,12 +101,8 @@ export function TeamSection({ members, faces, remainingContributors }: TeamSecti
                 <ul className="mt-2.5 flex list-none flex-col items-center gap-y-0.5 p-0 text-[13.5px]">
                   {memberStats(member).map((stat) => (
                     <li key={stat.href}>
-                      <Link
-                        href={stat.href}
-                        className="font-semibold text-[#4a5765] hover:underline"
-                      >
-                        <span className="text-[#215491] tabular-nums">{stat.count}</span>{' '}
-                        {stat.label}
+                      <Link href={stat.href} className="font-semibold text-ink-2 hover:underline">
+                        <span className="text-brand tabular-nums">{stat.count}</span> {stat.label}
                       </Link>
                     </li>
                   ))}
@@ -122,7 +118,7 @@ export function TeamSection({ members, faces, remainingContributors }: TeamSecti
           ke kterému patří. */}
         {faces.length > 0 && (
           <div className="mt-8">
-            <p className="m-0 text-[16px] leading-[1.8] text-[#5b666e]">
+            <p className="m-0 text-[16px] leading-[1.8] text-ink-2">
               Za {years} {pluralCs(years, ['rok', 'roky', 'let'])} přispěla řada dalších cestovatelů
               — autora najdeš u každého článku i místa.
             </p>
@@ -143,7 +139,7 @@ export function TeamSection({ members, faces, remainingContributors }: TeamSecti
                 )
               })}
               {remainingContributors > 0 && (
-                <li className="ml-1 text-[13.5px] text-[#5b666e]">
+                <li className="ml-1 text-[13.5px] text-ink-2">
                   a {pluralCs(remainingContributors, ['další', 'další', 'dalších'])}{' '}
                   {remainingContributors}
                 </li>
@@ -156,7 +152,7 @@ export function TeamSection({ members, faces, remainingContributors }: TeamSecti
       {/* Závěrečná pozvánka — poslední řádek stránky, na ose obsahu a mimo
           sekci týmu (netýká se jí, uzavírá celé „O nás"). Pomlčky po stranách
           jsou typografické (—), ne dvě spojovníky. */}
-      <p className="mt-10 text-center text-[17px] leading-relaxed text-[#5b666e]">
+      <p className="mt-10 text-center text-[17px] leading-relaxed text-ink-2">
         — roztáhni křídla a lítej v tom s námi —
       </p>
     </>

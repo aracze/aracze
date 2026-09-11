@@ -575,6 +575,10 @@ jsou popsaná v [docs/navigace.md](docs/navigace.md). Adresy se přepočítával
 tvary názvů míst doplňovaly jednorázovými doběhy (`fix:page-urls`, `fix:declension`); ty jsou
 hotové a odstraněné — u nových míst se tvary vyplňují v adminu.
 
+Barvy webu jsou definované jako tokeny v `@theme` bloku `src/app/(frontend)/globals.css`;
+role, pravidla a kontrasty popisuje [docs/design-system.md](docs/design-system.md).
+V komponentách se nepíší hexy ani Tailwind šedé, jen utility z tokenů (`bg-surface`, `text-ink-2`).
+
 ### SEO — metadata, sitemap, strukturovaná data
 
 Metadata stránek skládá `src/lib/seo.ts` (`buildPageMetadata`), volá ho `generateMetadata`

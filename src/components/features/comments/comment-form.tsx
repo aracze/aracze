@@ -109,14 +109,14 @@ export function CommentForm({
 
   return (
     <div id="napsat-komentar" className="mt-10 scroll-mt-24">
-      <h3 className="mb-5 text-lg font-bold text-[#2c3643]">
+      <h3 className="mb-5 text-lg font-bold text-ink">
         {replyTo ? 'Napiš odpověď' : 'Napiš komentář'}
       </h3>
 
       <form
         ref={formRef}
         onSubmit={handleSubmit}
-        className="rounded-2xl border border-[#e6eaee] bg-[#f5f7f9] p-6 md:pr-[44px]"
+        className="rounded-2xl border border-line bg-surface p-6 md:pr-[44px]"
       >
         <input type="hidden" name="articleId" value={articleId} />
         <input type="hidden" name="renderedAt" value={renderedAt} />
@@ -131,14 +131,14 @@ export function CommentForm({
         </div>
 
         {replyTo && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+          <div className="mb-4 flex items-center gap-2 text-sm text-ink-2">
             <span>
-              Odpovídáš na <span className="font-semibold text-[#215491]">@{replyTo.name}</span>
+              Odpovídáš na <span className="font-semibold text-brand">@{replyTo.name}</span>
             </span>
             <button
               type="button"
               onClick={cancelReply}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-200 hover:text-[#2c3643]"
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-ink-3 hover:bg-surface-2 hover:text-ink"
             >
               <X className="h-3.5 w-3.5" /> zrušit
             </button>
@@ -154,7 +154,7 @@ export function CommentForm({
             <div className="max-w-xs">
               <label
                 htmlFor="comment-name"
-                className="mb-1.5 block text-sm font-semibold text-gray-500"
+                className="mb-1.5 block text-sm font-semibold text-ink-3"
               >
                 Jméno
               </label>
@@ -165,7 +165,7 @@ export function CommentForm({
                 required
                 maxLength={80}
                 placeholder="Tvé jméno"
-                className="w-full rounded-xl border-[1.5px] border-[#e6eaee] bg-white px-3.5 py-3 text-[15px] text-[#2c3643] outline-none transition focus:border-[#215491] focus:ring-[3px] focus:ring-[#e9f1f9]"
+                className="w-full rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-[15px] text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
               />
             </div>
             {loginHint}
@@ -173,10 +173,7 @@ export function CommentForm({
         )}
 
         <div className="mb-4">
-          <label
-            htmlFor="comment-body"
-            className="mb-1.5 block text-sm font-semibold text-gray-500"
-          >
+          <label htmlFor="comment-body" className="mb-1.5 block text-sm font-semibold text-ink-3">
             {replyTo ? 'Odpověď' : 'Komentář'}
           </label>
           <textarea
@@ -187,7 +184,7 @@ export function CommentForm({
             maxLength={5000}
             rows={5}
             placeholder="Napiš svůj komentář…"
-            className="min-h-[110px] w-full resize-y rounded-xl border-[1.5px] border-[#e6eaee] bg-white px-3.5 py-3 text-[15px] leading-relaxed text-[#2c3643] outline-none transition focus:border-[#215491] focus:ring-[3px] focus:ring-[#e9f1f9]"
+            className="min-h-[110px] w-full resize-y rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-[15px] leading-relaxed text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
           />
         </div>
 
@@ -215,12 +212,12 @@ export function CommentForm({
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-[#215491] px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#1a3f6c] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isPending ? 'Odesílám…' : replyTo ? 'Odeslat odpověď' : 'Vložit komentář'}
           </button>
           {!turnstileSiteKey && !isSignedIn && (
-            <span className="text-[12.5px] text-gray-500">
+            <span className="text-[12.5px] text-ink-3">
               Chráněno proti spamu · bez opisování captchy
             </span>
           )}

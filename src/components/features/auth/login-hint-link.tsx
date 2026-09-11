@@ -29,7 +29,7 @@ export function LoginHintLink({ backTo }: { backTo: string }) {
         e.preventDefault()
         window.dispatchEvent(new CustomEvent(OPEN_LOGIN_EVENT))
       }}
-      className="font-semibold text-[#215491] underline decoration-[#215491]/30 hover:decoration-[#215491]"
+      className="font-semibold text-brand underline decoration-brand/30 hover:decoration-brand"
     >
       Přihlas se
     </Link>

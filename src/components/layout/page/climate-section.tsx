@@ -176,10 +176,10 @@ function PillChart({ months }: { months: ClimateNormalMonth[] }) {
               <div aria-hidden="true" className="text-[19px] leading-7">
                 {monthEmoji(m, medianR)}
               </div>
-              <div className="mb-1 font-heading text-[13px] font-semibold text-[#1f2937]">
+              <div className="mb-1 font-heading text-[13px] font-semibold text-ink">
                 {Math.round(m.tmax ?? 0)}°
               </div>
-              <div className="relative flex h-[176px] items-end justify-center rounded-full bg-[#f1f4f7] p-1">
+              <div className="relative flex h-[176px] items-end justify-center rounded-full bg-surface p-1">
                 {level && (
                   <div
                     className="w-full max-w-[26px] rounded-full"
@@ -191,28 +191,28 @@ function PillChart({ months }: { months: ClimateNormalMonth[] }) {
                 )}
                 {/* Bublina s hodnotami měsíce — jen CSS hover, bez JS */}
                 <div
-                  className={`pointer-events-none absolute top-0 z-10 hidden w-max rounded-lg border border-[#d8dde3] bg-white px-3 py-2 text-left shadow-sm group-hover:block ${tipPosition}`}
+                  className={`pointer-events-none absolute top-0 z-10 hidden w-max rounded-lg border border-line bg-white px-3 py-2 text-left shadow-sm group-hover:block ${tipPosition}`}
                 >
-                  <div className="text-[12px] font-semibold text-[#16324f]">
+                  <div className="text-[12px] font-semibold text-brand-deep">
                     {MONTH_FULL[i]} · {label}
                   </div>
-                  <div className="text-[11.5px] leading-snug text-[#4a4a4a]">
+                  <div className="text-[11.5px] leading-snug text-ink-2">
                     den {Math.round(m.tmax ?? 0)} °C · noc {Math.round(m.tmin ?? 0)} °C
                     <br />
                     srážky {m.prcp === null ? '—' : `${Math.round(m.prcp)} mm`}
                   </div>
                 </div>
               </div>
-              <div className="mt-1.5 font-heading text-[13px] font-semibold text-[#4a4a4a]">
+              <div className="mt-1.5 font-heading text-[13px] font-semibold text-ink-2">
                 {MONTH_SHORT[i]}
               </div>
-              <div className="whitespace-nowrap text-[11.5px] text-[#667085]">
+              <div className="whitespace-nowrap text-[11.5px] text-ink-3">
                 noc {Math.round(m.tmin ?? 0)}°
               </div>
               {/* Srážky se u některých míst nedají spočítat (stanice je pro
                   část okna nemá) — pak se číslo ani proužek nekreslí, aby
                   graf nepředstíral, že v tom měsíci neprší. */}
-              <div className="whitespace-nowrap text-[11.5px] text-[#667085]">
+              <div className="whitespace-nowrap text-[11.5px] text-ink-3">
                 {m.prcp === null ? ' ' : `💧 ${Math.round(m.prcp)} mm`}
               </div>
               {/* Srážky ještě jako tenký proužek pod číslem — porovnání mezi
@@ -222,10 +222,10 @@ function PillChart({ months }: { months: ClimateNormalMonth[] }) {
               {m.prcp !== null && (
                 <div
                   aria-hidden="true"
-                  className="mx-auto mt-1 h-1 w-[70%] overflow-hidden rounded-full bg-[#e6eef7]"
+                  className="mx-auto mt-1 h-1 w-[70%] overflow-hidden rounded-full bg-surface-2"
                 >
                   <div
-                    className="h-full rounded-full bg-[#bcd6ee]"
+                    className="h-full rounded-full bg-brand/40"
                     style={{ width: `${Math.round((m.prcp / maxR) * 100)}%` }}
                   />
                 </div>
@@ -261,13 +261,13 @@ export function ClimateSection({
           odkazy dál trefí sekci; nadpis se od ní může lišit. */}
       <h2
         id="prumerne-teploty-a-srazky"
-        className="font-heading text-[22px] font-bold leading-[1.25] text-[#005580]"
+        className="font-heading text-[22px] font-bold leading-[1.25] text-prose-heading"
       >
         {climateHeading(genitive)}
       </h2>
       {/* Druhé hledané spojení („počasí … po měsících") i rozsah let nese
           řádek pod nadpisem — v nadpisu by to bylo dlouhé a upovídané. */}
-      <p className="mt-1.5 text-[14px] text-[#667085]">
+      <p className="mt-1.5 text-[14px] text-ink-3">
         Počasí {locative} po měsících — průměrné denní teploty a srážky
         {normals.period ? ` za roky ${normals.period.start}–${normals.period.end}` : ''}.
       </p>
@@ -275,10 +275,10 @@ export function ClimateSection({
       {/* Legenda po skupinách — sdělí i to, že stupně tvoří dvojice (sezóna
           / mimo sezónu). Vypisuje se celá i na stránkách, kde některý stupeň
           nepadne: je to pevná stupnice a na každé stránce má být stejná. */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-[#4a4a4a]">
+      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-ink-2">
         {LEGEND_GROUPS.map((group) => (
           <span key={group.title} className="flex items-center gap-3">
-            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#667085]">
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-3">
               {group.title}
             </span>
             {group.levels.map((level) => (
@@ -344,14 +344,14 @@ export function ClimateSection({
           (poměr k mediánu), ale i absolutní hranice. Jinak by lhala v Bergenu,
           kde duben se 110 mm proti mediánu 180 je sušší než obvykle, a přesto
           deštivou ikonu dostane. */}
-      <p className="mt-3 text-[12px] text-[#667085]">
+      <p className="mt-3 text-[12px] text-ink-3">
         Výška sloupce = denní teplota, proužek pod číslem = srážky, ikona = deštivost měsíce (hodně
         srážek, nebo víc než tu bývá) · Zdroj:{' '}
         <a
           href="https://meteostat.net/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#667085] underline hover:text-[#215491]"
+          className="text-ink-3 underline hover:text-brand"
         >
           Meteostat
         </a>

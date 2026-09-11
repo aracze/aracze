@@ -28,11 +28,11 @@ export const ArticlesListClassicClient = ({
     <section id="clanky" className="w-full py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 md:px-12">
         <div className="flex flex-col mb-12 items-center text-center">
-          <h2 className="text-3xl font-bold text-[#1a3f6c] mb-3 font-heading tracking-tight">
+          <h2 className="text-3xl font-bold text-brand-deep mb-3 font-heading tracking-tight">
             Články a cestopisy
           </h2>
-          <div className="w-[30px] h-[1px] bg-[#215491] rounded-full mb-5"></div>
-          <p className="text-[17px] text-gray-400 max-w-xl leading-relaxed">{subtitle}</p>
+          <div className="w-[30px] h-[1px] bg-brand rounded-full mb-5"></div>
+          <p className="text-[17px] text-ink-3 max-w-xl leading-relaxed">{subtitle}</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-16">

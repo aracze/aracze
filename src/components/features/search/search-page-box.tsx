@@ -31,11 +31,11 @@ export function SearchPageBox({ initialQuery }: { initialQuery: string }) {
 
   return (
     <div className="w-full max-w-2xl relative">
-      <div className="bg-white rounded-full flex items-center h-14 pl-6 gap-3 border-2 border-[#d9dee3] shadow-[0_4px_12px_-4px_rgba(26,63,108,0.18)] pr-2 focus-within:border-[#215491]/20 transition-all">
+      <div className="bg-white rounded-full flex items-center h-14 pl-6 gap-3 border-2 border-line shadow-[0_4px_12px_-4px_rgba(26,63,108,0.18)] pr-2 focus-within:border-brand/20 transition-all">
         {isPending ? (
-          <Loader2 className="w-5 h-5 text-gray-400 shrink-0 animate-spin" aria-hidden="true" />
+          <Loader2 className="w-5 h-5 text-ink-3 shrink-0 animate-spin" aria-hidden="true" />
         ) : (
-          <SearchGraphic className="w-5 h-5 text-gray-400 shrink-0" />
+          <SearchGraphic className="w-5 h-5 text-ink-3 shrink-0" />
         )}
         <input
           aria-label="Hledat na webu"
@@ -45,13 +45,13 @@ export function SearchPageBox({ initialQuery }: { initialQuery: string }) {
           onKeyDown={(e) => {
             if (e.key === 'Enter') submit()
           }}
-          className="flex-1 min-w-0 bg-transparent border-none outline-none text-gray-800 font-medium placeholder:text-gray-400"
+          className="flex-1 min-w-0 bg-transparent border-none outline-none text-ink font-medium placeholder:text-ink-3"
         />
         {query.length > 0 && (
           <button
             type="button"
             onClick={() => setQuery('')}
-            className="p-1.5 -m-1.5 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+            className="p-1.5 -m-1.5 text-ink-3 hover:text-ink-2 transition-colors shrink-0"
             aria-label="Vymazat hledání"
           >
             <X className="w-5 h-5" />
@@ -61,7 +61,7 @@ export function SearchPageBox({ initialQuery }: { initialQuery: string }) {
           type="button"
           onClick={submit}
           aria-label="Hledat"
-          className="rounded-full bg-[#215491] hover:bg-[#1a4579] flex items-center justify-center shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215491]/50 w-10 h-10"
+          className="rounded-full bg-brand hover:bg-brand-deep flex items-center justify-center shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 w-10 h-10"
         >
           <SearchGraphic className="w-5 h-5 text-white" strokeWidth={2.5} />
         </button>
