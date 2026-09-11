@@ -148,12 +148,23 @@ BEGIN
   END IF;
 
   -- Osamocené odstavce po mapovém widgetu (jediný potomek = odkaz „Booking.com").
+  -- Skript je maže i v poslední PUBLIKOVANÉ verzi, takže se kontrolují oba zdroje.
   SELECT count(*) INTO zbytku
   FROM (
-    SELECT p.text
+    SELECT p.text AS doc
     FROM pages p
     WHERE p.category = 'Ubytování' AND jsonb_typeof(p.text->'root'->'children') = 'array'
-  ) t, jsonb_array_elements(t.text->'root'->'children') c
+    UNION ALL
+    SELECT lv.version_text
+    FROM (
+      SELECT DISTINCT ON (v.parent_id) v.parent_id, v.version_text
+      FROM _pages_v v
+      JOIN pages p ON p.id = v.parent_id
+      WHERE p.category = 'Ubytování' AND v.version__status = 'published' AND v.version_text IS NOT NULL
+      ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
+    ) lv
+    WHERE jsonb_typeof(lv.version_text->'root'->'children') = 'array'
+  ) t, jsonb_array_elements(t.doc->'root'->'children') c
   WHERE c->>'type' = 'paragraph'
     AND jsonb_array_length(COALESCE(c->'children', '[]'::jsonb)) = 1
     AND c->'children'->0->>'type' = 'link'
