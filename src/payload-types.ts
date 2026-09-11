@@ -1219,6 +1219,9 @@ export interface NiceToKnowBlock {
         type: 'language' | 'electricity' | 'currency' | 'weather' | 'time' | 'population' | 'drivingSide';
         headerText?: string | null;
         headerSubtext?: string | null;
+        /**
+         * U karty Elektřina se z velkých písmen za slovem „typu“ skládá ikona zásuvky (např. „Zásuvka typu C & F“).
+         */
         title: string;
         value: string;
         secondaryValue?: string | null;
