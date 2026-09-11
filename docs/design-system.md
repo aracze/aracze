@@ -70,12 +70,13 @@ Originál loga („Výherní logo“ na OneDrive, `logo-fb.svg`) má modrou `#22
 Čtyři stupně vhodnosti návštěvy (pruh sezóny, graf klimatu). `SUITABILITY_COLOR`
 v `src/lib/climate.ts` na tyto tokeny jen odkazuje (`var(--color-season-…)`), hodnota je jen tady.
 
-| Token          | Hodnota   | Text na plné ploše                    |
-| -------------- | --------- | ------------------------------------- |
-| `season-ideal` | `#1b7a68` | bílý                                  |
-| `season-good`  | `#5eb49f` | tmavý `#0e3a32` (bílý má jen 2,5 : 1) |
-| `season-mid`   | `#9fb1c4` | `ink`                                 |
-| `season-poor`  | `#c9d3de` | `ink-2`                               |
+| Token             | Hodnota   | Text na plné ploše                                 |
+| ----------------- | --------- | -------------------------------------------------- |
+| `season-ideal`    | `#1b7a68` | bílý                                               |
+| `season-good`     | `#5eb49f` | `season-good-ink` (bílý má jen 2,5 : 1)            |
+| `season-mid`      | `#9fb1c4` | `ink`                                              |
+| `season-poor`     | `#c9d3de` | `ink-2`                                            |
+| `season-good-ink` | `#0e3a32` | text na ploše `season-good` (pruh sezóny, legenda) |
 
 ### Typografie článků (legacy parita)
 

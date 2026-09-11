@@ -26,7 +26,7 @@ export const SUITABILITY_COLOR: Record<Suitability, string> = {
 /** Inkoust na plných plochách té barvy (pruh) — bílá projde jen na prvním stupni. */
 export const SUITABILITY_INK: Record<Suitability, string> = {
   ideal: '#ffffff',
-  good: '#0e3a32',
+  good: 'var(--color-season-good-ink)',
   mid: 'var(--color-ink)',
   poor: 'var(--color-ink-2)',
 }

@@ -53,6 +53,7 @@
   /* Sezóna / klima — čtyři stupně, tytéž hodnoty drží src/lib/climate.ts */
   --color-season-ideal: #1b7a68;
   --color-season-good: #5eb49f;
+  --color-season-good-ink: #0e3a32; /* text na ploše season-good (bílá tam má jen 2,5 : 1) */
   --color-season-mid: #9fb1c4;
   --color-season-poor: #c9d3de;
 
@@ -526,7 +527,7 @@
         }
 
         &.is-header {
-          @apply bg-brand font-semibold pt-3 pb-3 border-t-0 border-l border-[rgba(255,255,255,0.2)];
+          @apply bg-brand font-semibold pt-3 pb-3 border-t-0 border-l border-white/20;
 
           &:first-child {
             @apply border-l-0;
@@ -636,7 +637,7 @@
   }
 
   .prose .seasonality-month.status-mid .month-num {
-    @apply bg-season-good text-[#0e3a32];
+    @apply bg-season-good text-season-good-ink;
   }
 
   .prose .seasonality-month.status-peak .month-num {

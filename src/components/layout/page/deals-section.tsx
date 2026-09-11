@@ -188,7 +188,7 @@ export function Badge({ kind, onPhoto = false }: { kind: 'flight' | 'tour'; onPh
       : 'bg-white/95 text-accent'
     : kind === 'flight'
       ? 'bg-brand-tint text-brand-deep'
-      : 'bg-accent-bg text-accent'
+      : 'bg-accent-bg text-accent-ink'
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10.5px] font-bold tracking-[0.09em] uppercase ${palette}`}
