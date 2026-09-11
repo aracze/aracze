@@ -17,9 +17,12 @@ To spin up this project locally, follow these steps:
 4. **Install & Run**:
    ```bash
    pnpm install
-   pnpm payload migrate
    pnpm dev
    ```
+   > Tabulky v prázdné databázi vytvoří první `pnpm dev` sám (Payload `push` v dev režimu).
+   > Payload migrace projekt nepoužívá — do produkce jde schéma dumpem (krok 7–8) a změny
+   > se tam dorovnávají ručním SQL.
+   >
    > **Historický obsah** (místa, cíle, články, komentáře, avatary, pírka) je do databáze
    > přenesený ze starého Grails webu nad MySQL. Migrace je **dokončená a její skripty byly
    > odstraněné** — čerstvý klon si data stáhne dumpem, ne doběhem. Viz „Stará databáze“ níž.
@@ -486,10 +489,10 @@ s odletem z Prahy** (Invia XML feed) a uloží je do JSON pole `affiliate.deals`
     ADD COLUMN IF NOT EXISTS version_affiliate_deals jsonb;
   ```
 
-  Ruční SQL místo Payload migrace je v projektu ZÁMĚR: repo drží jedinou
-  initial migraci a produkce se zarovnává ručním SQL (viz dřívější změny
-  schématu), `PAYLOAD_RUN_MIGRATIONS` se na prod nepouští. Pak backfill,
-  force-recreate cms a ruční spuštění workflow.
+  Ruční SQL místo Payload migrace je v projektu ZÁMĚR: repo žádné Payload
+  migrace nedrží (poslední, zastaralá „initial" migrace byla odstraněna
+  v září 2026) a produkce se zarovnává ručním SQL (viz dřívější změny
+  schématu). Pak backfill, force-recreate cms a ruční spuštění workflow.
 
 - **Drafty:** JSON `deals` je součást verzovaného dokumentu — sync proto
   přepisuje i poslední verzi v `_pages_v`; publikování ještě STARŠÍ verze
