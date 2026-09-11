@@ -1041,8 +1041,13 @@ m.cloudinary_public_id = a.cloudinary_public_id` musí vrátit 0.
   z DiscoverCars adresy rodiče, `ara.cz/go/epojisteni` (404) → `/go/pojisteni`, mrtvý
   Impact odkaz Revolutu → revolut.com/cz (bez provize), tři chybné země u Invie a Booking
   ve článcích → `/go/ubytovani[/cesta]`; dohromady 173 stránek a 4 články (dev hotovo,
-  prod = stejný skript + force-recreate `cms`). Nechané záměrně: živé odkazy na
-  ara.carrentalnet.com a economycarrentals (reseller 1657), Kiwi a Vašenároky.
+  prod = stejný skript + force-recreate `cms`). Živé, ale nahrazené odkazy na
+  ara.carrentalnet.com a economycarrentals (reseller 1657) řeší
+  `scripts/pujcovny-discovercars-v-textech.sql` (11. 9. 2026): z věty „stránky
+  [Economycarrentals] nebo [Rentalcars]" zůstane jeden odkaz „DiscoverCars" → `/go/auta[/země]`
+  (56 stránek Doprava, 1 článek). Týž skript opravuje chyby ze šablony téže věty: Francie
+  a Peru měly v ní „Bulharsko", Bosna a Hercegovina chybnou zemi u půjčoven, Švédsko
+  a Švýcarsko nevokalizované „v" a článek tvar „vyberu". Kiwi a Vašenároky zůstávají.
   Místo widgetu má podstránka Ubytování vlastní blok (`page/accommodation-map-section.tsx`)
   vložený DO textu za první nadpis h2 a jeho první odstavec (`midText` v MainContent; text bez
   h2 ho dostane až za sebe, pokračování nemá „lead" odstavec, viz `.prose-continued`): MapLibre mapa
