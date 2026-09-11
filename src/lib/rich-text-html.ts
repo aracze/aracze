@@ -345,7 +345,11 @@ function richTextToHtmlInternal(value: unknown, context: RichTextRenderContext =
           if (t === 'language') {
             headerHtml = `<div class="nice-to-know-item__content__header"><div class="language-bubble">${escapeHtml(item.headerText || '')}${item.headerSubtext ? `<br/><span>${escapeHtml(item.headerSubtext)}</span>` : ''}</div></div>`
           } else if (t === 'electricity') {
-            headerHtml = `<div class="nice-to-know-item__content__header"><img src="/assets/outlets/typeC.png" width="60" height="60" alt="Zásuvka" /></div>`
+            // Typy zásuvek čteme z titulku karty („Zásuvka typu C & J“), ikony
+            // skládá outletIconsHtml. Bez rozpoznaného typu ikonu raději vynecháme.
+            headerHtml = `<div class="nice-to-know-item__content__header">${outletIconsHtml(
+              parseOutletTypes(String(item.title || '')),
+            )}</div>`
           } else if (t === 'currency') {
             const renderedCurrency = escapeHtml(context.currencyCode || '--')
             const renderedRate =
@@ -394,7 +398,12 @@ function richTextToHtmlInternal(value: unknown, context: RichTextRenderContext =
             </div>`
           }
 
-          html += `<div class="nice-to-know-item nice-to-know__item--${t}"><div class="nice-to-know-item__content">${headerHtml}<div class="nice-to-know-item__body"><span class="nice-to-know-item__title">${escapeHtml(
+          // Hlavička je pevná rozpěrka (63 px) — bez ní by karta bez ikony
+          // (řízení s nejasnou stranou, zásuvka bez rozpoznaného typu) vyskočila
+          // o výšku hlavičky nad sousední karty.
+          const headerOrSpacer =
+            headerHtml || '<div class="nice-to-know-item__content__header"></div>'
+          html += `<div class="nice-to-know-item nice-to-know__item--${t}"><div class="nice-to-know-item__content">${headerOrSpacer}<div class="nice-to-know-item__body"><span class="nice-to-know-item__title">${escapeHtml(
             item.title || '',
           )}</span><span class="nice-to-know-item__value-wrap"><span>${escapeHtml(
             item.value || '',
@@ -616,6 +625,94 @@ function sanitizeNiceToKnowType(
     return type
   }
   return 'language'
+}
+
+/**
+ * Typy zásuvek, pro které máme ikonu v `public/assets/outlets/Type<X>.svg`
+ * (přítomnost v tabulce = whitelist; písmeno bez ikony se přeskočí, aby se
+ * nesahalo na neexistující soubor). `fitsInto` = zásuvky, do kterých pasuje
+ * zástrčka daného typu: C (europlug) do E, F, H, J, K, L a N; A do B. Ikona
+ * takové zásuvky typ zástrčky už říká, jeho vlastní ikona je navíc.
+ */
+const OUTLET_TYPES: Record<string, { fitsInto?: string[] }> = {
+  A: { fitsInto: ['B'] },
+  B: {},
+  C: { fitsInto: ['E', 'F', 'H', 'J', 'K', 'L', 'N'] },
+  D: {},
+  E: {},
+  F: {},
+  G: {},
+  H: {},
+  I: {},
+  J: {},
+  K: {},
+  L: {},
+  N: {},
+}
+
+// Geometrie kaskády převzatá z legacy složených ikon (TypeC-E.svg: viewBox
+// 298,9 × 234,8, dvě ikony 185 × 185 — přední vlevo dole, zadní posunutá
+// o 113,9 vpravo a 49,8 vzhůru). Výška 60 px = legacy `<img height="60">`.
+const OUTLET_ICON_UNIT = 185
+const OUTLET_ICON_STEP_X = 113.9
+const OUTLET_ICON_STEP_Y = 49.8
+const OUTLET_ICON_HEIGHT_PX = 60
+
+/**
+ * Z titulku karty („Zásuvka typu C & F“, „Zásuvka typu C, F, E, K“, „A, C & I“)
+ * vytáhne písmena typů v pořadí, bez duplicit. Bere jen samostatná VELKÁ
+ * písmena za slovem „typu“ (jinak by „Zásuvka“ dalo „Z“; malá ne, protože
+ * spojka „a“ v „C a F“ by byla typ A); bez slova „typu“ celý titulek.
+ */
+export function parseOutletTypes(title: string): string[] {
+  const afterTypu = title.replace(/^.*?(?<!\p{L})typu(?!\p{L})/isu, '')
+  return [...new Set(afterTypu.match(/(?<![\p{L}\p{N}])[A-Z](?![\p{L}\p{N}])/gu) ?? [])]
+}
+
+/**
+ * Do dvou typů se ukážou oba (vzhled dvojic z legacy webu), od tří se vypustí
+ * typy, jejichž zástrčka pasuje do jiné zobrazené zásuvky — Dánsko „C, E, F & K“
+ * dostane E, F, K, Itálie „C, F & L“ jen F a L. Volba uživatele 11. 9. 2026
+ * (varianta C z porovnání); titulek karty typy vypisuje všechny.
+ */
+export function outletTypesToShow(types: string[]): string[] {
+  if (types.length <= 2) return types
+  return types.filter((t) => !(OUTLET_TYPES[t]?.fitsInto ?? []).some((s) => types.includes(s)))
+}
+
+/**
+ * Kaskáda ikon zásuvek: první typ vpředu vlevo dole, každý další o krok vpravo
+ * nahoru za ním (ikony mají bílou výplň, takže přední zadní překryje jako
+ * v legacy obrázku). Celek se škáluje na výšku 60 px, takže tři typy (Čína,
+ * Dánsko po redukci) jsou drobnější, ale vejdou se do karty.
+ */
+function outletIconsHtml(types: string[]): string {
+  // Nejdřív whitelist, pak redukce: písmeno bez ikony („V“ z „230 V“ v titulku)
+  // se tak nepočítá do hranice tří typů a nevyhodí ikonu C.
+  const known = outletTypesToShow(types.filter((t) => t in OUTLET_TYPES))
+  if (known.length === 0) return ''
+
+  const n = known.length
+  const totalW = OUTLET_ICON_UNIT + (n - 1) * OUTLET_ICON_STEP_X
+  const totalH = OUTLET_ICON_UNIT + (n - 1) * OUTLET_ICON_STEP_Y
+  const scale = OUTLET_ICON_HEIGHT_PX / totalH
+  const r = (v: number) => Math.round(v * scale * 10) / 10
+  const size = r(OUTLET_ICON_UNIT)
+
+  // Zadní ikony do DOMu první, přední (první typ) poslední — překryv bez z-indexu.
+  // Rozměry jen ve style (absolutně pozicované obrázky v obalu s pevnou
+  // velikostí — atributy width/height by nic nepřidaly).
+  const imgs = known
+    .map(
+      (type, i) =>
+        `<img src="/assets/outlets/Type${type}.svg" alt="" style="width:${size}px;height:${size}px;left:${r(i * OUTLET_ICON_STEP_X)}px;bottom:${r(i * OUTLET_ICON_STEP_Y)}px" />`,
+    )
+    .reverse()
+    .join('')
+
+  // Ikony jsou pro čtečky dekorace: titulek karty hned pod nimi vypisuje všechny
+  // typy, a po redukci od tří typů by vlastní popisek říkal něco jiného než on.
+  return `<span class="outlet-icons" aria-hidden="true" style="width:${r(totalW)}px;height:${r(totalH)}px">${imgs}</span>`
 }
 
 function sanitizeBudgetTier(type: unknown): 'budget' | 'midrange' | 'top' {

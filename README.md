@@ -720,6 +720,22 @@ jedna instance deleguje klik z `<body>` (pokryje i rozbalovací texty a přechod
 jádro knihovny se stahuje až při prvním kliknutí. Titulek v lightboxu se přebírá z popisku
 pod fotkou (`.image-caption`), fotky bez rozměrů v DB mají fallback z náhledu.
 
+### Zásuvky v kartě Nice-to-know — ikony skládané z typů
+
+Karta „Elektřina“ v bloku Praktické informace (Nice-to-know) skládá ikonu zásuvky z ikon
+jednotlivých typů podle **titulku karty** („Zásuvka typu C & J“) — pravidla (co se čte, kdy se
+při třech a víc typech některé vypustí, geometrie kaskády) jsou u `parseOutletTypes`,
+`outletTypesToShow` a `outletIconsHtml` v `src/lib/rich-text-html.ts`. Dřív web ukazoval všude
+pevný typ C a legacy měl ručně složený obrázek jen pro část kombinací. **Nový typ zásuvky** =
+přidat `public/assets/outlets/Type<X>.svg` (185 × 185, bílá výplň, aby přední ikona překryla
+zadní; `TypeA`–`TypeL` jsou z legacy webu, `TypeN` dokreslený z `TypeC`) a řádek do tabulky
+`OUTLET_TYPES` (i s tím, do kterých zásuvek jeho zástrčka pasuje).
+Údaje karet prošly 11. 9. 2026 kontrolou proti přehledu IEC: `scripts/zasuvky-karty-opravy.sql`
+opravuje typy u Bulharska, Rakouska, Madeiry, Chorvatska, Sardinie a Sicílie, napětí Turecka a
+Ukrajiny (230 V), tvar výčtu u Dánska a Monaka a všude „hz“ → „Hz“; přepisuje `pages`, poslední
+publikovanou verzi i rozpracovaný draft, zálohuje do `zaloha.texts_zasuvky_2026_09_11`. V DEV
+spuštěno; **prod = stejný skript + force-recreate `cms`** (viz hlavička skriptu).
+
 ### Collections
 
 - **Users (Správa uživatelů)**:
@@ -1045,8 +1061,17 @@ m.cloudinary_public_id = a.cloudinary_public_id` musí vrátit 0.
   z DiscoverCars adresy rodiče, `ara.cz/go/epojisteni` (404) → `/go/pojisteni`, mrtvý
   Impact odkaz Revolutu → revolut.com/cz (bez provize), tři chybné země u Invie a Booking
   ve článcích → `/go/ubytovani[/cesta]`; dohromady 173 stránek a 4 články (dev hotovo,
-  prod = stejný skript + force-recreate `cms`). Nechané záměrně: živé odkazy na
-  ara.carrentalnet.com a economycarrentals (reseller 1657), Kiwi a Vašenároky.
+  prod = stejný skript + force-recreate `cms`). Živé, ale nahrazené odkazy na
+  ara.carrentalnet.com a economycarrentals (reseller 1657) řeší
+  `scripts/pujcovny-discovercars-v-textech.sql` (11. 9. 2026; spouštět až PO
+  `affiliate-odkazy-v-textech.sql`, skript to sám kontroluje a jinak se zruší): z věty
+  „stránky [Economycarrentals] nebo [Rentalcars]" zůstane jeden odkaz „DiscoverCars" → `/go/auta[/země]`
+  (56 stránek Doprava, 1 článek). Týž skript opravuje chyby ze šablony téže věty: Francie
+  a Peru měly v ní „Bulharsko", Bosna a Hercegovina chybnou zemi u půjčoven, Švédsko
+  a Švýcarsko nevokalizované „v" a článek tvar „vyberu". Kiwi a Vašenároky zůstávají.
+  Všechny tři skripty končí pojistkou: před `COMMIT` ověří, že nezůstala žádná adresa
+  z jejich tabulky přepisů (v textu dokumentu ani v poslední publikované verzi), jinak
+  vyhodí výjimku a transakci zruší — na produkci je lepší nezměnit nic než půlku.
   Místo widgetu má podstránka Ubytování vlastní blok (`page/accommodation-map-section.tsx`)
   vložený DO textu za první nadpis h2 a jeho první odstavec (`midText` v MainContent; text bez
   h2 ho dostane až za sebe, pokračování nemá „lead" odstavec, viz `.prose-continued`): MapLibre mapa

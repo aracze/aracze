@@ -118,4 +118,60 @@ SELECT p.full_slug, l->'fields'->>'url' AS url
 FROM pages p, jsonb_path_query(p.text, 'strict $.**.children[*] ? (@.type == "link")') l
 WHERE p.category = 'Ubytování' AND (l->'fields'->>'url') ~ 'booking|/go/'
 ORDER BY 1, 2;
+
+-- POJISTKA: výpisy výš jsou jen k přečtení, tady se kontroluje tvrdě. Když by po přepisu
+-- zůstalo něco, co skript měl odstranit, transakce se zruší — lepší nezměnit nic než půlku.
+-- Kontroluje se adresa z tabulky `m`, ne „jakýkoliv odkaz na Booking": odkaz, který editor
+-- přidá později, skript nezná a nemá ho měnit. Kromě textu stránky se kontroluje i poslední
+-- PUBLIKOVANÁ verze (tu skript také přepisuje); starší verze v historii zůstávají záměrně.
+-- `strpos` místo LIKE: adresy obsahují znak `%` (např. `%3A` ve Wyoming odkazu), který by
+-- se v LIKE choval jako zástupný znak.
+DO $$
+DECLARE
+  zbytku int;
+BEGIN
+  WITH posledni_publikovana AS (
+    SELECT DISTINCT ON (v.parent_id) v.parent_id, v.version_text
+    FROM _pages_v v
+    JOIN pages p ON p.id = v.parent_id
+    WHERE p.category = 'Ubytování' AND v.version__status = 'published' AND v.version_text IS NOT NULL
+    ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
+  )
+  SELECT count(*) INTO zbytku
+  FROM m
+  WHERE EXISTS (
+          SELECT 1 FROM pages p
+          WHERE p.category = 'Ubytování' AND p.text IS NOT NULL AND strpos(p.text::text, m.old_url) > 0)
+     OR EXISTS (SELECT 1 FROM posledni_publikovana lv WHERE strpos(lv.version_text::text, m.old_url) > 0);
+  IF zbytku > 0 THEN
+    RAISE EXCEPTION 'Zbylo % nepřepsaných adres z tabulky m — transakce se ruší.', zbytku;
+  END IF;
+
+  -- Osamocené odstavce po mapovém widgetu (jediný potomek = odkaz „Booking.com").
+  -- Skript je maže i v poslední PUBLIKOVANÉ verzi, takže se kontrolují oba zdroje.
+  SELECT count(*) INTO zbytku
+  FROM (
+    SELECT p.text AS doc
+    FROM pages p
+    WHERE p.category = 'Ubytování' AND jsonb_typeof(p.text->'root'->'children') = 'array'
+    UNION ALL
+    SELECT lv.version_text
+    FROM (
+      SELECT DISTINCT ON (v.parent_id) v.parent_id, v.version_text
+      FROM _pages_v v
+      JOIN pages p ON p.id = v.parent_id
+      WHERE p.category = 'Ubytování' AND v.version__status = 'published' AND v.version_text IS NOT NULL
+      ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
+    ) lv
+    WHERE jsonb_typeof(lv.version_text->'root'->'children') = 'array'
+  ) t, jsonb_array_elements(t.doc->'root'->'children') c
+  WHERE c->>'type' = 'paragraph'
+    AND jsonb_array_length(COALESCE(c->'children', '[]'::jsonb)) = 1
+    AND c->'children'->0->>'type' = 'link'
+    AND c->'children'->0->'fields'->>'url' ~ '^((https?:)?//www\.booking\.com/?\?aid=\d+|/go/ubytovani/?)$'
+    AND c->'children'->0->'children'->0->>'text' ~* '^\s*booking\.com\s*$';
+  IF zbytku > 0 THEN
+    RAISE EXCEPTION 'Zbylo % osamocených odstavců po widgetu — transakce se ruší.', zbytku;
+  END IF;
+END $$;
 COMMIT;

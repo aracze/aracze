@@ -64,6 +64,13 @@ const nextConfig = {
         destination: '/o-nas',
         permanent: true,
       },
+      // Ikona zásuvky typu C bývala PNG (i na starém webu); teď jsou všechny
+      // typy SVG a skládají se podle titulku karty (outletIconsHtml).
+      {
+        source: '/assets/outlets/typeC.png',
+        destination: '/assets/outlets/TypeC.svg',
+        permanent: true,
+      },
       // Spolupráce a Pírka byly sekce redakčního systému starého webu (nábor
       // autorů, resp. bodování příspěvků). Na novém webu ten systém není a
       // nechystá se, takže tu nejsou náhradní stránky — jen nejbližší smysluplný

@@ -49,6 +49,10 @@ export const NiceToKnowBlock: Block = {
           type: 'text',
           label: 'Titulek dole (šedý, např. „DOBRÝ DEN“ V:)',
           required: true,
+          admin: {
+            description:
+              'U karty Elektřina se z velkých písmen za slovem „typu“ skládá ikona zásuvky (např. „Zásuvka typu C & F“).',
+          },
         },
         {
           name: 'value',

@@ -770,14 +770,17 @@
     color: #ffffff;
   }
 
-  /* Electricity icon */
-  .prose .electricity-icon {
-    font-size: 48px;
-    color: var(--color-ink-3);
-    line-height: 1;
-    border: 2px solid var(--color-ink-3);
-    border-radius: 8px;
-    padding: 2px 10px;
+  /* Zásuvky: kaskáda ikon jednotlivých typů (rozměry a posuny počítá
+     outletIconsHtml v src/lib/rich-text-html.ts podle legacy složených obrázků) */
+  .prose .outlet-icons {
+    position: relative;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .prose .outlet-icons img {
+    position: absolute;
+    margin: 0;
   }
 
   /* Weather icon */
