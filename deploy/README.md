@@ -156,18 +156,9 @@ do produkce. CMS má na to vestavěné endpointy (`pg_dump --format=c`, resp.
 1. **Lokálně** vytvoř dump (endpoint `dbDump`) — stáhne soubor `.dump`.
 2. Nahraj ho do produkce (endpoint `dbImport`) — ten provede `DROP SCHEMA` a
    obnoví lokální schéma i data.
-3. Protože import přepíše schéma lokálním (bez záznamu o migraci), po importu
-   označíme počáteční migraci jako provedenou, aby ji CMS při restartu
-   nespouštěl znovu:
-
-   ```bash
-   docker compose exec -T postgres psql -U postgres -d aracze -c \
-     "CREATE TABLE IF NOT EXISTS payload_migrations (id serial PRIMARY KEY, name varchar, batch numeric, updated_at timestamptz DEFAULT now() NOT NULL, created_at timestamptz DEFAULT now() NOT NULL); \
-      INSERT INTO payload_migrations (name, batch) SELECT '20260709_134221_initial', 1 \
-      WHERE NOT EXISTS (SELECT 1 FROM payload_migrations WHERE name = '20260709_134221_initial');"
-   ```
-
-> Tento krok proběhne jednou, až bude aplikace nasazená. Provedu ho s tebou.
+3. Restartuj `cms` (`docker compose up -d --force-recreate cms`), aby zahodil
+   cache obsahu z doby před importem. Nic dalšího není potřeba — Payload
+   migrace se nepoužívají, takže se žádný záznam o migraci nedoplňuje.
 
 ## 4) Běžné nasazení další verze
 
