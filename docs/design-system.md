@@ -22,18 +22,19 @@ tak, aby na ní prošel bílý text.
 
 ### Neutrály
 
-| Token         | Hodnota   | Kdy                                                                       |
-| ------------- | --------- | ------------------------------------------------------------------------- |
-| `paper`       | `#ffffff` | stránka, čtecí plocha (běžně `bg-white`)                                  |
-| `surface`     | `#f4f6f9` | podklad karet: komentář, reklama, tip, střídavé sekce, patička sekce      |
-| `surface-2`   | `#e9eef4` | o krok tmavší podklad: pruhy, vnořený blok na `surface`, neaktivní štítek |
-| `line`        | `#dfe5ec` | oddělovače, rámečky karet                                                 |
-| `line-strong` | `#c9d3de` | rámečky polí formuláře, linky, které mají být vidět i na `surface-2`      |
-| `ink`         | `#1f2a37` | text, nadpisy karet                                                       |
-| `ink-2`       | `#4f5d6b` | vedlejší text: perex, popisky, „Odpovědět“, patička                       |
-| `ink-3`       | `#5f6b79` | tlumený text: meta údaje („před 2 lety“), nápovědy, placeholder           |
-| `dusk`        | `#3b444f` | tmavý podklad: hero bez fotky, tmavé pruhy                                |
-| `night`       | `#0a1626` | překryv za dialogy (`bg-night/55`), tmavé plátno ořezu fotky              |
+| Token           | Hodnota   | Kdy                                                                                                   |
+| --------------- | --------- | ----------------------------------------------------------------------------------------------------- |
+| `paper`         | `#ffffff` | stránka, čtecí plocha (běžně `bg-white`)                                                              |
+| `surface`       | `#f4f6f9` | podklad karet: komentář, reklama, tip, střídavé sekce, patička sekce                                  |
+| `surface-2`     | `#e9eef4` | o krok tmavší podklad: pruhy, vnořený blok na `surface`, neaktivní štítek                             |
+| `surface-quiet` | `#f5f6f7` | plocha, která má ustoupit a nepřitahovat oko: blok reklamy, prázdné stavy (téměř bez modrého nádechu) |
+| `line`          | `#dfe5ec` | oddělovače, rámečky karet                                                                             |
+| `line-strong`   | `#c9d3de` | rámečky polí formuláře, linky, které mají být vidět i na `surface-2`                                  |
+| `ink`           | `#1f2a37` | text, nadpisy karet                                                                                   |
+| `ink-2`         | `#4f5d6b` | vedlejší text: perex, popisky, „Odpovědět“, patička                                                   |
+| `ink-3`         | `#5f6b79` | tlumený text: meta údaje („před 2 lety“), nápovědy, placeholder                                       |
+| `dusk`          | `#3b444f` | tmavý podklad: hero bez fotky, tmavé pruhy                                                            |
+| `night`         | `#0a1626` | překryv za dialogy (`bg-night/55`), tmavé plátno ořezu fotky                                          |
 
 `ink-3` je nejsvětlejší povolená barva textu — drží 4,5 : 1 na bílé, na `surface`
 i na `surface-2`. Světlejší šedou pro text nepoužívej; pro dekoraci (tečka, šipka)
@@ -90,8 +91,8 @@ nejsou v řadě modré značky. Mění se jen po výslovném rozhodnutí.
 
 ## Pravidla
 
-1. **Podklad karty je vždy `surface`.** Komentář, reklama, tip, Nice-to-know, patička
-   sekce — všechny stejná šedá. Když potřebuješ blok uvnitř bloku, použij `surface-2`,
+1. **Podklad karty je vždy `surface`.** Komentář, tip, Nice-to-know, patička sekce —
+   všechny stejná šedá. Výjimka je blok reklamy: ten má ustoupit, proto `surface-quiet`. Když potřebuješ blok uvnitř bloku, použij `surface-2`,
    nikdy třetí odstín.
 2. **Text má tři stupně, ne víc.** `ink` / `ink-2` / `ink-3`. Hierarchii dělej velikostí
    a tučností, ne dalším odstínem šedé.

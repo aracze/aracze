@@ -22,6 +22,7 @@
   --color-paper: #ffffff; /* stránka, čtecí plocha */
   --color-surface: #f4f6f9; /* podklad karet: komentář, reklama, tip, střídavé sekce */
   --color-surface-2: #e9eef4; /* o krok tmavší podklad: pruhy, vnořené bloky */
+  --color-surface-quiet: #f5f6f7; /* plocha, která má ustoupit: blok reklamy, prázdné stavy (bez modrého nádechu) */
   --color-line: #dfe5ec; /* oddělovače, rámečky karet */
   --color-line-strong: #c9d3de; /* rámečky polí formuláře, výraznější linky */
   --color-ink: #1f2a37; /* text, nadpisy karet */
