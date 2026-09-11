@@ -192,7 +192,7 @@ export function InlineReviews({
         <button
           type="button"
           onClick={openForm}
-          className="whitespace-nowrap rounded-full border-[1.5px] border-brand px-5 py-1.5 text-[13px] font-bold text-brand transition-colors hover:bg-brand hover:text-white"
+          className="whitespace-nowrap rounded-full border-[1.5px] border-brand px-5 py-1.5 text-[13px] font-bold text-brand transition-colors btn-lift"
         >
           Napsat recenzi
         </button>
@@ -292,7 +292,7 @@ export function InlineReviews({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-lift disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isPending ? 'Odesílám…' : 'Vložit recenzi'}
             </button>

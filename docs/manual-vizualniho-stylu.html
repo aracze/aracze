@@ -9,7 +9,7 @@
   :root {
     --paper: #ffffff; --surface: #f4f6f9; --surface-2: #e9eef4; --line: #dfe5ec; --line-strong: #c9d3de;
     --ink: #1f2a37; --ink-2: #4f5d6b; --ink-3: #5f6b79; --dusk: #3b444f; --night: #0a1626;
-    --brand: #215491; --brand-deep: #1a3f6c; --brand-tint: #e6eef8; --logo: #224386;
+    --brand: #224386; --brand-deep: #1a3366; --brand-tint: #e7ecf9; --logo: #224386;
     --accent: #c2473c; --accent-bg: #fbe9e7; --accent-ink: #a3271d;
     --ok: #1b7a68; --ok-bg: #e4f3ef; --warn: #b45309; --warn-bg: #fdf1de; --err: #a3271d; --err-bg: #fdeceb; --star: #e9a11b;
     --s-ideal: #1b7a68; --s-good: #5eb49f; --s-mid: #9fb1c4; --s-poor: #c9d3de;
@@ -111,7 +111,10 @@
   /* prvky */
   .ui { background: var(--paper); }
   .ui-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  .btn { display: inline-block; white-space: nowrap; background: var(--brand); color: #fff; font-size: 13px; font-weight: 700; border-radius: 999px; padding: 9px 20px; border: 1.5px solid var(--brand); font-family: var(--sans); letter-spacing: 0.01em; }
+  .btn { display: inline-block; white-space: nowrap; background: var(--brand); color: #fff; font-size: 13px; font-weight: 700; border-radius: 999px; padding: 9px 20px; border: 1.5px solid var(--brand); font-family: var(--sans); letter-spacing: 0.01em; transition: box-shadow .15s, transform .15s; }
+  .btn:hover, .btn.hov { box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 22%, transparent), 0 6px 14px -6px color-mix(in srgb, var(--brand) 45%, transparent); transform: translateY(-1px); }
+  .btn.foc { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--brand); }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } .btn:hover, .btn.hov { transform: none; } }
   .btn.o { background: transparent; color: var(--brand); } .btn.d { background: var(--brand-deep); border-color: var(--brand-deep); } .btn.acc { background: var(--accent); border-color: var(--accent); } .btn.dis { background: var(--surface-2); border-color: var(--surface-2); color: var(--ink-3); }
   .bd { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 3px 10px; }
   .bd.new { background: var(--brand-tint); color: var(--brand); } .bd.sale { background: var(--accent-bg); color: var(--accent-ink); } .bd.ok { background: var(--ok-bg); color: var(--ok); } .bd.warn { background: var(--warn-bg); color: var(--warn); } .bd.err { background: var(--err-bg); color: var(--err); } .bd.neutral { background: var(--surface-2); color: var(--ink-2); }
@@ -220,11 +223,11 @@
       <h3>Provedení</h3>
       <div class="logo-grid">
         <div class="logo-box blue"><svg><use href="#ara-logo"/></svg><span class="cap">bílé na modré značky</span></div>
-        <div class="logo-box white"><svg><use href="#ara-logo"/></svg><span class="cap">modré na bílé · #224386</span></div>
+        <div class="logo-box white"><svg><use href="#ara-logo"/></svg><span class="cap">modré na bílé · #224386 = modrá značky</span></div>
         <div class="logo-box photo"><svg><use href="#ara-logo"/></svg><span class="cap">bílé na fotce (hlavička webu)</span></div>
         <div class="logo-box mark"><svg><use href="#ara-mark"/></svg><span class="cap">samostatný papoušek · ikony, favicon</span></div>
       </div>
-      <p class="small" style="margin-top:12px">Originál loga má modrou <span class="mono">#224386</span>, kterou drží ikony webu. Rozhraní webu používá modrou značky <span class="mono">#215491</span>; obě jsou si blízko a na webu se nepotkávají, protože logo v hlavičce i patičce je bílé. Modré provedení loga na bílé používejte v původní <span class="mono">#224386</span>.</p>
+      <p class="small" style="margin-top:12px">Modrá loga <span class="mono">#224386</span> je zároveň modrá značky celého webu: hlavičky, tlačítek, odkazů, ikon i náhledového obrázku pro sdílení. Do září 2026 web používal blízkou <span class="mono">#215491</span>; sjednocení na barvu loga bylo rozhodnuto 11. 9. 2026.</p>
       <h3>Ochranná zóna a minimální velikost</h3>
       <div class="clear">
         <div class="frame"></div>
@@ -245,13 +248,13 @@
   <section class="page" id="k3" data-folio="03 · barvy">
     <div class="chap"><div class="no">03</div><h2>Barvy</h2><p>Jedna modrá, tři šedé pro text, tři pro plochy. Ostatní barvy jen pro stav.</p></div>
     <div class="body">
-      <p class="lead">Paleta je odvozená z modré loga. <strong>Šedé nejsou neutrální</strong>, mají lehký modrý nádech (odstín 213°), aby ladily s modrou místo aby vedle ní působily špinavě. Každá barva má jméno podle role, ne podle vzhledu.</p>
+      <p class="lead">Paleta je odvozená z modré loga, která je zároveň modrou značky. <strong>Šedé nejsou neutrální</strong>, mají lehký modrý nádech (odstín 213°), aby ladily s modrou místo aby vedle ní působily špinavě. Každá barva má jméno podle role, ne podle vzhledu.</p>
 
       <h3>Modrá značky</h3>
       <div class="sw-row">
-        <div class="swatch big"><div class="c" style="background:#215491;color:#fff">#215491</div><div class="t"><b>Značka</b>odkazy, tlačítka, ikony, jména autorů, sekundární menu<code>brand</code></div></div>
-        <div class="swatch big"><div class="c" style="background:#1a3f6c;color:#fff">#1a3f6c</div><div class="t"><b>Značka tmavá</b>hlavička, nadpisy sekcí, hover tlačítek, avatar<code>brand-deep</code></div></div>
-        <div class="swatch big"><div class="c" style="background:#e6eef8;color:#1f2a37">#e6eef8</div><div class="t"><b>Modrý nádech</b>štítek počtu, podbarvený tip, aktivní položka<code>brand-tint</code></div></div>
+        <div class="swatch big"><div class="c" style="background:#224386;color:#fff">#224386</div><div class="t"><b>Značka</b>odkazy, tlačítka, ikony, jména autorů, sekundární menu<code>brand</code></div></div>
+        <div class="swatch big"><div class="c" style="background:#1a3366;color:#fff">#1a3366</div><div class="t"><b>Značka tmavá</b>hlavička, nadpisy sekcí, avatar (ne hover)<code>brand-deep</code></div></div>
+        <div class="swatch big"><div class="c" style="background:#e7ecf9;color:#1f2a37">#e7ecf9</div><div class="t"><b>Modrý nádech</b>štítek počtu, podbarvený tip, aktivní položka<code>brand-tint</code></div></div>
       </div>
 
       <h3>Neutrály: text</h3>
@@ -292,7 +295,7 @@
       <p class="small" style="margin-top:10px">Zelená je o 45° vedle modré, proto s ní ladí. Odstín říká „sezóna“, světlost „jak moc“.</p>
 
       <h3>Poměr barev na stránce</h3>
-      <div class="ratio"><i style="flex:62;background:#ffffff"></i><i style="flex:18;background:#f4f6f9"></i><i style="flex:12;background:#1f2a37"></i><i style="flex:6;background:#215491"></i><i style="flex:2;background:#c2473c"></i></div>
+      <div class="ratio"><i style="flex:62;background:#ffffff"></i><i style="flex:18;background:#f4f6f9"></i><i style="flex:12;background:#1f2a37"></i><i style="flex:6;background:#224386"></i><i style="flex:2;background:#c2473c"></i></div>
       <div class="ratio-lbl"><span>papír a fotky</span><span>podklad</span><span>text</span><span>modrá</span><span>akcent</span></div>
       <p class="small">Modrá je asi 6 % plochy, akcent 2 %. Když je modré víc, stránka přestává být klidná; když je akcentu víc, přestává upozorňovat.</p>
 
@@ -304,11 +307,11 @@
           <tr><td><span class="dot" style="background:#1f2a37"></span>Text</td><td class="num">14,5</td><td class="num">13,4</td><td class="num">12,5</td></tr>
           <tr><td><span class="dot" style="background:#4f5d6b"></span>Text vedlejší</td><td class="num">6,8</td><td class="num">6,2</td><td class="num">5,8</td></tr>
           <tr><td><span class="dot" style="background:#5f6b79"></span>Text tlumený</td><td class="num">5,4</td><td class="num">5,0</td><td class="num">4,7</td></tr>
-          <tr><td><span class="dot" style="background:#215491"></span>Značka (odkaz)</td><td class="num">7,7</td><td class="num">7,1</td><td class="num">6,6</td></tr>
+          <tr><td><span class="dot" style="background:#224386"></span>Značka (odkaz)</td><td class="num">9,5</td><td class="num">8,8</td><td class="num">8,1</td></tr>
           <tr><td><span class="dot" style="background:#1b7a68"></span>Úspěch</td><td class="num">5,2</td><td class="num">4,8</td><td class="num">4,5</td></tr>
           <tr><td><span class="dot" style="background:#c2473c"></span>Zdůraznění</td><td class="num">4,9</td><td class="num">4,6</td><td class="num">4,2<span class="warn-tag">velký text</span></td></tr>
-          <tr><td><span class="dot" style="background:#215491"></span>Bílý text na značce</td><td class="num" colspan="3">7,7</td></tr>
-          <tr><td><span class="dot" style="background:#1a3f6c"></span>Bílý text na značce tmavé</td><td class="num" colspan="3">10,7</td></tr>
+          <tr><td><span class="dot" style="background:#224386"></span>Bílý text na značce</td><td class="num" colspan="3">9,5</td></tr>
+          <tr><td><span class="dot" style="background:#1a3366"></span>Bílý text na značce tmavé</td><td class="num" colspan="3">12,3</td></tr>
           <tr><td><span class="dot" style="background:#c2473c"></span>Bílý text na zdůraznění</td><td class="num" colspan="3">4,9</td></tr>
           <tr><td><span class="dot" style="background:#5eb49f"></span>Bílý text na „dobré“</td><td class="num" colspan="3">2,5<span class="bad-tag">proto tmavý text</span></td></tr>
         </tbody>
@@ -343,8 +346,9 @@
     <div class="chap"><div class="no">05</div><h2>Prvky webu</h2><p>Málo tvarů, které se opakují všude stejně.</p></div>
     <div class="body ui">
       <h3>Tlačítka</h3>
-      <div class="ui-row"><span class="btn">Vložit komentář</span><span class="btn o">Zobrazit více</span><span class="btn d">Hledat</span><span class="btn acc">Zobrazit let</span><span class="btn dis">Odesláno</span></div>
-      <p class="small" style="margin-top:10px">Pilulka, 13 px tučně, výplň modrá značky; hover ztmaví na značku tmavou. Obrysová varianta pro druhou akci vedle první. Korálová jen u akčních nabídek a slev.</p>
+      <div class="ui-row"><span class="btn">Vložit komentář</span><span class="btn o">Zobrazit více</span><span class="btn acc">Zobrazit let</span><span class="btn dis">Odesláno</span></div>
+      <div class="ui-row" style="margin-top:14px"><span class="btn hov">Najetí myší</span><span class="btn o hov">Najetí myší</span><span class="btn foc">Fokus z klávesnice</span></div>
+      <p class="small" style="margin-top:10px">Pilulka, 13 px tučně, výplň modrá značky. Při najetí se barva nemění: kolem tlačítka se objeví průsvitné halo, jemný stín a tlačítko se zvedne o 1 px, stejně u plného i obrysového. Fokus z klávesnice kreslí ostrý dvojitý prstenec, aby se od hala lišil. Obrysová varianta pro druhou akci vedle první. Korálová jen u akčních nabídek a slev.</p>
 
       <h3>Štítky</h3>
       <div class="ui-row"><span class="bd new">Nové</span><span class="bd sale">Sleva 30 %</span><span class="bd ok">Ověřeno 2026</span><span class="bd warn">Hurikánová sezóna</span><span class="bd err">Zavřeno</span><span class="bd neutral">Archiv</span></div>
@@ -387,16 +391,16 @@
         <div class="yes"><div class="tag">Ano</div><div class="ex" style="background:#fff;border:1px solid #dfe5ec;color:#5f6b79">před 2 lety · 11 komentářů</div><p>Tlumený text je nejsvětlejší povolená šedá a drží 4,5 : 1 i na podkladu.</p></div>
         <div class="no"><div class="tag">Ne</div><div class="ex" style="background:#f5f7f9;color:#9aa4ad">před 2 lety · 11 komentářů</div><p>Světlejší šedá vypadá „jemně“, ale na kartě má kontrast 2,5 : 1 a nedá se přečíst.</p></div>
 
-        <div class="yes"><div class="tag">Ano</div><div class="ex" style="background:#fff;border:1px solid #dfe5ec"><span style="color:#215491;font-weight:600">Půjčení auta →</span> &nbsp;<span style="color:#1a3f6c;font-family:var(--head);font-weight:700">Kdy jet</span></div><p>Modrá značky = dá se kliknout. Tmavá modrá = nadpis, rámec webu.</p></div>
+        <div class="yes"><div class="tag">Ano</div><div class="ex" style="background:#fff;border:1px solid #dfe5ec"><span style="color:#224386;font-weight:600">Půjčení auta →</span> &nbsp;<span style="color:#1a3366;font-family:var(--head);font-weight:700">Kdy jet</span></div><p>Modrá značky = dá se kliknout. Tmavá modrá = nadpis, rámec webu.</p></div>
         <div class="no"><div class="tag">Ne</div><div class="ex" style="background:#fff;border:1px solid #dfe5ec"><span style="color:#2f7d9a;font-weight:600">Půjčení auta →</span> &nbsp;<span style="color:#287bbb;font-weight:600">Kdy jet</span></div><p>Další odstíny modré pro odkazy a nadpisy. Čtenář neví, co je odkaz.</p></div>
 
         <div class="yes"><div class="tag">Ano</div><div class="ex" style="background:#fff;border:1px solid #dfe5ec"><span class="bd ok">Ověřeno</span> <span class="bd sale">Sleva</span></div><p>Zelená říká „v pořádku“, korálová „akce“. Stavová barva nese informaci.</p></div>
         <div class="no"><div class="tag">Ne</div><div class="ex" style="background:#e4f3ef;color:#1b7a68;font-weight:600">Nadpis sekce v zelené, protože se to hodí k fotce</div><p>Stavové barvy jako dekorace ztratí význam tam, kde ho potřebují.</p></div>
 
-        <div class="yes"><div class="tag">Ano</div><div class="ex" style="background:#215491;color:#fff;font-weight:700;border-radius:999px;text-align:center">Vložit komentář</div><p>Bílý text na modré značky: 7,7 : 1. Na korálové 4,9 : 1.</p></div>
+        <div class="yes"><div class="tag">Ano</div><div class="ex" style="background:#224386;color:#fff;font-weight:700;border-radius:999px;text-align:center">Vložit komentář</div><p>Bílý text na modré značky: 9,5 : 1. Na korálové 4,9 : 1.</p></div>
         <div class="no"><div class="tag">Ne</div><div class="ex" style="background:#5eb49f;color:#fff;font-weight:700;border-radius:999px;text-align:center">Vložit komentář</div><p>Bílý text na světlé zelené má 2,5 : 1. Na ní patří tmavý text.</p></div>
 
-        <div class="yes"><div class="tag">Ano</div><div class="ex" style="background:#fff;border:1px solid #dfe5ec;font-family:var(--mono);font-size:12px;color:#215491">bg-surface · text-ink-3 · border-line</div><p>Nová potřeba = nový pojmenovaný token. Barva dostane jméno podle role.</p></div>
+        <div class="yes"><div class="tag">Ano</div><div class="ex" style="background:#fff;border:1px solid #dfe5ec;font-family:var(--mono);font-size:12px;color:#224386">bg-surface · text-ink-3 · border-line</div><p>Nová potřeba = nový pojmenovaný token. Barva dostane jméno podle role.</p></div>
         <div class="no"><div class="tag">Ne</div><div class="ex" style="background:#fff;border:1px solid #dfe5ec;font-family:var(--mono);font-size:12px;color:#a3271d">bg-[#f5f8fb] · text-gray-400</div><p>Hex nebo obecná šedá v komponentě. Přesně tak paleta znovu zaroste.</p></div>
       </div>
     </div>
@@ -411,7 +415,7 @@
 @theme {
   <span class="k">--color-surface</span>: <span class="v">#f4f6f9</span>;   <span class="c">/* podklad karet */</span>
   <span class="k">--color-ink-3</span>:   <span class="v">#5f6b79</span>;   <span class="c">/* tlumený text */</span>
-  <span class="k">--color-brand</span>:   <span class="v">#215491</span>;   <span class="c">/* odkazy, tlačítka */</span>
+  <span class="k">--color-brand</span>:   <span class="v">#224386</span>;   <span class="c">/* odkazy, tlačítka */</span>
 }
 
 <span class="c">/* komponenta */</span>
@@ -429,7 +433,8 @@ color: <span class="v">var(--color-ink-3)</span>;</pre>
           <tr><td>line / line-strong</td><td class="num">#dfe5ec / #c9d3de</td><td>oddělovače / pole formulářů</td></tr>
           <tr><td>ink / ink-2 / ink-3</td><td class="num">#1f2a37 / #4f5d6b / #5f6b79</td><td>text / vedlejší / tlumený</td></tr>
           <tr><td>dusk / night</td><td class="num">#3b444f / #0a1626</td><td>hero bez fotky / překryv dialogu</td></tr>
-          <tr><td>brand / brand-deep / brand-tint</td><td class="num">#215491 / #1a3f6c / #e6eef8</td><td>značka / tmavá / nádech</td></tr>
+          <tr><td>brand / brand-deep / brand-tint</td><td class="num">#224386 / #1a3366 / #e7ecf9</td><td>značka / tmavá / nádech</td></tr>
+          <tr><td>btn-lift (utilita)</td><td class="num">halo brand 22 % + stín</td><td>hover a fokus všech tlačítek</td></tr>
           <tr><td>accent / accent-bg / accent-ink</td><td class="num">#c2473c / #fbe9e7 / #a3271d</td><td>zdůraznění a jeho štítek</td></tr>
           <tr><td>ok / ok-bg</td><td class="num">#1b7a68 / #e4f3ef</td><td>úspěch</td></tr>
           <tr><td>warn / warn-bg</td><td class="num">#b45309 / #fdf1de</td><td>varování</td></tr>
@@ -443,7 +448,7 @@ color: <span class="v">var(--color-ink-3)</span>;</pre>
       <h3>Mimo tokeny</h3>
       <ul class="small">
         <li>E-mailové šablony: klienti neumí CSS proměnné, hexy se opisují z tabulky.</li>
-        <li>Styl mapy MapLibre a ikony webu (<span class="mono">build-icons.mjs</span>, modrá loga #224386).</li>
+        <li>Styl mapy MapLibre a ikony webu (<span class="mono">build-icons.mjs</span> generuje ikony v modré značky #224386).</li>
         <li>Průhledné překryvy <span class="mono">rgba(…)</span> nad fotkami a admin Payloadu.</li>
       </ul>
     </div>
@@ -454,7 +459,7 @@ color: <span class="v">var(--color-ink-3)</span>;</pre>
     <div class="body">
       <div>
         <svg role="img" aria-label="ara.cz"><use href="#ara-logo"/></svg>
-        <p style="margin-top:16px">Manuál vizuálního stylu Ara.cz, verze 1.0, září 2026. Vychází z auditu 151 barev v kódu webu, review sezónní sady ze srpna 2026 a porovnání variant A, B a C. Zvolena varianta A.</p>
+        <p style="margin-top:16px">Manuál vizuálního stylu Ara.cz, verze 1.0, září 2026. Vychází z auditu 151 barev v kódu webu, review sezónní sady ze srpna 2026 a porovnání variant A, B a C. Zvolena varianta A; modrá značky sjednocena s modrou loga.</p>
       </div>
       <div>
         <p><strong style="color:var(--ink)">Písma</strong><br>Poppins (Indian Type Foundry), Open Sans (Steve Matteson). Obě přes Google Fonts, licence Open Font License.</p>
@@ -465,4 +470,5 @@ color: <span class="v">var(--color-ink-3)</span>;</pre>
   </section>
 
 </div>
+
 </body></html>

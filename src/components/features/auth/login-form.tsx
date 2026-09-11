@@ -130,7 +130,7 @@ export function LoginForm({
       <button
         type="submit"
         disabled={pending}
-        className="mx-auto mt-5 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep disabled:opacity-60"
+        className="mx-auto mt-5 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors btn-lift disabled:opacity-60"
       >
         {pending ? 'Přihlašuji…' : 'Přihlásit se'}
       </button>

@@ -287,7 +287,7 @@ export function AvatarCropDialog({
               type="button"
               onClick={potvrdit}
               disabled={ukladam || !nacteno || chyba}
-              className="whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-60"
+              className="whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-lift disabled:cursor-not-allowed disabled:opacity-60"
             >
               {ukladam ? 'Ořezávám…' : 'Použít fotku'}
             </button>

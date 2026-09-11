@@ -14,8 +14,9 @@ do komponenty. Důvod: před zavedením tokenů (11. 9. 2026) měl web 151 různ
 z toho 59 šedých a 10 „skoro bílých“ podkladů — karta komentáře a blok reklamy vedle
 sebe měly každý jinou šedou a tlumené texty padaly pod normu čitelnosti.
 
-Zvolená sada je varianta **„A · Uklizená modrá“**: stávající modrá webu `#215491` (originál loga
-je `#224386`, viz níže), šedé s jednotným modrým nádechem (odstín 213°), korálová ztmavená
+Zvolená sada je varianta **„A · Uklizená modrá“**: modrá značky je modrá originálu loga
+`#224386` (od 11. 9. 2026; do té doby web používal `#215491`), šedé s jednotným modrým nádechem
+(odstín 213°), korálová ztmavená
 tak, aby na ní prošel bílý text.
 
 ## Role
@@ -44,11 +45,11 @@ použij `line-strong`.
 
 | Token        | Hodnota   | Kdy                                                                |
 | ------------ | --------- | ------------------------------------------------------------------ |
-| `brand`      | `#215491` | odkazy, tlačítka, ikony, jména autorů, sekundární menu             |
-| `brand-deep` | `#1a3f6c` | hlavička, nadpisy sekcí, hover tlačítek, avatar bez fotky          |
-| `brand-tint` | `#e6eef8` | štítek počtu komentářů, podbarvený tip, jemné zvýraznění aktivního |
+| `brand`      | `#224386` | odkazy, tlačítka, ikony, jména autorů, sekundární menu             |
+| `brand-deep` | `#1a3366` | hlavička, nadpisy sekcí, avatar bez fotky (NE hover tlačítek)      |
+| `brand-tint` | `#e7ecf9` | štítek počtu komentářů, podbarvený tip, jemné zvýraznění aktivního |
 
-Originál loga („Výherní logo“ na OneDrive, `logo-fb.svg`) má modrou `#224386` (odstín 220°) — tu drží ikony webu (`scripts/build-icons.mjs`, favicon, ikona aplikace). Rozhraní webu používá `brand` `#215491` (odstín 213°); obě modré jsou si blízko a vedle sebe se na webu nepotkávají, protože logo v hlavičce i patičce je bílé. Sjednocení ikon na `brand` je možné, ale je to samostatné rozhodnutí.
+Modrá značky je přesně modrá originálu loga („Výherní logo“ na OneDrive, `logo-fb.svg`, odstín 220°). Stejnou modrou mají ikony webu (`scripts/build-icons.mjs`, favicon, ikona aplikace) i náhledový obrázek pro sdílení `public/og-default.png`. `brand-deep` a `brand-tint` jsou tmavší a světlejší stupeň téhož odstínu. Logo v hlavičce a patičce webu je bílé.
 
 ### Zdůraznění a stavy
 
@@ -98,7 +99,11 @@ nejsou v řadě modré značky. Mění se jen po výslovném rozhodnutí.
 2. **Text má tři stupně, ne víc.** `ink` / `ink-2` / `ink-3`. Hierarchii dělej velikostí
    a tučností, ne dalším odstínem šedé.
 3. **Jedna modrá pro „dá se kliknout“.** Odkazy, tlačítka, ikony = `brand`;
-   `brand-deep` je pro rámec webu a hover, ne pro odkazy.
+   `brand-deep` je pro rámec webu (hlavička, nadpisy), ne pro odkazy ani hover.
+   **Tlačítka** (plná i obrysová) mají společnou utilitu `btn-lift`: při najetí průsvitné
+   halo v `brand` + jemný stín a posun o 1 px, barva výplně se nemění; fokus z klávesnice
+   = ostrý dvojitý prstenec (bílá mezera + `brand`). Žádné vlastní `hover:bg-*` ani
+   `focus-visible:ring-*` na tlačítkách.
 4. **Stavové barvy jen pro stav.** Zelená říká „v pořádku / sezóna“, korálová „akce /
    sleva“, oranžová „pozor / hvězdy“. Nepoužívej je jako dekoraci.
 5. **Kontrast**: běžný text ≥ 4,5 : 1, velký text a ikony ≥ 3 : 1 vůči podkladu, na kterém
@@ -113,11 +118,11 @@ nejsou v řadě modré značky. Mění se jen po výslovném rozhodnutí.
 | `ink`                     | 14,5    | 13,4         | 12,5            |
 | `ink-2`                   | 6,8     | 6,2          | 5,8             |
 | `ink-3`                   | 5,4     | 5,0          | 4,7             |
-| `brand`                   | 7,7     | 7,1          | 6,6             |
+| `brand`                   | 9,5     | 8,8          | 8,1             |
 | `ok`                      | 5,2     | 4,8          | 4,5             |
 | `accent`                  | 4,9     | 4,6          | 4,2 (jen velký) |
-| bílý text na `brand`      | 7,7     |              |                 |
-| bílý text na `brand-deep` | 10,7    |              |                 |
+| bílý text na `brand`      | 9,5     |              |                 |
+| bílý text na `brand-deep` | 12,3    |              |                 |
 | bílý text na `accent`     | 4,9     |              |                 |
 
 ## Co je mimo tokeny (záměrně)

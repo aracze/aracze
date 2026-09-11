@@ -43,7 +43,7 @@ export async function CommentsSection({
             tlačítko zůstává až u samotného odeslání ve formuláři. */}
         <a
           href="#napsat-komentar"
-          className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-brand px-6 py-2.5 text-[13px] font-bold tracking-wide text-brand transition-colors hover:bg-brand hover:text-white"
+          className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-brand px-6 py-2.5 text-[13px] font-bold tracking-wide text-brand transition-colors btn-lift"
         >
           <Pencil className="h-[14px] w-[14px]" strokeWidth={2} />
           Vložit komentář
