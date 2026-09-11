@@ -11,10 +11,34 @@
 -- článek tvar „vyberu" místo „vybere". Každá fráze je ve svém dokumentu právě jednou.
 -- Idempotentní; původní texty do zaloha.texts_pujcovny_2026_09_11. Z verzí jen poslední
 -- PUBLIKOVANÁ (draft editora a historie zůstávají); články verze nemají.
+-- Pořadí: až PO scripts/affiliate-odkazy-v-textech.sql (skript to na začátku kontroluje).
 -- Spuštění (dev):  docker compose exec -T postgres psql -U postgres -d aracze < scripts/pujcovny-discovercars-v-textech.sql
 -- Prod: stejně proti produkční DB (služba `postgres`), potom `docker compose up -d --force-recreate cms` (cache).
 BEGIN;
 CREATE SCHEMA IF NOT EXISTS zaloha;
+
+-- POŘADÍ SPUŠTĚNÍ: nejdřív musí doběhnout scripts/affiliate-odkazy-v-textech.sql, který
+-- přepsal rentalcars.com → /go/auta[/země]. Dvojici odkazů ve větě tenhle skript pozná
+-- podle toho, že ten druhý vede na /go/auta; při obráceném pořadí by dvojici nerozpoznal,
+-- nechal v textu mrtvý odkaz na Rentalcars a tiše to potvrdil. Proto se to kontroluje
+-- hned na začátku, dokud se ještě nic nezměnilo.
+DO $$
+DECLARE
+  zbylo int;
+BEGIN
+  SELECT (SELECT count(*) FROM pages WHERE text::text ~* 'rentalcars\.com')
+       + (SELECT count(*) FROM articles WHERE text::text ~* 'rentalcars\.com')
+       + (SELECT count(*) FROM (
+            SELECT DISTINCT ON (v.parent_id) v.parent_id, v.version_text
+            FROM _pages_v v
+            WHERE v.version__status = 'published' AND v.version_text IS NOT NULL
+            ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
+          ) lv WHERE lv.version_text::text ~* 'rentalcars\.com')
+  INTO zbylo;
+  IF zbylo > 0 THEN
+    RAISE EXCEPTION 'V textech je ještě % dokumentů s odkazem na rentalcars.com — nejdřív spusť scripts/affiliate-odkazy-v-textech.sql, teprve pak tenhle skript.', zbylo;
+  END IF;
+END $$;
 
 -- Cesta na DiscoverCars z pole „Půjčení auta" rodiče (stejné pravidlo jako carRentalHref
 -- ve webu: /cz se odřízne, host je /go/auta), bez pole obecné /go/auta.
@@ -109,12 +133,15 @@ CREATE TEMP TABLE src_versions ON COMMIT DROP AS
 SELECT v.id AS version_id, v.parent_id AS page_id, v.version_text AS old_text,
        pg_temp.fix_typos(p.full_slug, pg_temp.fix_text(v.version_text, pg_temp.go_auta_for(p.parent_id))) AS new_text
 FROM (
+  -- Filtr na vzor MUSÍ být až za DISTINCT ON: uvnitř by vybral nejnovější verzi,
+  -- která vzor obsahuje, tedy klidně historickou, a tu by skript přepsal místo živé.
   SELECT DISTINCT ON (v.parent_id) v.*
   FROM _pages_v v
   WHERE v.version__status = 'published' AND v.version_text IS NOT NULL
-    AND v.version_text::text ~* 'carrentalnet\.com|economycarrentals\.com|/go/auta'
   ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
-) v JOIN pages p ON p.id = v.parent_id;
+) v
+JOIN pages p ON p.id = v.parent_id
+WHERE v.version_text::text ~* 'carrentalnet\.com|economycarrentals\.com|/go/auta';
 DELETE FROM src_versions WHERE old_text = new_text;
 
 CREATE TEMP TABLE src_articles ON COMMIT DROP AS
@@ -195,8 +222,25 @@ BEGIN
   END IF;
 
   -- Název odkazu musí sedět s cílem: /go/auta vede na DiscoverCars, ne na Rentalcars.
+  -- Prohledávají se všechny tři zdroje, které skript mění (stránka, článek, poslední
+  -- publikovaná verze) — ne jen `pages`.
   SELECT count(*) INTO zbytku
-  FROM pages p, jsonb_path_query(p.text, 'strict $.**.children[*] ? (@.type == "link")') l
+  FROM (
+    SELECT doc FROM (
+      SELECT p.text AS doc FROM pages p WHERE p.text IS NOT NULL
+      UNION ALL
+      SELECT a.text FROM articles a WHERE a.text IS NOT NULL
+      UNION ALL
+      SELECT lv.version_text
+      FROM (
+        SELECT DISTINCT ON (v.parent_id) v.parent_id, v.version_text
+        FROM _pages_v v
+        WHERE v.version__status = 'published' AND v.version_text IS NOT NULL
+        ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
+      ) lv
+    ) x
+    WHERE strpos(x.doc::text, '/go/auta') > 0
+  ) d, jsonb_path_query(d.doc, 'strict $.**.children[*] ? (@.type == "link")') l
   WHERE l->'fields'->>'url' LIKE '/go/auta%'
     AND (l->'children'->0->>'text') ~* '^\s*rentalcars(\.com)?\s*$';
   IF zbytku > 0 THEN

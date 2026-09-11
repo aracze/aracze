@@ -149,8 +149,17 @@ BEGIN
            SELECT 1 FROM pages p
            WHERE p.id = m.doc_id AND p.text IS NOT NULL AND strpos(p.text::text, m.old_url) > 0))
      OR (m.scope = 'page' AND EXISTS (
-           SELECT 1 FROM pubv v
-           WHERE v.page_id = m.doc_id AND strpos(v.version_text::text, m.old_url) > 0))
+           -- ČERSTVÝ dotaz nad _pages_v, NE temp tabulka `pubv`: ta je snímek pořízený
+           -- před zápisem, takže by v ní staré adresy zůstaly vždy a pojistka by rušila
+           -- i úspěšný běh.
+           SELECT 1
+           FROM (
+             SELECT DISTINCT ON (v.parent_id) v.parent_id, v.version_text
+             FROM _pages_v v
+             WHERE v.version__status = 'published' AND v.version_text IS NOT NULL
+             ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
+           ) lv
+           WHERE lv.parent_id = m.doc_id AND strpos(lv.version_text::text, m.old_url) > 0))
      OR (m.scope = 'article' AND EXISTS (
            SELECT 1 FROM articles a
            WHERE a.id = m.doc_id AND a.text IS NOT NULL AND strpos(a.text::text, m.old_url) > 0));

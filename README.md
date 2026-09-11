@@ -1043,11 +1043,15 @@ m.cloudinary_public_id = a.cloudinary_public_id` musí vrátit 0.
   ve článcích → `/go/ubytovani[/cesta]`; dohromady 173 stránek a 4 články (dev hotovo,
   prod = stejný skript + force-recreate `cms`). Živé, ale nahrazené odkazy na
   ara.carrentalnet.com a economycarrentals (reseller 1657) řeší
-  `scripts/pujcovny-discovercars-v-textech.sql` (11. 9. 2026): z věty „stránky
-  [Economycarrentals] nebo [Rentalcars]" zůstane jeden odkaz „DiscoverCars" → `/go/auta[/země]`
+  `scripts/pujcovny-discovercars-v-textech.sql` (11. 9. 2026; spouštět až PO
+  `affiliate-odkazy-v-textech.sql`, skript to sám kontroluje a jinak se zruší): z věty
+  „stránky [Economycarrentals] nebo [Rentalcars]" zůstane jeden odkaz „DiscoverCars" → `/go/auta[/země]`
   (56 stránek Doprava, 1 článek). Týž skript opravuje chyby ze šablony téže věty: Francie
   a Peru měly v ní „Bulharsko", Bosna a Hercegovina chybnou zemi u půjčoven, Švédsko
   a Švýcarsko nevokalizované „v" a článek tvar „vyberu". Kiwi a Vašenároky zůstávají.
+  Všechny tři skripty končí pojistkou: před `COMMIT` ověří, že nezůstala žádná adresa
+  z jejich tabulky přepisů (v textu dokumentu ani v poslední publikované verzi), jinak
+  vyhodí výjimku a transakci zruší — na produkci je lepší nezměnit nic než půlku.
   Místo widgetu má podstránka Ubytování vlastní blok (`page/accommodation-map-section.tsx`)
   vložený DO textu za první nadpis h2 a jeho první odstavec (`midText` v MainContent; text bez
   h2 ho dostane až za sebe, pokračování nemá „lead" odstavec, viz `.prose-continued`): MapLibre mapa
