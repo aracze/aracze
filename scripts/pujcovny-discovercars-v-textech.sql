@@ -149,8 +149,8 @@ FROM pages p, jsonb_path_query(p.text, 'strict $.**.children[*] ? (@.type == "li
 WHERE l->'fields'->>'url' LIKE '/go/auta%' GROUP BY 1 ORDER BY 2 DESC;
 SELECT 'neopravene fraze: ' || count(*) AS kontrola_preklepy
 FROM typo t
-WHERE EXISTS (SELECT 1 FROM pages p WHERE p.full_slug = t.slug AND p.text::text LIKE '%' || t.old_txt || '%')
-   OR EXISTS (SELECT 1 FROM articles a WHERE a.slug = t.slug AND a.text::text LIKE '%' || t.old_txt || '%');
+WHERE EXISTS (SELECT 1 FROM pages p WHERE p.full_slug = t.slug AND strpos(p.text::text, t.old_txt) > 0)
+   OR EXISTS (SELECT 1 FROM articles a WHERE a.slug = t.slug AND strpos(a.text::text, t.old_txt) > 0);
 
 -- POJISTKA: výpisy výš jsou jen k přečtení, tady se kontroluje tvrdě. Když by cokoliv
 -- z toho, co má skript odstranit, zůstalo, transakce se zruší — na produkci je lepší
@@ -175,10 +175,11 @@ BEGIN
     RAISE EXCEPTION 'Zbyly odkazy na carrentalnet/economycarrentals v % dokumentech — transakce se ruší.', zbytku;
   END IF;
 
+  -- `strpos` místo LIKE: fráze se znakem `%` nebo `_` by se v LIKE chovaly jako maska.
   SELECT count(*) INTO zbytku
   FROM typo t
-  WHERE EXISTS (SELECT 1 FROM pages p WHERE p.full_slug = t.slug AND p.text::text LIKE '%' || t.old_txt || '%')
-     OR EXISTS (SELECT 1 FROM articles a WHERE a.slug = t.slug AND a.text::text LIKE '%' || t.old_txt || '%')
+  WHERE EXISTS (SELECT 1 FROM pages p WHERE p.full_slug = t.slug AND strpos(p.text::text, t.old_txt) > 0)
+     OR EXISTS (SELECT 1 FROM articles a WHERE a.slug = t.slug AND strpos(a.text::text, t.old_txt) > 0)
      OR EXISTS (
           SELECT 1
           FROM (
@@ -188,7 +189,7 @@ BEGIN
             ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
           ) lv
           JOIN pages p ON p.id = lv.parent_id
-          WHERE p.full_slug = t.slug AND lv.version_text::text LIKE '%' || t.old_txt || '%');
+          WHERE p.full_slug = t.slug AND strpos(lv.version_text::text, t.old_txt) > 0);
   IF zbytku > 0 THEN
     RAISE EXCEPTION 'Zbylo % neopravených frází (překlepy) — transakce se ruší.', zbytku;
   END IF;
