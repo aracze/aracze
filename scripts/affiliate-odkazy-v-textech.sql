@@ -132,4 +132,39 @@ SELECT 'pages' AS tabulka, count(*) AS zmeneno FROM src_pages
 UNION ALL SELECT '_pages_v', count(*) FROM src_versions
 UNION ALL SELECT 'articles', count(*) FROM src_articles;
 SELECT rule, new_url, count(*) FROM m GROUP BY 1, 2 ORDER BY 1, 3 DESC, 2 LIMIT 40;
+
+-- POJISTKA: výpisy výš jsou jen k přečtení, tady se kontroluje tvrdě. Když by po přepisu
+-- zůstala adresa z tabulky `m`, transakce se zruší — lepší nezměnit nic než půlku.
+-- Kontroluje se `m`, ne „jakýkoliv mrtvý odkaz": co skript nezná, nemá měnit. Kromě textu
+-- dokumentu se kontroluje i poslední PUBLIKOVANÁ verze stránky (tu skript také přepisuje);
+-- starší verze v historii zůstávají záměrně. `strpos` místo LIKE: adresy obsahují znak `%`
+-- (např. `%3A` v odkazu z Google reklamy), který by se v LIKE choval jako zástupný znak.
+DO $$
+DECLARE
+  zbytku int;
+BEGIN
+  SELECT count(*) INTO zbytku
+  FROM m
+  WHERE (m.scope = 'page' AND EXISTS (
+           SELECT 1 FROM pages p
+           WHERE p.id = m.doc_id AND p.text IS NOT NULL AND strpos(p.text::text, m.old_url) > 0))
+     OR (m.scope = 'page' AND EXISTS (
+           -- ČERSTVÝ dotaz nad _pages_v, NE temp tabulka `pubv`: ta je snímek pořízený
+           -- před zápisem, takže by v ní staré adresy zůstaly vždy a pojistka by rušila
+           -- i úspěšný běh.
+           SELECT 1
+           FROM (
+             SELECT DISTINCT ON (v.parent_id) v.parent_id, v.version_text
+             FROM _pages_v v
+             WHERE v.version__status = 'published' AND v.version_text IS NOT NULL
+             ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
+           ) lv
+           WHERE lv.parent_id = m.doc_id AND strpos(lv.version_text::text, m.old_url) > 0))
+     OR (m.scope = 'article' AND EXISTS (
+           SELECT 1 FROM articles a
+           WHERE a.id = m.doc_id AND a.text IS NOT NULL AND strpos(a.text::text, m.old_url) > 0));
+  IF zbytku > 0 THEN
+    RAISE EXCEPTION 'Zbylo % nepřepsaných adres z tabulky m — transakce se ruší.', zbytku;
+  END IF;
+END $$;
 COMMIT;
