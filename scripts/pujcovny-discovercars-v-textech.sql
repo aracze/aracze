@@ -151,4 +151,55 @@ SELECT 'neopravene fraze: ' || count(*) AS kontrola_preklepy
 FROM typo t
 WHERE EXISTS (SELECT 1 FROM pages p WHERE p.full_slug = t.slug AND p.text::text LIKE '%' || t.old_txt || '%')
    OR EXISTS (SELECT 1 FROM articles a WHERE a.slug = t.slug AND a.text::text LIKE '%' || t.old_txt || '%');
+
+-- POJISTKA: výpisy výš jsou jen k přečtení, tady se kontroluje tvrdě. Když by cokoliv
+-- z toho, co má skript odstranit, zůstalo, transakce se zruší — na produkci je lepší
+-- nezměnit nic než půlku. Kontroluje se i poslední PUBLIKOVANÁ verze (tu skript také
+-- přepisuje); starší verze v historii zůstávají se starým textem záměrně.
+DO $$
+DECLARE
+  zbytku int;
+BEGIN
+  WITH posledni_publikovana AS (
+    SELECT DISTINCT ON (v.parent_id) v.parent_id, v.version_text
+    FROM _pages_v v
+    WHERE v.version__status = 'published' AND v.version_text IS NOT NULL
+    ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
+  )
+  SELECT (SELECT count(*) FROM pages WHERE text::text ~* 'carrentalnet\.com|economycarrentals\.com')
+       + (SELECT count(*) FROM articles WHERE text::text ~* 'carrentalnet\.com|economycarrentals\.com')
+       + (SELECT count(*) FROM posledni_publikovana
+          WHERE version_text::text ~* 'carrentalnet\.com|economycarrentals\.com')
+  INTO zbytku;
+  IF zbytku > 0 THEN
+    RAISE EXCEPTION 'Zbyly odkazy na carrentalnet/economycarrentals v % dokumentech — transakce se ruší.', zbytku;
+  END IF;
+
+  SELECT count(*) INTO zbytku
+  FROM typo t
+  WHERE EXISTS (SELECT 1 FROM pages p WHERE p.full_slug = t.slug AND p.text::text LIKE '%' || t.old_txt || '%')
+     OR EXISTS (SELECT 1 FROM articles a WHERE a.slug = t.slug AND a.text::text LIKE '%' || t.old_txt || '%')
+     OR EXISTS (
+          SELECT 1
+          FROM (
+            SELECT DISTINCT ON (v.parent_id) v.parent_id, v.version_text
+            FROM _pages_v v
+            WHERE v.version__status = 'published' AND v.version_text IS NOT NULL
+            ORDER BY v.parent_id, v.updated_at DESC, v.id DESC
+          ) lv
+          JOIN pages p ON p.id = lv.parent_id
+          WHERE p.full_slug = t.slug AND lv.version_text::text LIKE '%' || t.old_txt || '%');
+  IF zbytku > 0 THEN
+    RAISE EXCEPTION 'Zbylo % neopravených frází (překlepy) — transakce se ruší.', zbytku;
+  END IF;
+
+  -- Název odkazu musí sedět s cílem: /go/auta vede na DiscoverCars, ne na Rentalcars.
+  SELECT count(*) INTO zbytku
+  FROM pages p, jsonb_path_query(p.text, 'strict $.**.children[*] ? (@.type == "link")') l
+  WHERE l->'fields'->>'url' LIKE '/go/auta%'
+    AND (l->'children'->0->>'text') ~* '^\s*rentalcars(\.com)?\s*$';
+  IF zbytku > 0 THEN
+    RAISE EXCEPTION 'Zbylo % odkazů /go/auta s textem „Rentalcars" — transakce se ruší.', zbytku;
+  END IF;
+END $$;
 COMMIT;
