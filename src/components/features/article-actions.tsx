@@ -41,7 +41,7 @@ export function ArticleActions({ commentCount = 0 }: { commentCount?: number }) 
   }
 
   return (
-    <div className="mt-6 flex items-center justify-between border-y border-[#2c3643] py-2.5">
+    <div className="mt-6 flex items-center justify-between border-y border-ink py-2.5">
       {/* Comments — scroll to the comments section / form */}
       <div className="flex items-center gap-3">
         <a
@@ -54,7 +54,7 @@ export function ArticleActions({ commentCount = 0 }: { commentCount?: number }) 
         </a>
         <a
           href="#napsat-komentar"
-          className="text-xs font-bold uppercase tracking-wide text-black/70 transition-opacity hover:opacity-100 hover:text-[#215491]"
+          className="text-xs font-bold uppercase tracking-wide text-black/70 transition-opacity hover:opacity-100 hover:text-brand"
         >
           Vložit komentář
         </a>
@@ -62,7 +62,7 @@ export function ArticleActions({ commentCount = 0 }: { commentCount?: number }) 
 
       {/* Share */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-wide text-[#99a9b3]">Sdílet</span>
+        <span className="text-xs font-bold uppercase tracking-wide text-ink-3">Sdílet</span>
         <button
           type="button"
           onClick={share}

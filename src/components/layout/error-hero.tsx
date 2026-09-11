@@ -32,7 +32,7 @@ export function ErrorHero({
   filterId: string
 }) {
   return (
-    <section className="relative h-[315px] w-full overflow-hidden bg-[#f7f9fb]">
+    <section className="relative h-[315px] w-full overflow-hidden bg-surface">
       {/* Kresba přiletí zleva a ustálí se — jednou, ne dokola. `motion-safe:`
           znamená, že kdo má v systému vypnuté animace, uvidí rovnou statický
           obrázek. */}
@@ -79,7 +79,7 @@ export function ErrorHero({
         <h1 className="text-center text-[30px] font-semibold tracking-normal text-white [text-shadow:0_1px_2px_rgba(6,17,32,0.75),0_3px_14px_rgba(6,17,32,0.55)] md:text-[40px]">
           {title}
         </h1>
-        <div className="mx-auto mt-3 h-px w-[30px] rounded-full bg-[#D7E1EF]" />
+        <div className="mx-auto mt-3 h-px w-[30px] rounded-full bg-brand-tint" />
       </div>
 
       <StaticHeroWave />

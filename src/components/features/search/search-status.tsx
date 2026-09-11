@@ -20,7 +20,7 @@ export function SearchStatus({
     <div
       role="status"
       aria-live="polite"
-      className="p-4 flex items-center justify-center gap-2 text-gray-400 text-sm"
+      className="p-4 flex items-center justify-center gap-2 text-ink-3 text-sm"
     >
       {isLoading ? (
         <>

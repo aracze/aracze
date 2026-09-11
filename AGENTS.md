@@ -85,6 +85,13 @@ specifická pro tento web:
    linky, watermark ikony). Zkrácené svislé oddělovače řeš absolutním pozicováním
    (`top-[20%] h-[70%]`), ne borderem přes celou výšku.
 
+9. **Barvy jen přes tokeny**: všechny barvy jsou definované v bloku `@theme` v
+   `src/app/(frontend)/globals.css` (`bg-surface`, `text-ink-2`, `border-line`, `bg-brand`…),
+   role a pravidla „kdy kterou“ popisuje `docs/design-system.md`. V komponentách NIKDY
+   nepiš hex (`bg-[#f5f7f9]`) ani Tailwind šedé (`text-gray-500`) — když role chybí,
+   přidej token a zapiš ho do dokumentu. Tlumený text = `text-ink-3` (drží 4,5 : 1 i na
+   `bg-surface-2`); světlejší šedou pro text nepoužívej.
+
 ## Core Principles (projektový checklist)
 
 1. **TypeScript-First**: Always use TypeScript with proper types from Payload.

@@ -114,7 +114,7 @@ export function WeatherOverviewSection({
     <section aria-labelledby="aktualni-pocasi" className="mb-10">
       <h2
         id="aktualni-pocasi"
-        className="font-heading text-[22px] font-bold leading-[1.25] text-[#005580]"
+        className="font-heading text-[22px] font-bold leading-[1.25] text-prose-heading"
       >
         Aktuální počasí {locative}
       </h2>
@@ -128,10 +128,10 @@ export function WeatherOverviewSection({
             <Link
               key={item.href}
               href={item.href}
-              className="group block overflow-hidden rounded-xl border border-[#e3e9ef] bg-white no-underline transition-shadow hover:shadow-md"
+              className="group block overflow-hidden rounded-xl border border-line bg-white no-underline transition-shadow hover:shadow-md"
             >
               <div
-                className="relative flex h-[132px] items-end bg-[#dbe6f0] bg-cover bg-center px-3.5 py-3"
+                className="relative flex h-[132px] items-end bg-surface-2 bg-cover bg-center px-3.5 py-3"
                 style={item.imageUrl ? { backgroundImage: `url(${item.imageUrl})` } : undefined}
               >
                 {/* Obloha podle počasí se vlévá od pravého horního rohu (viz
@@ -162,11 +162,11 @@ export function WeatherOverviewSection({
                   {item.title}
                 </span>
               </div>
-              <div className="flex items-center gap-3.5 px-3.5 py-2.5 text-[13px] text-[#4a4a4a]">
+              <div className="flex items-center gap-3.5 px-3.5 py-2.5 text-[13px] text-ink-2">
                 <span className="flex items-center gap-1.5">
                   <Droplets
                     aria-hidden="true"
-                    className="h-[15px] w-[15px] shrink-0 text-[#4c7bb0]"
+                    className="h-[15px] w-[15px] shrink-0 text-brand"
                     strokeWidth={2}
                   />
                   {item.weather.current.humidity} %
@@ -174,12 +174,12 @@ export function WeatherOverviewSection({
                 <span className="flex items-center gap-1.5">
                   <Wind
                     aria-hidden="true"
-                    className="h-[15px] w-[15px] shrink-0 text-[#4c7bb0]"
+                    className="h-[15px] w-[15px] shrink-0 text-brand"
                     strokeWidth={2}
                   />
                   {item.weather.current.windSpeed} m/s
                 </span>
-                <span className="ml-auto truncate text-[#8a94a0]">
+                <span className="ml-auto truncate text-ink-3">
                   {item.weather.current.condition}
                 </span>
               </div>
@@ -187,13 +187,13 @@ export function WeatherOverviewSection({
           )
         })}
       </div>
-      <p className="mt-2 text-[12px] text-[#8a94a0]">
+      <p className="mt-2 text-[12px] text-ink-3">
         Zdroj:{' '}
         <a
           href="https://openweathermap.org/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#8a94a0] underline hover:text-[#215491]"
+          className="text-ink-3 underline hover:text-brand"
         >
           OpenWeather
         </a>

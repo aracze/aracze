@@ -202,7 +202,7 @@ export function AvatarCropDialog({
   // nepřekryl vlnku — kreslila se přes fotku v dialogu.
   return createPortal(
     <>
-      <div className="fixed inset-0 z-[300] bg-[#0a1626]/55 animate-in fade-in duration-150 motion-reduce:animate-none" />
+      <div className="fixed inset-0 z-[300] bg-night/55 animate-in fade-in duration-150 motion-reduce:animate-none" />
       <div className="fixed inset-0 z-[310] grid place-items-center overflow-y-auto p-4">
         <div
           ref={panelRef}
@@ -215,19 +215,19 @@ export function AvatarCropDialog({
             type="button"
             onClick={zrusit}
             aria-label="Zavřít bez uložení výřezu"
-            className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full text-[#8a939b] transition-colors hover:bg-[#f0f4f9] hover:text-[#2c3643]"
+            className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full text-ink-3 transition-colors hover:bg-surface hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
 
-          <h2 id={titleId} className="font-heading text-[18px] font-bold text-[#1a3f6c]">
+          <h2 id={titleId} className="font-heading text-[18px] font-bold text-brand-deep">
             Umísti se do kruhu
           </h2>
-          <p className="mb-4 mt-0.5 text-[13px] text-[#8a939b]">
+          <p className="mb-4 mt-0.5 text-[13px] text-ink-3">
             Fotku posuň tažením, přibliž posuvníkem. Co je v kruhu, bude tvoje profilovka.
           </p>
 
-          <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#0a1626]">
+          <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-night">
             {chyba ? (
               <p
                 role="alert"
@@ -258,7 +258,7 @@ export function AvatarCropDialog({
           </div>
 
           <div className="mt-4 flex items-center gap-3 px-1">
-            <ZoomOut className="h-4 w-4 shrink-0 text-[#8a939b]" aria-hidden="true" />
+            <ZoomOut className="h-4 w-4 shrink-0 text-ink-3" aria-hidden="true" />
             <input
               type="range"
               min={1}
@@ -267,11 +267,11 @@ export function AvatarCropDialog({
               value={zoom}
               onChange={(e) => setZoom(Number(e.target.value))}
               aria-label="Přiblížení fotky"
-              className="h-6 w-full accent-[#215491]"
+              className="h-6 w-full accent-brand"
             />
-            <ZoomIn className="h-5 w-5 shrink-0 text-[#8a939b]" aria-hidden="true" />
+            <ZoomIn className="h-5 w-5 shrink-0 text-ink-3" aria-hidden="true" />
           </div>
-          <p className="mt-2 text-center text-[12px] text-[#9aa4ad]">
+          <p className="mt-2 text-center text-[12px] text-ink-3">
             Fotka jde posouvat tam, kde přesahuje kruh — po přibližení všemi směry.
           </p>
 
@@ -279,7 +279,7 @@ export function AvatarCropDialog({
             <button
               type="button"
               onClick={zrusit}
-              className="px-1.5 py-2 text-[13.5px] font-semibold text-[#8a939b] hover:text-[#2c3643] hover:underline"
+              className="px-1.5 py-2 text-[13.5px] font-semibold text-ink-3 hover:text-ink hover:underline"
             >
               Zrušit
             </button>
@@ -287,7 +287,7 @@ export function AvatarCropDialog({
               type="button"
               onClick={potvrdit}
               disabled={ukladam || !nacteno || chyba}
-              className="whitespace-nowrap rounded-full bg-[#215491] px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#1a3f6c] disabled:cursor-not-allowed disabled:opacity-60"
+              className="whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-60"
             >
               {ukladam ? 'Ořezávám…' : 'Použít fotku'}
             </button>

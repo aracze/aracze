@@ -28,7 +28,7 @@ const CARD = `group relative flex h-[280px] flex-col overflow-hidden ${PHOTO_TIL
 /** Odznak na bílé kartě — plný modrý kruh s bílou ikonou. */
 function SolidBadge({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#215491] text-white">
+    <div className="mb-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand text-white">
       {children}
     </div>
   )
@@ -67,8 +67,8 @@ const DocIcon = ({ className }: { className: string }) => (
 /** Datum na spodní hraně karty — společný podpis („Recenzováno: …"). */
 function CardDate({ label, iso, display }: { label: string; iso: string; display: string }) {
   return (
-    <p className="pt-3 text-[13px] text-[#8a939b]">
-      <span className="font-semibold text-[#5b666e]">{label}: </span>
+    <p className="pt-3 text-[13px] text-ink-3">
+      <span className="font-semibold text-ink-2">{label}: </span>
       <time dateTime={iso}>{display}</time>
     </p>
   )
@@ -88,7 +88,7 @@ function CardDate({ label, iso, display }: { label: string; iso: string; display
  */
 function CardText({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-2 min-h-0 flex-1 overflow-hidden text-[14.5px] leading-relaxed text-[#4a4a4a] [-webkit-mask-image:linear-gradient(to_bottom,black_calc(100%-2.4em),transparent)] [mask-image:linear-gradient(to_bottom,black_calc(100%-2.4em),transparent)]">
+    <p className="mt-2 min-h-0 flex-1 overflow-hidden text-[14.5px] leading-relaxed text-ink-2 [-webkit-mask-image:linear-gradient(to_bottom,black_calc(100%-2.4em),transparent)] [mask-image:linear-gradient(to_bottom,black_calc(100%-2.4em),transparent)]">
       {children}
     </p>
   )
@@ -121,7 +121,7 @@ function PhotoCard({
         sub={subtitle}
         size="lg"
         titleLines={3}
-        badge={<Icon className="h-4 w-4 text-[#1a3f6c]" />}
+        badge={<Icon className="h-4 w-4 text-brand-deep" />}
         // Na profilu jsou karty v jednom sloupci i na mobilu a sousedí s bílými
         // kartami recenzí (280 px) — drž 280 všude, ne 240 jako v mřížce míst.
         className="h-[280px]"
@@ -143,10 +143,10 @@ function PhotoCard({
         <SolidBadge>
           <Icon className="h-[18px] w-[18px]" />
         </SolidBadge>
-        <h3 className="line-clamp-4 text-lg font-bold leading-tight text-[#1a3f6c] transition-colors group-hover:text-[#2a5a9c]">
+        <h3 className="line-clamp-4 text-lg font-bold leading-tight text-brand-deep transition-colors group-hover:text-brand">
           {title}
         </h3>
-        {subtitle && <p className="mt-1 text-[13px] text-[#8a939b]">{subtitle}</p>}
+        {subtitle && <p className="mt-1 text-[13px] text-ink-3">{subtitle}</p>}
       </div>
     </Link>
   )
@@ -187,7 +187,7 @@ export function ProfileReviewCard({ item }: { item: ProfileReviewItem }) {
         <SolidBadge>
           <StarBadgeIcon className="h-[18px] w-[18px]" />
         </SolidBadge>
-        <h3 className="line-clamp-2 shrink-0 text-lg font-bold leading-tight text-[#1a3f6c] transition-colors group-hover:text-[#2a5a9c]">
+        <h3 className="line-clamp-2 shrink-0 text-lg font-bold leading-tight text-brand-deep transition-colors group-hover:text-brand">
           {item.targetTitle}
         </h3>
         <div className="mt-1.5 shrink-0">
@@ -209,7 +209,7 @@ export function ProfileCommentCard({ item }: { item: ProfileCommentItem }) {
         <SolidBadge>
           <CommentBadgeIcon className="h-[18px] w-[18px]" />
         </SolidBadge>
-        <h3 className="line-clamp-2 shrink-0 text-lg font-bold leading-tight text-[#1a3f6c] transition-colors group-hover:text-[#2a5a9c]">
+        <h3 className="line-clamp-2 shrink-0 text-lg font-bold leading-tight text-brand-deep transition-colors group-hover:text-brand">
           {item.targetTitle}
         </h3>
         <CardText>{item.body}</CardText>

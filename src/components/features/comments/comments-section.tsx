@@ -30,11 +30,11 @@ export async function CommentsSection({
 
   return (
     <section id="komentare" className="scroll-mt-24">
-      <div className="mb-6 flex items-center justify-between gap-4 border-b border-[#e6eaee] pb-4">
-        <h2 className="flex items-center gap-2.5 text-xl font-bold text-[#2c3643]">
-          <MessageCircle className="h-5 w-5 text-[#215491]" strokeWidth={1.8} />
+      <div className="mb-6 flex items-center justify-between gap-4 border-b border-line pb-4">
+        <h2 className="flex items-center gap-2.5 text-xl font-bold text-ink">
+          <MessageCircle className="h-5 w-5 text-brand" strokeWidth={1.8} />
           Komentáře k článku
-          <span className="rounded-full bg-[#e9f1f9] px-2.5 py-0.5 text-[13px] font-bold text-[#215491]">
+          <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-[13px] font-bold text-brand">
             {count}
           </span>
         </h2>
@@ -43,7 +43,7 @@ export async function CommentsSection({
             tlačítko zůstává až u samotného odeslání ve formuláři. */}
         <a
           href="#napsat-komentar"
-          className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-[#215491] px-6 py-2.5 text-[13px] font-bold tracking-wide text-[#215491] transition-colors hover:bg-[#215491] hover:text-white"
+          className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-brand px-6 py-2.5 text-[13px] font-bold tracking-wide text-brand transition-colors hover:bg-brand hover:text-white"
         >
           <Pencil className="h-[14px] w-[14px]" strokeWidth={2} />
           Vložit komentář
@@ -66,7 +66,7 @@ export async function CommentsSection({
           ))}
         </div>
       ) : (
-        <p className="py-6 text-[15px] text-gray-500">
+        <p className="py-6 text-[15px] text-ink-3">
           Zatím tu není žádný komentář. Buď první, kdo přidá svůj názor!
         </p>
       )}

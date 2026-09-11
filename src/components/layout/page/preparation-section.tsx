@@ -172,11 +172,11 @@ export function PreparationSection({
       <div className="mx-auto max-w-7xl px-4 md:px-12">
         {/* Nadpis ve stejném vzoru jako sousední sekce („Co vidět…", články). */}
         <div className="mb-12 flex flex-col items-center text-center">
-          <h2 className="font-heading mb-3 text-3xl font-bold tracking-tight text-[#1a3f6c]">
+          <h2 className="font-heading mb-3 text-3xl font-bold tracking-tight text-brand-deep">
             Příprava {genitive}
           </h2>
-          <div className="mb-5 h-[1px] w-[30px] rounded-full bg-[#d45145]"></div>
-          <p className="max-w-xl text-[17px] leading-relaxed text-gray-400">
+          <div className="mb-5 h-[1px] w-[30px] rounded-full bg-accent"></div>
+          <p className="max-w-xl text-[17px] leading-relaxed text-ink-3">
             Zařiď si vše potřebné na cestu z jednoho místa.
           </p>
         </div>
@@ -261,13 +261,13 @@ export function PreparationCards({
           href={item.href}
           target="_blank"
           rel="nofollow sponsored noopener"
-          className="group block rounded-lg border border-[#e6ebf1] bg-white px-4 pt-[30px] pb-6 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]"
+          className="group block rounded-lg border border-line bg-white px-4 pt-[30px] pb-6 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]"
         >
-          <span className="flex h-12 items-center justify-center text-[#1a3f6c]">{item.icon}</span>
-          <h3 className="mt-[18px] mb-2 text-[16px] font-bold text-[#1a3f6c] transition-colors group-hover:text-[#2a5a9c]">
+          <span className="flex h-12 items-center justify-center text-brand-deep">{item.icon}</span>
+          <h3 className="mt-[18px] mb-2 text-[16px] font-bold text-brand-deep transition-colors group-hover:text-brand">
             {item.title}
           </h3>
-          <p className="text-[13.5px] leading-normal text-[#74808f]">{item.description}</p>
+          <p className="text-[13.5px] leading-normal text-ink-3">{item.description}</p>
         </a>
       ))}
       {practicalInfo && (
@@ -276,15 +276,15 @@ export function PreparationCards({
           // Interní odkaz — podbarvením odlišený od partnerských karet.
           // Na mobilu (2 sloupce) přes celou šířku, ať nezůstává díra vedle
           // páté karty; od md už je v mřížce jako ostatní.
-          className="group col-span-2 block rounded-lg border border-[#e0e8f1] bg-[#f3f6fa] px-4 pt-[30px] pb-6 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)] md:col-span-1"
+          className="group col-span-2 block rounded-lg border border-line bg-surface px-4 pt-[30px] pb-6 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)] md:col-span-1"
         >
-          <span className="flex h-12 items-center justify-center text-[#1a3f6c]">
+          <span className="flex h-12 items-center justify-center text-brand-deep">
             <GuideIcon height={44} />
           </span>
-          <h3 className="mt-[18px] mb-2 text-[16px] font-bold text-[#1a3f6c] transition-colors group-hover:text-[#2a5a9c]">
+          <h3 className="mt-[18px] mb-2 text-[16px] font-bold text-brand-deep transition-colors group-hover:text-brand">
             Praktické informace
           </h3>
-          <p className="text-[13.5px] leading-normal text-[#74808f]">
+          <p className="text-[13.5px] leading-normal text-ink-3">
             Praktické cestovní informace
             <br />
             při cestě {ownerGenitive}

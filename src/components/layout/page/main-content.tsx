@@ -42,14 +42,14 @@ function PanelWeather({ weather }: { weather: PanelWeatherData }) {
           Celý popisek zůstává v title a stránka počasí ho má vypsaný. */}
       <span
         title={weather.condition}
-        className="block h-[15px] max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-bold uppercase leading-[15px] tracking-[0.1em] text-[#667085]"
+        className="block h-[15px] max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-bold uppercase leading-[15px] tracking-[0.1em] text-ink-3"
       >
         {weather.condition}
       </span>
-      <span className="text-[26px] leading-none tracking-[0.01rem] text-[#333]">
+      <span className="text-[26px] leading-none tracking-[0.01rem] text-ink">
         {weather.temp} °C
       </span>
-      <WeatherIcon icon={weather.icon} className="h-[15px] w-[15px] text-[#667085]" />
+      <WeatherIcon icon={weather.icon} className="h-[15px] w-[15px] text-ink-3" />
     </Link>
   )
 }
@@ -463,10 +463,10 @@ export const MainContent = ({
                     20 px má jen úvodní „lead" odstavec) — postranní informace
                     jsou plnohodnotný obsah, ne popisek. */}
                 {touristPointInfo.address && (
-                  <span className="flex items-start gap-3.5 text-[18px] leading-relaxed text-[#4a4a4a]">
+                  <span className="flex items-start gap-3.5 text-[18px] leading-relaxed text-ink-2">
                     <MapPin
                       aria-hidden="true"
-                      className="mt-[5px] h-[20px] w-[20px] shrink-0 text-[#215491]"
+                      className="mt-[5px] h-[20px] w-[20px] shrink-0 text-brand"
                       strokeWidth={2}
                     />
                     {touristPointInfo.address}
@@ -477,11 +477,11 @@ export const MainContent = ({
                     href={websiteHref(touristPointInfo.websiteUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-start gap-3.5 text-[18px] font-semibold leading-relaxed text-[#215491] hover:underline"
+                    className="flex items-start gap-3.5 text-[18px] font-semibold leading-relaxed text-brand hover:underline"
                   >
                     <Globe
                       aria-hidden="true"
-                      className="mt-[5px] h-[20px] w-[20px] shrink-0 text-[#215491]"
+                      className="mt-[5px] h-[20px] w-[20px] shrink-0 text-brand"
                       strokeWidth={2}
                     />
                     {websiteLabel(touristPointInfo.websiteUrl)}
@@ -528,11 +528,11 @@ export const MainContent = ({
                       )}
                     </div>
                     <div className="inline-block pt-[3px]">
-                      <div className="block text-[12px] leading-[20.4px] text-[#565656]">
+                      <div className="block text-[12px] leading-[20.4px] text-ink-2">
                         {contributor.profileHref ? (
                           <Link
                             href={contributor.profileHref}
-                            className="font-semibold text-[#565656] no-underline hover:underline"
+                            className="font-semibold text-ink-2 no-underline hover:underline"
                           >
                             {contributor.name}
                           </Link>
@@ -540,7 +540,7 @@ export const MainContent = ({
                           <span className="font-semibold">{contributor.name}</span>
                         )}
                       </div>
-                      <div className="block text-[12px] leading-[20.4px] text-[#898e95]">
+                      <div className="block text-[12px] leading-[20.4px] text-ink-3">
                         Cestovní průvodce
                       </div>
                     </div>
@@ -554,23 +554,23 @@ export const MainContent = ({
                 {practicalInfo && (
                   <Link
                     href={practicalInfo.fullSlug}
-                    className="relative flex items-center gap-3 overflow-hidden rounded-lg bg-[#f2f7fb] px-[18px] py-4 transition-colors hover:bg-[#e9f2f9]"
+                    className="relative flex items-center gap-3 overflow-hidden rounded-lg bg-surface px-[18px] py-4 transition-colors hover:bg-surface-2"
                   >
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute right-11 top-1/2 z-0 h-[56px] w-[56px] -translate-y-1/2 bg-[url('/assets/information/essentials-gray.gif')] bg-contain bg-no-repeat opacity-[0.18]"
                     />
                     <span className="relative z-10 flex-1">
-                      <span className="block font-heading text-[16px] font-semibold leading-snug text-[#1a3f6c]">
+                      <span className="block font-heading text-[16px] font-semibold leading-snug text-brand-deep">
                         Praktické informace {practicalInfoOwnerPhrase}
                       </span>
-                      <span className="mt-1 block text-[13px] leading-snug text-[#6f7a86]">
+                      <span className="mt-1 block text-[13px] leading-snug text-ink-3">
                         Měna, doprava, zdraví a další rady na cestu.
                       </span>
                     </span>
                     <ChevronRight
                       aria-hidden="true"
-                      className="relative z-10 h-5 w-5 shrink-0 text-[#215491]"
+                      className="relative z-10 h-5 w-5 shrink-0 text-brand"
                       strokeWidth={2}
                     />
                   </Link>
@@ -582,7 +582,7 @@ export const MainContent = ({
           {showAktualniInfoPanel && (
             <div className="relative">
               {/* Vertical line (shortened) — mezi textem a panelem */}
-              <div className="absolute -left-[30px] top-[20%] h-[70%] w-px bg-[#e4e4e4]" />
+              <div className="absolute -left-[30px] top-[20%] h-[70%] w-px bg-surface-2" />
 
               <div className="text-center bg-white py-4 px-0">
                 {/* Kdy jet — pruh sezóny úplně nahoře (rozhodnutí uživatele:
@@ -595,12 +595,12 @@ export const MainContent = ({
                   />
                 )}
                 {seasonPanel && (timezone || exchangeRate || panelWeather) && (
-                  <div className="w-[250px] mx-auto border-b border-[#e4e4e4] mb-6" />
+                  <div className="w-[250px] mx-auto border-b border-line mb-6" />
                 )}
                 {/* Section 1: Time, Weather and Exchange Rate */}
                 {(timezone || exchangeRate || panelWeather) && (
                   <div className="mb-6">
-                    <h2 className="text-[20px] font-semibold text-[#1a3f6c] mb-4">
+                    <h2 className="text-[20px] font-semibold text-brand-deep mb-4">
                       {panelHeading}
                     </h2>
                     {(timezone || panelWeather) && (
@@ -621,7 +621,7 @@ export const MainContent = ({
                           // se překryjí.
                           <div className="mx-auto flex w-[250px] items-stretch justify-center">
                             <LocalTime timezone={timezone} stacked className="flex-1 min-w-0" />
-                            <div className="w-px shrink-0 self-stretch bg-[#e4e4e4]" />
+                            <div className="w-px shrink-0 self-stretch bg-surface-2" />
                             <div className="flex-1 min-w-0">
                               <PanelWeather weather={panelWeather} />
                             </div>
@@ -632,12 +632,12 @@ export const MainContent = ({
                           panelWeather && <PanelWeather weather={panelWeather} />
                         )}
                         {exchangeRate && (
-                          <div className="w-[250px] mx-auto border-b border-[#e4e4e4] mt-4 mb-4" />
+                          <div className="w-[250px] mx-auto border-b border-line mt-4 mb-4" />
                         )}
                       </>
                     )}
                     {exchangeRate && currencyCode && (
-                      <div className="block text-[26px] tracking-[0.01rem] text-[#333] mt-4">
+                      <div className="block text-[26px] tracking-[0.01rem] text-ink mt-4">
                         {practicalInfo ? (
                           <Link
                             href={`${practicalInfo.fullSlug}#mena-a-ceny`}
@@ -671,13 +671,13 @@ export const MainContent = ({
                     href={practicalInfo.fullSlug}
                     className="block hover:no-underline group relative mt-6 pt-4"
                   >
-                    <h2 className="text-[22px] font-semibold text-[#1a3f6c] mb-6 group-hover:underline leading-tight">
+                    <h2 className="text-[22px] font-semibold text-brand-deep mb-6 group-hover:underline leading-tight">
                       Praktické informace <br />
                       {practicalInfoOwnerPhrase}
                     </h2>
                     <div className="relative inline-block w-full">
                       <div className="absolute top-1/2 -translate-y-1/2 left-[calc(50%+70px)] w-[55px] h-[55px] bg-[url('/assets/information/essentials-gray.gif')] bg-no-repeat bg-contain opacity-20 z-0" />
-                      <div className="relative z-10 text-[18px] text-[#888] leading-[1.5]">
+                      <div className="relative z-10 text-[18px] text-ink-3 leading-[1.5]">
                         <p className="m-0">
                           Praktické cestovní informace <br />
                           při cestě {practicalInfoOwnerPhrase}

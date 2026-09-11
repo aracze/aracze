@@ -37,10 +37,10 @@ export function RelatedTouristPoints({
     <section className="relative w-full bg-white py-12 [box-shadow:0_0.3rem_2.9rem_0_rgba(0,0,0,0.08)]">
       <div className="mx-auto max-w-7xl px-4 md:px-12">
         <div className="mb-7 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-          <h2 className="text-[22px] font-bold text-[#1a3f6c]">{heading}</h2>
+          <h2 className="text-[22px] font-bold text-brand-deep">{heading}</h2>
           <Link
             href={parentFullSlug}
-            className="inline-flex items-center gap-1.5 text-[14px] font-bold text-[#1a3f6c] transition-colors hover:text-[#d45145]"
+            className="inline-flex items-center gap-1.5 text-[14px] font-bold text-brand-deep transition-colors hover:text-accent"
           >
             {parentTitle}
             <svg

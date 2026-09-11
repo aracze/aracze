@@ -116,11 +116,11 @@ export const PlacesToVisit: React.FC<PlacesToVisitProps> = ({
     <section id="mista" className="w-full py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 md:px-12">
         <div className="flex flex-col mb-12 items-center text-center">
-          <h2 className="text-3xl font-bold text-[#1a3f6c] mb-3 font-heading tracking-tight">
+          <h2 className="text-3xl font-bold text-brand-deep mb-3 font-heading tracking-tight">
             {sectionTitle}
           </h2>
-          <div className="w-[30px] h-[1px] bg-[#d45145] rounded-full mb-5"></div>
-          <p className="text-[17px] text-gray-400 max-w-xl leading-relaxed">
+          <div className="w-[30px] h-[1px] bg-accent rounded-full mb-5"></div>
+          <p className="text-[17px] text-ink-3 max-w-xl leading-relaxed">
             {parentLocative
               ? `Objevte nejkrásnější místa. Co vidět a kam ${parentLocative} vyrazit.`
               : 'Objevte nejkrásnější místa. Co vidět a kam vyrazit.'}
@@ -210,7 +210,7 @@ function SuperordinateGrid({
             poiId={place.id}
             size="lg"
             title={place.title}
-            badge={<PinIcon className="h-4 w-4 text-[#1a3f6c]" />}
+            badge={<PinIcon className="h-4 w-4 text-brand-deep" />}
             topRight={
               showAnalyticsDebug ? (
                 <AnalyticsDebugBadge views={place.analyticsPageViews ?? 0} />
@@ -259,7 +259,7 @@ function TouristPointList({
   showAnalyticsDebug?: boolean
 }) {
   return (
-    <div className="divide-y divide-gray-100">
+    <div className="divide-y divide-line">
       {places.map((place, index) => {
         const imageUrl = imageUrlMap?.get(place.id) ?? null
         // richTextToHtml voláme jen jednou; náhled i délku odvodíme z výsledku.

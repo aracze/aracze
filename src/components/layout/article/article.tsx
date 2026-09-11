@@ -88,7 +88,7 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
   const publishedIso = article.publishedAt ?? article.createdAt ?? null
   const publishDate = formatPublishDate(publishedIso)
   const publishedLine = publishDate && (
-    <p className="text-sm text-gray-500">
+    <p className="text-sm text-ink-3">
       Publikováno <time dateTime={publishDate.dateTime}>{publishDate.text}</time>
     </p>
   )
@@ -165,21 +165,21 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
               `.prose > p:first-of-type`) a nadpisy mají id přímo z richTextToHtml
               (rehypeSlug byl proto zbytečný). */}
             <div
-              className="reading-prose prose max-w-[808px] prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline"
+              className="reading-prose prose max-w-[808px] prose-a:text-brand prose-a:no-underline hover:prose-a:underline"
               dangerouslySetInnerHTML={{ __html: articleText }}
             />
 
             {/* Attribution (Zdroj: ...) — right-aligned italic, like the legacy `p.attribution` */}
             {article.attribution && (
               <div
-                className="mt-12 text-right text-sm italic text-gray-600 [&_a]:font-medium [&_a]:text-[#215491] [&_a]:no-underline hover:[&_a]:underline"
+                className="mt-12 text-right text-sm italic text-ink-2 [&_a]:font-medium [&_a]:text-brand [&_a]:no-underline hover:[&_a]:underline"
                 dangerouslySetInnerHTML={{ __html: richTextToHtml(article.attribution) }}
               />
             )}
 
             {/* Author */}
             {authorName && (
-              <div className="mt-8 flex items-start gap-4 border-t border-[#dadbdc] pt-5 pb-2.5">
+              <div className="mt-8 flex items-start gap-4 border-t border-line pt-5 pb-2.5">
                 {profileHref ? (
                   <Link href={profileHref} className="shrink-0">
                     {authorAvatar}
@@ -189,23 +189,20 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
                 )}
                 <div className="min-w-0">
                   {profileHref ? (
-                    <Link
-                      href={profileHref}
-                      className="font-semibold text-[#215491] hover:underline"
-                    >
+                    <Link href={profileHref} className="font-semibold text-brand hover:underline">
                       {authorName}
                     </Link>
                   ) : (
-                    <span className="font-semibold text-[#215491]">{authorName}</span>
+                    <span className="font-semibold text-brand">{authorName}</span>
                   )}
                   {publishedLine}
-                  {authorBio && <p className="mt-1 leading-relaxed text-gray-600">{authorBio}</p>}
+                  {authorBio && <p className="mt-1 leading-relaxed text-ink-2">{authorBio}</p>}
                 </div>
               </div>
             )}
             {/* Bez autora aspoň samotné datum (dnes nemá autora žádný článek). */}
             {!authorName && publishedLine && (
-              <div className="mt-8 border-t border-[#dadbdc] pt-5 pb-2.5">{publishedLine}</div>
+              <div className="mt-8 border-t border-line pt-5 pb-2.5">{publishedLine}</div>
             )}
 
             {/* Comment count + "Vložit komentář" + "Sdílet" */}

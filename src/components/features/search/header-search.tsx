@@ -83,11 +83,11 @@ export function HeaderSearch() {
                 {/* Lupa se během hledání točí — signál „pracuju" přímo v poli. */}
                 {isLoading ? (
                   <Loader2
-                    className="w-6 h-6 text-gray-400 shrink-0 animate-spin"
+                    className="w-6 h-6 text-ink-3 shrink-0 animate-spin"
                     aria-hidden="true"
                   />
                 ) : (
-                  <SearchGraphic className="w-6 h-6 text-gray-400 shrink-0" strokeWidth={2.5} />
+                  <SearchGraphic className="w-6 h-6 text-ink-3 shrink-0" strokeWidth={2.5} />
                 )}
                 <input
                   ref={inputRef}
@@ -98,14 +98,14 @@ export function HeaderSearch() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') submitToSearchPage()
                   }}
-                  className="flex-1 bg-transparent border-none outline-none text-xl font-normal text-gray-800 placeholder:text-gray-400 py-1"
+                  className="flex-1 bg-transparent border-none outline-none text-xl font-normal text-ink placeholder:text-ink-3 py-1"
                 />
-                <div className="hidden md:flex items-center gap-4 border-l border-gray-100 pl-6">
+                <div className="hidden md:flex items-center gap-4 border-l border-line pl-6">
                   <button
                     type="button"
                     onClick={handleClear}
                     aria-label="Zavřít vyhledávání"
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+                    className="p-2 hover:bg-surface-2 rounded-full transition-colors text-ink-3 hover:text-ink-2"
                   >
                     <X className="w-6 h-6" strokeWidth={2.5} />
                   </button>
@@ -114,13 +114,13 @@ export function HeaderSearch() {
                   type="button"
                   onClick={handleClear}
                   aria-label="Zavřít vyhledávání"
-                  className="md:hidden p-2 text-gray-400"
+                  className="md:hidden p-2 text-ink-3"
                 >
                   <X className="w-6 h-6" strokeWidth={2.5} />
                 </button>
               </div>
               {(query.length > 0 || results.length > 0) && (
-                <div className="border-t border-gray-100">
+                <div className="border-t border-line">
                   {/* Staré výsledky při načítání nového dotazu zůstávají, jen
                       ztlumené (stale-while-revalidate) — výpis nepoblikává. */}
                   <div

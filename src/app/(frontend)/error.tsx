@@ -32,20 +32,20 @@ export default function Error({
 
       <div className="mx-auto w-full max-w-6xl px-4 py-12 md:py-14">
         <div className="mx-auto flex max-w-[36rem] flex-col items-center gap-5 text-center">
-          <p className="text-[#5b666e]">
+          <p className="text-ink-2">
             Stránku se teď nepodařilo načíst. Zkus to prosím za chvíli znovu.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={reset}
-              className="rounded-full bg-[#215491] px-6 py-2.5 font-semibold text-white transition-colors hover:bg-[#1a4579] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215491]/50"
+              className="rounded-full bg-brand px-6 py-2.5 font-semibold text-white transition-colors hover:bg-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
             >
               Zkusit znovu
             </button>
             <Link
               href="/"
-              className="rounded-full border border-[#215491] px-6 py-2.5 font-semibold text-[#215491] transition-colors hover:bg-[#215491]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215491]/50"
+              className="rounded-full border border-brand px-6 py-2.5 font-semibold text-brand transition-colors hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
             >
               Zpět na úvodní stránku
             </Link>

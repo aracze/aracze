@@ -46,17 +46,17 @@ function Field({
           autoFocus={autoFocus}
           aria-describedby={hint ? hintId : undefined}
           placeholder=" "
-          className="peer block w-full rounded-xl bg-[#eef3fb] px-4 pb-1.5 pt-5 text-[14.5px] text-[#2c3643] outline-none ring-2 ring-transparent transition-shadow focus:ring-[#215491]/35"
+          className="peer block w-full rounded-xl bg-surface px-4 pb-1.5 pt-5 text-[14.5px] text-ink outline-none ring-2 ring-transparent transition-shadow focus:ring-brand/35"
         />
         <label
           htmlFor={id}
-          className="pointer-events-none absolute left-4 top-1 text-[11px] font-semibold uppercase leading-none tracking-wide text-[#8a99a8] transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-[14.5px] peer-placeholder-shown:font-normal peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal peer-placeholder-shown:text-[#9aa4ad] peer-focus:top-1 peer-focus:translate-y-0 peer-focus:text-[11px] peer-focus:font-semibold peer-focus:uppercase peer-focus:tracking-wide peer-focus:text-[#215491]"
+          className="pointer-events-none absolute left-4 top-1 text-[11px] font-semibold uppercase leading-none tracking-wide text-ink-3 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-[14.5px] peer-placeholder-shown:font-normal peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal peer-placeholder-shown:text-ink-3 peer-focus:top-1 peer-focus:translate-y-0 peer-focus:text-[11px] peer-focus:font-semibold peer-focus:uppercase peer-focus:tracking-wide peer-focus:text-brand"
         >
           {label}
         </label>
       </div>
       {hint && (
-        <p id={hintId} className="mt-1.5 px-1 text-[12px] leading-snug text-[#9aa4ad]">
+        <p id={hintId} className="mt-1.5 px-1 text-[12px] leading-snug text-ink-3">
           {hint}
         </p>
       )}
@@ -65,9 +65,9 @@ function Field({
 }
 
 const ERROR_CLASS =
-  'mb-5 rounded-xl bg-[#fdeceb] px-4 py-3 text-center text-[14px] font-medium text-[#a3271d]'
+  'mb-5 rounded-xl bg-err-bg px-4 py-3 text-center text-[14px] font-medium text-err'
 const BUTTON_CLASS =
-  'mx-auto mt-5 block w-fit rounded-full bg-[#215491] px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#1a3f6c] disabled:opacity-60'
+  'mx-auto mt-5 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep disabled:opacity-60'
 
 /** Krok 1 — pošli mi odkaz na e-mail. */
 export function ForgotPasswordForm({ turnstileSiteKey }: { turnstileSiteKey: string | null }) {
@@ -81,22 +81,22 @@ export function ForgotPasswordForm({ turnstileSiteKey }: { turnstileSiteKey: str
   if (state.status === 'sent') {
     return (
       <div className="mx-auto max-w-[340px] text-center">
-        <span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-[#2f7d9a] to-[#215491]">
+        <span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-brand to-brand">
           <Image src="/assets/avatar-parrot.png" alt="" width={32} height={32} unoptimized />
         </span>
-        <h2 className="font-heading text-[20px] font-bold text-[#1a3f6c]">Podívej se do e-mailu</h2>
+        <h2 className="font-heading text-[20px] font-bold text-brand-deep">
+          Podívej se do e-mailu
+        </h2>
         {/* ZÁMĚRNĚ neříkáme, jestli účet existuje — jinak by šlo formulářem
             zjišťovat, kdo je na webu registrovaný. */}
-        <p className="mt-2 text-[14.5px] leading-relaxed text-[#5b666e]">
+        <p className="mt-2 text-[14.5px] leading-relaxed text-ink-2">
           Pokud u nás účet s tímhle e-mailem je, poslali jsme na něj odkaz pro nastavení nového
           hesla.
         </p>
-        <p className="mt-4 text-[13px] leading-relaxed text-[#9aa4ad]">
-          Nepřišel? Zkontroluj spam.
-        </p>
+        <p className="mt-4 text-[13px] leading-relaxed text-ink-3">Nepřišel? Zkontroluj spam.</p>
         <Link
           href="/prihlaseni"
-          className="mx-auto mt-6 block w-fit rounded-full border-2 border-[#c9d4e0] px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-[#5b666e] transition-colors hover:border-[#215491] hover:text-[#215491]"
+          className="mx-auto mt-6 block w-fit rounded-full border-2 border-line-strong px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
         >
           Zpět na přihlášení
         </Link>
@@ -148,9 +148,9 @@ export function ForgotPasswordForm({ turnstileSiteKey }: { turnstileSiteKey: str
         {pending ? 'Odesílám…' : 'Poslat odkaz'}
       </button>
 
-      <p className="mt-5 text-center text-[13.5px] text-[#8a939b]">
+      <p className="mt-5 text-center text-[13.5px] text-ink-3">
         Vzpomněl sis?{' '}
-        <Link href="/prihlaseni" className="font-semibold text-[#215491] hover:underline">
+        <Link href="/prihlaseni" className="font-semibold text-brand hover:underline">
           Přihlas se
         </Link>
       </p>
@@ -198,7 +198,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         {pending ? 'Ukládám…' : 'Nastavit heslo'}
       </button>
 
-      <p className="mt-5 text-center text-[13px] leading-relaxed text-[#9aa4ad]">
+      <p className="mt-5 text-center text-[13px] leading-relaxed text-ink-3">
         Po nastavení tě rovnou přihlásíme.
       </p>
     </form>

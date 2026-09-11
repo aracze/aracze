@@ -46,20 +46,18 @@ export function ArticleRowCard({
     <Link
       href={href}
       className={cn(
-        'group flex flex-col sm:flex-row gap-6 items-stretch bg-white rounded-3xl border border-gray-100/50 p-5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] transition-all duration-500 transform hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)]',
+        'group flex flex-col sm:flex-row gap-6 items-stretch bg-white rounded-3xl border border-line/50 p-5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] transition-all duration-500 transform hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)]',
         className,
       )}
     >
       <div className="flex-1 order-2 sm:order-1 flex flex-col justify-center">
-        <h3 className="text-2xl font-bold text-[#1a3f6c] mb-3 leading-[1.2] transition-colors group-hover:text-[#215491]">
+        <h3 className="text-2xl font-bold text-brand-deep mb-3 leading-[1.2] transition-colors group-hover:text-brand">
           {title}
         </h3>
-        <p className="text-gray-500 line-clamp-3 text-[15px] leading-relaxed font-light">
-          {excerpt}
-        </p>
-        <div className="mt-[20px] flex items-center text-[#215491] font-bold text-[12px] tracking-[0.1em] uppercase font-heading">
+        <p className="text-ink-3 line-clamp-3 text-[15px] leading-relaxed font-light">{excerpt}</p>
+        <div className="mt-[20px] flex items-center text-brand font-bold text-[12px] tracking-[0.1em] uppercase font-heading">
           <span>Číst více</span>
-          <div className="ml-3 w-8 h-[1px] bg-[#215491]/30 transition-all duration-300 group-hover:w-12 group-hover:bg-[#215491]"></div>
+          <div className="ml-3 w-8 h-[1px] bg-brand/30 transition-all duration-300 group-hover:w-12 group-hover:bg-brand"></div>
         </div>
       </div>
       <div className="order-1 sm:order-2 relative w-full sm:w-[280px] h-[180px] shrink-0 overflow-hidden rounded-2xl">

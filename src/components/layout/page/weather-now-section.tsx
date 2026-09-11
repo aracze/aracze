@@ -22,7 +22,7 @@ import type { PlaceWeather } from '@/lib/weather'
 
 /** Údaje v patičce pásu — jeden řádek, ustupují velké teplotě nad sebou. */
 function FactsFooter({ weather }: { weather: PlaceWeather }) {
-  const iconClass = 'h-[19px] w-[19px] shrink-0 text-[#9fc0e2]'
+  const iconClass = 'h-[19px] w-[19px] shrink-0 text-line-strong'
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-2 border-t border-white/20 pt-3.5 text-[13.5px] text-white">
       <span className="flex items-center gap-2">
@@ -41,7 +41,7 @@ function FactsFooter({ weather }: { weather: PlaceWeather }) {
         <span className="font-semibold">{weather.current.windSpeed} m/s</span>
         <Navigation2
           aria-hidden="true"
-          className="h-[14px] w-[14px] shrink-0 text-[#9fc0e2]"
+          className="h-[14px] w-[14px] shrink-0 text-line-strong"
           strokeWidth={2}
           style={{ transform: `rotate(${weather.current.windArrowDeg}deg)` }}
         />
@@ -69,12 +69,12 @@ export function WeatherNowSection({
     <section aria-labelledby="aktualni-pocasi" className="mb-10">
       <h2
         id="aktualni-pocasi"
-        className="font-heading text-[22px] font-bold leading-[1.25] text-[#005580]"
+        className="font-heading text-[22px] font-bold leading-[1.25] text-prose-heading"
       >
         Aktuální počasí {locative}
       </h2>
 
-      <div className="mt-4 rounded-[14px] bg-gradient-to-br from-[#1a3f6c] via-[#2c5f9e] to-[#3f74b5] px-7 py-6">
+      <div className="mt-4 rounded-[14px] bg-gradient-to-br from-brand-deep via-brand to-brand px-7 py-6">
         <div className="flex items-center gap-4">
           <div aria-hidden="true" className="text-[46px] leading-none">
             {weather.current.emoji}
@@ -98,15 +98,15 @@ export function WeatherNowSection({
           {weather.dayParts.map((part) => (
             <div
               key={part.label}
-              className="rounded-[10px] border border-[#d7e5f2] bg-[#f2f7fb] px-1.5 py-3"
+              className="rounded-[10px] border border-line bg-surface px-1.5 py-3"
             >
               <div aria-hidden="true" className="text-[22px]">
                 {part.emoji}
               </div>
-              {/* #4d7196, ne světlejší modrá — na tónovaném podkladu #f2f7fb
+              {/* `brand`, ne světlejší modrá — na tónovaném podkladu `surface`
                   drží kontrast 4,7 : 1 (drobné písmo potřebuje 4,5 : 1). */}
-              <div className="text-[12.5px] text-[#4d7196]">{part.label}</div>
-              <div className="font-heading text-[17px] font-semibold text-[#1a3f6c]">
+              <div className="text-[12.5px] text-brand">{part.label}</div>
+              <div className="font-heading text-[17px] font-semibold text-brand-deep">
                 {part.temp}°
               </div>
             </div>
@@ -139,7 +139,7 @@ export function WeatherForecastSection({
     <section aria-labelledby="predpoved-pocasi" className="mt-10">
       <h2
         id="predpoved-pocasi"
-        className="font-heading text-[22px] font-bold leading-[1.25] text-[#005580]"
+        className="font-heading text-[22px] font-bold leading-[1.25] text-prose-heading"
       >
         {forecastHeading(weather, locative)}
       </h2>
@@ -149,29 +149,27 @@ export function WeatherForecastSection({
         {weather.days.map((day) => (
           <div
             key={day.label}
-            className="rounded-[10px] border border-[#d7e5f2] bg-[#f2f7fb] px-1.5 py-3 text-center"
+            className="rounded-[10px] border border-line bg-surface px-1.5 py-3 text-center"
           >
-            <div className="text-[12.5px] text-[#4d7196]">{day.label}</div>
+            <div className="text-[12.5px] text-brand">{day.label}</div>
             <div aria-hidden="true" className="my-0.5 text-[22px]">
               {day.emoji}
             </div>
-            <div className="font-heading text-[17px] font-semibold text-[#1a3f6c]">
+            <div className="font-heading text-[17px] font-semibold text-brand-deep">
               {day.tempMax}°
             </div>
-            <div className="text-[12.5px] text-[#4d7196]">{day.tempMin}°</div>
-            <div className="mt-1 whitespace-nowrap text-[11.5px] text-[#2f6db3]">
-              💧 {day.pop} %
-            </div>
+            <div className="text-[12.5px] text-brand">{day.tempMin}°</div>
+            <div className="mt-1 whitespace-nowrap text-[11.5px] text-brand">💧 {day.pop} %</div>
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[12px] text-[#8a94a0]">
+      <p className="mt-2 text-[12px] text-ink-3">
         Zdroj:{' '}
         <a
           href="https://openweathermap.org/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#8a94a0] underline hover:text-[#215491]"
+          className="text-ink-3 underline hover:text-brand"
         >
           OpenWeather
         </a>

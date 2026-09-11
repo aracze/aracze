@@ -24,7 +24,7 @@ export function ResultList({
 
   // Animace „vjetí" jen pro uživatele bez omezeného pohybu (prefers-reduced-motion).
   return (
-    <div className="flex flex-col divide-y divide-gray-100 pt-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-300">
+    <div className="flex flex-col divide-y divide-line pt-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-300">
       {results.slice(0, limit).map((result: FuseResult<SearchItem>, index: number) => {
         const item = result.item
         const showCategory = item.category && !PLACE_CATEGORIES.has(item.category)
@@ -41,23 +41,23 @@ export function ResultList({
             titleLines={1}
             titleExtra={
               showCategory && (
-                <span className="hidden md:inline-block shrink-0 text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#215491]/10 text-[#215491]">
+                <span className="hidden md:inline-block shrink-0 text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-brand/10 text-brand">
                   {item.category}
                 </span>
               )
             }
             fallback={
               <MapPin
-                className="w-5 h-5 text-[#1a3f6c]"
-                fill="#1a3f6c"
+                className="w-5 h-5 text-brand-deep"
+                fill="var(--color-brand-deep)"
                 fillOpacity={0.1}
                 strokeWidth={2.5}
               />
             }
           >
             {(item.path || item.text) && (
-              <p className="text-[13.5px] text-gray-400 truncate mt-0.5">
-                {item.path && <span className="text-gray-500 font-medium">{item.path}</span>}
+              <p className="text-[13.5px] text-ink-3 truncate mt-0.5">
+                {item.path && <span className="text-ink-3 font-medium">{item.path}</span>}
                 {item.path && item.text && <span className="hidden md:inline"> — </span>}
                 {item.text && <span className="hidden md:inline">{item.text}</span>}
               </p>

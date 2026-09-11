@@ -75,7 +75,7 @@ export function SeasonStrip({
         })}
       </div>
       {season.idealText && (
-        <div className="mt-3.5 inline-block rounded-[3px] bg-[#f2f5f8] px-5 py-[5px] text-[10px] font-bold uppercase tracking-[0.05em] text-[#67747c]">
+        <div className="mt-3.5 inline-block rounded-[3px] bg-surface px-5 py-[5px] text-[10px] font-bold uppercase tracking-[0.05em] text-ink-3">
           {season.idealText}
         </div>
       )}
@@ -90,14 +90,16 @@ export function SeasonStrip({
     <div className="mb-6">
       {href ? (
         <Link href={href} className="block hover:no-underline">
-          <h2 className="mb-0 text-[20px] font-semibold leading-tight text-[#1a3f6c] hover:underline">
+          <h2 className="mb-0 text-[20px] font-semibold leading-tight text-brand-deep hover:underline">
             {heading}
           </h2>
           {strip}
         </Link>
       ) : (
         <>
-          <h2 className="mb-0 text-[20px] font-semibold leading-tight text-[#1a3f6c]">{heading}</h2>
+          <h2 className="mb-0 text-[20px] font-semibold leading-tight text-brand-deep">
+            {heading}
+          </h2>
           {strip}
         </>
       )}

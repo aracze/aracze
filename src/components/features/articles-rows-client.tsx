@@ -171,11 +171,11 @@ export const ArticlesRowsClient = ({ items }: { items: ArticleCardVM[] }) => {
               přepnutí kotvy (viz useEffect výš). */}
           <div ref={spacerRef} aria-hidden="true" />
           <div ref={panelRef} className="sticky">
-            <p className="font-heading mb-3 text-[16px] font-bold text-[#1a3f6c]">
+            <p className="font-heading mb-3 text-[16px] font-bold text-brand-deep">
               Články v rubrice · {items.length}
             </p>
             <nav aria-label="Seznam článků v rubrice" className="pr-2">
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-line">
                 {items.map((item) => (
                   <li key={item.key}>
                     {/* Kompaktní velikost (44 px) — rejstřík s 18+ položkami. */}

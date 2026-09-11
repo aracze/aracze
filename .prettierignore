@@ -10,3 +10,5 @@ src/app/(payload)/admin/importMap.ts
 # Generovaný mapový styl + zkopírovaný dist MapLibre workeru (scripts/build-map-style.mjs)
 public/map-styles
 public/maplibre
+# Brand manuál — vygenerovaný samostatný HTML soubor s vloženým obrázkem
+docs/*.html

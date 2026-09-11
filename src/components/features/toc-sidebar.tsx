@@ -94,13 +94,13 @@ export function TocSidebar({
 
   const itemClass = (level: number, active: boolean) => {
     const base =
-      'block py-4 border-b border-[#e4e4e4] transition-colors duration-300 hover:text-black no-underline'
+      'block py-4 border-b border-line transition-colors duration-300 hover:text-black no-underline'
     if (practicalInfo && level === 2) {
-      return `${base} font-bold ${active ? 'text-[#287bbb]' : 'text-[#004d94]'}`
+      return `${base} font-bold ${active ? 'text-brand' : 'text-brand-deep'}`
     }
     const strong = level === (practicalInfo ? 3 : 2)
     const weight = strong ? 'font-semibold' : 'font-normal'
-    const color = active ? 'text-[#287bbb]' : strong ? 'text-gray-800/85' : 'text-gray-800/65'
+    const color = active ? 'text-brand' : strong ? 'text-ink/85' : 'text-ink/65'
     return `${base} ${weight} ${color}`
   }
 

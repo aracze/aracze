@@ -24,27 +24,27 @@ export default function AccountDeletedPage() {
     <AuthPageShell title="Účet je smazaný">
       <div className="text-center">
         <CheckCircle2
-          className="mx-auto mb-4 h-12 w-12 text-[#2f9a6a]"
+          className="mx-auto mb-4 h-12 w-12 text-ok"
           strokeWidth={1.8}
           aria-hidden="true"
         />
-        <p className="text-[15px] leading-relaxed text-[#5b666e]">
+        <p className="text-[15px] leading-relaxed text-ink-2">
           Hotovo — účet i profil jsou pryč a jsi odhlášený. Tvoje komentáře a recenze v diskusích
           zůstaly, ale už nejsou propojené s žádným účtem.
         </p>
-        <p className="mt-4 text-[13.5px] leading-relaxed text-[#9aa4ad]">
+        <p className="mt-4 text-[13.5px] leading-relaxed text-ink-3">
           Kdyby ses chtěl někdy vrátit, stačí se zaregistrovat znovu.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link
             href="/"
-            className="rounded-full bg-[#215491] px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#1a3f6c]"
+            className="rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep"
           >
             Zpět na web
           </Link>
           <Link
             href="/registrace"
-            className="rounded-full border-2 border-[#c9d4e0] px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-[#5b666e] transition-colors hover:border-[#215491] hover:text-[#215491]"
+            className="rounded-full border-2 border-line-strong px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
           >
             Založit nový účet
           </Link>

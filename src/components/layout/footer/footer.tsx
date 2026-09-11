@@ -16,7 +16,7 @@ function FooterLogo({ logo }: { logo: ImageLink }) {
     return (
       <Link
         href={logo.link?.href ?? '/'}
-        className="flex items-center shrink-0 text-[#7a848e] hover:text-[#215491] transition-colors"
+        className="flex items-center shrink-0 text-ink-3 hover:text-brand transition-colors"
         aria-label="Ara.cz – Cestovní průvodce po světě"
       >
         {/* Logo je jednobarevná křivka s natvrdo bílým `fill` — přebarvíme ho
@@ -24,7 +24,7 @@ function FooterLogo({ logo }: { logo: ImageLink }) {
             ŠEDÁ, ne firemní modrá: v plné modré bylo logo v patičce hlasitější
             než věta vedle něj a přetahovalo pozornost z obsahu stránky. Značku
             drží hlavička; tady stačí, aby byla poznat. Modrá se vrací na hover.
-            Odstín drž na #7a848e nebo tmavší — světlejší šedé (#8a939b) mají
+            Odstín drž na `ink-3` nebo tmavší — světlejší šedé mají
             proti podkladu patičky jen 2,8:1, tedy pod hranicí 3:1, kterou
             WCAG žádá po grafických prvcích. */}
         <div
@@ -77,23 +77,23 @@ function FooterContactBlock({ contact }: { contact: FooterContact }) {
         // `text-sm`, tedy STEJNOU jako věta vedle — v řadě jsou to dva
         // rovnocenné texty, ne popisek a titulek. Modrou naopak drž: je to
         // nejužitečnější věc v patičce, šedá by ji srazila na úroveň copyrightu.
-        <p className="m-0 text-sm text-[#5b666e]">
+        <p className="m-0 text-sm text-ink-2">
           Napiš nám na:{' '}
           <a
             href={`mailto:${contact.email}`}
-            className="font-medium text-[#215491] no-underline underline-offset-4 hover:text-[#005580] hover:underline"
+            className="font-medium text-brand no-underline underline-offset-4 hover:text-prose-heading hover:underline"
           >
             {contact.email}
           </a>
         </p>
       ) : null}
       {contact.personName ? (
-        <p className="mt-1 text-sm text-[#6e757b]">
+        <p className="mt-1 text-sm text-ink-3">
           Kontaktní osoba{' '}
           {contact.personHref ? (
             <Link
               href={contact.personHref}
-              className="border-b border-[#d8dcdf] text-[#353535] no-underline transition-colors hover:border-current hover:text-[#005580]"
+              className="border-b border-line text-ink no-underline transition-colors hover:border-current hover:text-prose-heading"
             >
               {contact.personName}
             </Link>
@@ -116,7 +116,7 @@ export async function Footer() {
   const contact = footer?.contact ?? { email: null, personName: null, personHref: null }
 
   return (
-    <footer className="bg-[#f4f5f6] border-t border-[#d8dcdf] w-full z-10">
+    <footer className="bg-surface border-t border-line w-full z-10">
       <div className="max-w-7xl mx-auto px-4 md:px-12">
         {/* Horní řada: logo · výzva · kontakt. Na mobilu se skládá pod sebe. */}
         <div className="flex flex-wrap items-center gap-x-10 gap-y-5 pt-6 pb-5">
@@ -142,9 +142,9 @@ export async function Footer() {
           {lede ? (
             // Bez horní meze šířky — v řadě je na větu dost místa a umělý
             // ořez na „hezkou" délku ji zbytečně lámal na dva řádky.
-            // Tlumená šedá (ne tělová #353535): v patičce nejde o obsah ke
+            // Tlumená šedá `ink-2` (ne tělová `ink`): v patičce nejde o obsah ke
             // čtení, ale o doprovodný text — v plné černi soupeřil se stránkou.
-            <p className="flex-1 min-w-[280px] m-0 text-sm leading-relaxed text-[#5b666e] text-pretty">
+            <p className="flex-1 min-w-[280px] m-0 text-sm leading-relaxed text-ink-2 text-pretty">
               {lede}
             </p>
           ) : null}
@@ -153,14 +153,14 @@ export async function Footer() {
         </div>
 
         {/* Spodní lišta: právní odkazy + copyright. */}
-        <div className="flex flex-wrap items-center justify-between gap-x-7 gap-y-2 pt-3.5 pb-4 border-t border-[#d8dcdf]">
+        <div className="flex flex-wrap items-center justify-between gap-x-7 gap-y-2 pt-3.5 pb-4 border-t border-line">
           {navItems.length > 0 ? (
             <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 list-none p-0 m-0">
               {navItems.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="text-[13px] text-[#5b666e] no-underline hover:text-[#005580] hover:underline underline-offset-4 transition-colors"
+                    className="text-[13px] text-ink-2 no-underline hover:text-prose-heading hover:underline underline-offset-4 transition-colors"
                   >
                     {item.label}
                   </Link>
@@ -170,7 +170,7 @@ export async function Footer() {
           ) : null}
 
           <div
-            className="text-xs leading-[18px] text-[#6e757b] [&_a]:text-[#353535] [&_a]:no-underline hover:[&_a]:text-[#005580] [&_p]:m-0"
+            className="text-xs leading-[18px] text-ink-3 [&_a]:text-ink [&_a]:no-underline hover:[&_a]:text-prose-heading [&_p]:m-0"
             dangerouslySetInnerHTML={{ __html: copyrightHtml }}
           />
         </div>

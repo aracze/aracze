@@ -70,7 +70,7 @@ export function CollapsiblePageTextWithContributor({
             elementu jako sourozenecký JSX (bílý přechod níže), proto vlastní div. */}
         <div
           className={cn(
-            'reading-prose prose max-w-[808px] prose-a:text-[#215491] prose-a:no-underline hover:prose-a:underline',
+            'reading-prose prose max-w-[808px] prose-a:text-brand prose-a:no-underline hover:prose-a:underline',
             proseClassName,
           )}
           dangerouslySetInnerHTML={{ __html: textHtml }}
@@ -94,7 +94,7 @@ export function CollapsiblePageTextWithContributor({
             aria-expanded={isExpanded}
             // Svislý padding dělá z 20px řádku ~40px plochu pro prst (WCAG 2.2 chce
             // aspoň 24); záporný margin drží původní rozestupy.
-            className="block w-[130px] py-2.5 -my-2.5 text-center text-[14px] font-bold leading-[19.5px] text-[#005580] hover:underline"
+            className="block w-[130px] py-2.5 -my-2.5 text-center text-[14px] font-bold leading-[19.5px] text-prose-heading hover:underline"
           >
             zobrazit více
             <svg

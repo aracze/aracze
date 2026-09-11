@@ -41,26 +41,26 @@ export default async function AccountSettingsPage() {
     <AuthPageShell title="Nastavení účtu">
       <div className="space-y-10">
         <section>
-          <h2 className="mb-1 font-heading text-[19px] font-bold text-[#1a3f6c]">
+          <h2 className="mb-1 font-heading text-[19px] font-bold text-brand-deep">
             Přihlašovací e-mail
           </h2>
-          <p className="mb-3 text-[14.5px] leading-relaxed text-[#5b666e]">
+          <p className="mb-3 text-[14.5px] leading-relaxed text-ink-2">
             Slouží k přihlášení a k obnově hesla. Veřejně ho nikde neukazujeme.
           </p>
-          <p className="max-w-[420px] rounded-xl bg-[#f5f7f9] px-4 py-3 text-[15px] text-[#2c3643]">
+          <p className="max-w-[420px] rounded-xl bg-surface px-4 py-3 text-[15px] text-ink">
             {email}
           </p>
-          <p className="mt-2 text-[13px] leading-snug text-[#9aa4ad]">
+          <p className="mt-2 text-[13px] leading-snug text-ink-3">
             Změnu e-mailu zatím neděláme — potřebuje potvrzení z nové adresy, jinak by stačil
             překlep a přišel bys o možnost obnovit heslo. Napiš nám a přepíšeme ho.
           </p>
         </section>
 
-        <section className="border-t border-[#eef1f4] pt-8">
-          <h2 className="mb-1 font-heading text-[19px] font-bold text-[#1a3f6c]">Změna hesla</h2>
-          <p className="mb-4 text-[14.5px] leading-relaxed text-[#5b666e]">
+        <section className="border-t border-line pt-8">
+          <h2 className="mb-1 font-heading text-[19px] font-bold text-brand-deep">Změna hesla</h2>
+          <p className="mb-4 text-[14.5px] leading-relaxed text-ink-2">
             Zapomenuté heslo řeší{' '}
-            <Link href="/zapomenute-heslo" className="font-semibold text-[#215491] hover:underline">
+            <Link href="/zapomenute-heslo" className="font-semibold text-brand hover:underline">
               obnova přes e-mail
             </Link>
             .
@@ -68,17 +68,17 @@ export default async function AccountSettingsPage() {
           <ChangePasswordForm />
         </section>
 
-        <section className="border-t border-[#eef1f4] pt-8">
-          <h2 className="mb-1 font-heading text-[19px] font-bold text-[#a3271d]">Smazání účtu</h2>
+        <section className="border-t border-line pt-8">
+          <h2 className="mb-1 font-heading text-[19px] font-bold text-err">Smazání účtu</h2>
           <div className="mt-3">
             <DeleteAccountForm publicName={me.publicName} />
           </div>
         </section>
 
         {me.profileHref && (
-          <p className="border-t border-[#eef1f4] pt-6 text-[14px] text-[#8a939b]">
+          <p className="border-t border-line pt-6 text-[14px] text-ink-3">
             Fotku, jméno, medailonek a web najdeš{' '}
-            <Link href={me.profileHref} className="font-semibold text-[#215491] hover:underline">
+            <Link href={me.profileHref} className="font-semibold text-brand hover:underline">
               na svém profilu
             </Link>{' '}
             pod tlačítkem Upravit profil.

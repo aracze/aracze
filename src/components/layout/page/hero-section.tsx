@@ -42,7 +42,7 @@ export const HeroSection = ({
   blurDataURL,
 }: HeroSectionProps) => {
   return (
-    <section className="relative w-full h-[315px] bg-[#3b444f]">
+    <section className="relative w-full h-[315px] bg-dusk">
       {/* Cover Image Background with its own overflow clipping */}
       <div className="absolute inset-0 overflow-hidden">
         <StaticHeroImage
@@ -79,14 +79,14 @@ export const HeroSection = ({
                   <li key={bc.href} className="flex shrink-0 items-center gap-1.5">
                     <Link
                       href={bc.href}
-                      className={`text-[14px] tracking-wide transition-colors duration-200 hover:text-[#1a3f6c] ${
-                        isLast ? 'font-bold text-gray-700' : 'font-medium text-gray-500'
+                      className={`text-[14px] tracking-wide transition-colors duration-200 hover:text-brand-deep ${
+                        isLast ? 'font-bold text-ink-2' : 'font-medium text-ink-3'
                       }`}
                     >
                       {bc.title}
                     </Link>
                     {!isLast && (
-                      <span className="text-gray-300 text-[12px] px-0.5" aria-hidden="true">
+                      <span className="text-ink-3 text-[12px] px-0.5" aria-hidden="true">
                         /
                       </span>
                     )}
@@ -128,7 +128,7 @@ export const HeroSection = ({
             )}
           </div>
         </div>
-        <div className="-translate-y-[12px] w-[30px] h-px bg-[#D7E1EF] rounded-full mx-auto"></div>
+        <div className="-translate-y-[12px] w-[30px] h-px bg-brand-tint rounded-full mx-auto"></div>
 
         {rating && rating.count > 0 && (
           <a

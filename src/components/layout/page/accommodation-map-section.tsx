@@ -44,18 +44,18 @@ export function AccommodationMapSection({
   // (z variant vybral uživatel 5. 9. 2026 — nejméně zakrývá mapu, tlačítko
   // je přesto vidět hned).
   const chip = (
-    <div className="inline-flex max-w-full flex-wrap items-center gap-3 rounded-full border border-[#e6ebf1] bg-white py-1.5 pl-4 pr-1.5 lg:shadow-[0_10px_28px_rgba(26,63,108,0.18)]">
-      <span className="shrink-0 text-[#1a3f6c]" aria-hidden="true">
+    <div className="inline-flex max-w-full flex-wrap items-center gap-3 rounded-full border border-line bg-white py-1.5 pl-4 pr-1.5 lg:shadow-[0_10px_28px_rgba(26,63,108,0.18)]">
+      <span className="shrink-0 text-brand-deep" aria-hidden="true">
         <BedIcon height={22} />
       </span>
       {/* Není to nadpis sekce (blok nemá položku v obsahu vpravo a jediný obsah
           je tlačítko) — jen popisek tlačítka, proto <p>, ne <h3>. */}
-      <p className="font-heading text-[15px] font-bold leading-tight text-[#1a3f6c]">{title}</p>
+      <p className="font-heading text-[15px] font-bold leading-tight text-brand-deep">{title}</p>
       <a
         href={href}
         target="_blank"
         rel="nofollow sponsored noopener"
-        className="inline-flex items-center justify-center gap-2 rounded-full bg-[#215491] px-4 py-2.5 text-[13.5px] font-semibold text-white no-underline transition-colors hover:bg-[#1a4578] hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215491] focus-visible:ring-offset-2"
+        className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-[13.5px] font-semibold text-white no-underline transition-colors hover:bg-brand-deep hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
       >
         Hledat
         <ArrowRight className="h-4 w-4" aria-hidden="true" />

@@ -31,17 +31,17 @@ export default async function NewPasswordPage({ searchParams }: Props) {
       ) : (
         <div className="text-center">
           <XCircle
-            className="mx-auto mb-4 h-12 w-12 text-[#c2554a]"
+            className="mx-auto mb-4 h-12 w-12 text-accent"
             strokeWidth={1.8}
             aria-hidden="true"
           />
-          <p className="text-[15px] leading-relaxed text-[#5b666e]">
+          <p className="text-[15px] leading-relaxed text-ink-2">
             V adrese chybí odkaz z e-mailu. Otevři prosím odkaz, který jsme ti poslali, nebo si nech
             poslat nový.
           </p>
           <Link
             href="/zapomenute-heslo"
-            className="mx-auto mt-6 block w-fit rounded-full bg-[#215491] px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#1a3f6c]"
+            className="mx-auto mt-6 block w-fit rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep"
           >
             Poslat nový odkaz
           </Link>

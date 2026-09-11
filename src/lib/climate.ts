@@ -10,25 +10,25 @@ import type { ClimateNormalMonth } from '@/types/payload'
  * Barva tak nese dvě informace najednou (odstín = sezóna, světlost = míra)
  * a světlost přitom plynule stoupá přes celou škálu.
  *
- * Tytéž hodnoty má i ruční sezónní pruh v textu stránky (`.seasonality-month`
- * v globals.css) — ten bere první, druhý a čtvrtý stupeň. Při změně barev je
- * proto nutné upravit i CSS.
+ * Hodnoty jsou tokeny `--color-season-*` z bloku @theme v globals.css (jediné
+ * místo, kde se barvy definují); tytéž tokeny bere i ruční sezónní pruh v textu
+ * stránky (`.seasonality-month`). Používají se jen jako CSS hodnoty (inline style).
  */
 export type Suitability = 'ideal' | 'good' | 'mid' | 'poor'
 
 export const SUITABILITY_COLOR: Record<Suitability, string> = {
-  ideal: '#1b7a68',
-  good: '#5eb49f',
-  mid: '#9fb1c4',
-  poor: '#c9d3de',
+  ideal: 'var(--color-season-ideal)',
+  good: 'var(--color-season-good)',
+  mid: 'var(--color-season-mid)',
+  poor: 'var(--color-season-poor)',
 }
 
 /** Inkoust na plných plochách té barvy (pruh) — bílá projde jen na prvním stupni. */
 export const SUITABILITY_INK: Record<Suitability, string> = {
   ideal: '#ffffff',
   good: '#0e3a32',
-  mid: '#22303f',
-  poor: '#4e5a68',
+  mid: 'var(--color-ink)',
+  poor: 'var(--color-ink-2)',
 }
 
 export const SUITABILITY_LABEL: Record<Suitability, string> = {

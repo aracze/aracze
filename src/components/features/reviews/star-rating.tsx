@@ -35,18 +35,18 @@ export function StarRating({
               key={n}
               aria-hidden="true"
               style={box}
-              className={`star-glyph ${fraction >= 1 ? 'text-[#f5a623]' : 'text-[#d9dee3]'}`}
+              className={`star-glyph ${fraction >= 1 ? 'text-star' : 'text-line-strong'}`}
             />
           )
         }
         return (
           <span key={n} aria-hidden="true" className="relative inline-block" style={box}>
-            <span className="star-glyph absolute inset-0 text-[#d9dee3]" style={box} />
+            <span className="star-glyph absolute inset-0 text-line-strong" style={box} />
             <span
               className="absolute inset-y-0 left-0 overflow-hidden"
               style={{ width: `${fraction * 100}%` }}
             >
-              <span className="star-glyph text-[#f5a623]" style={box} />
+              <span className="star-glyph text-star" style={box} />
             </span>
           </span>
         )

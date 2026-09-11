@@ -10,6 +10,58 @@
   --font-poppins: var(--font-poppins);
 }
 
+/* ==========================================================================
+   Barevné tokeny webu — varianta „A · Uklizená modrá“ (zavedeno 11. 9. 2026).
+   JEDINÉ místo, kde se barvy definují. V komponentách se používají výhradně
+   utility z těchto tokenů (bg-surface, text-ink-2, border-line, …) — žádné
+   hexy v className ani ve stylech. Role, pravidla „kdy kterou“ a kontrasty:
+   docs/design-system.md
+   ========================================================================== */
+@theme {
+  /* Neutrály — šedé s jednotným modrým nádechem (odstín 213°) */
+  --color-paper: #ffffff; /* stránka, čtecí plocha */
+  --color-surface: #f4f6f9; /* podklad karet: komentář, reklama, tip, střídavé sekce */
+  --color-surface-2: #e9eef4; /* o krok tmavší podklad: pruhy, vnořené bloky */
+  --color-line: #dfe5ec; /* oddělovače, rámečky karet */
+  --color-line-strong: #c9d3de; /* rámečky polí formuláře, výraznější linky */
+  --color-ink: #1f2a37; /* text, nadpisy karet */
+  --color-ink-2: #4f5d6b; /* vedlejší text: perex, popisky, „Odpovědět“ */
+  --color-ink-3: #5f6b79; /* tlumený text: meta údaje, nápovědy (min. 4,5 : 1 i na surface-2) */
+  --color-dusk: #3b444f; /* tmavý podklad: hero bez fotky, patička, tmavé pruhy */
+  --color-night: #0a1626; /* překryv za dialogy (s průhledností), tmavé plátno */
+
+  /* Modrá značky (rozhraní webu). Originál loga má #224386 — tu drží ikony webu (build-icons.mjs) */
+  --color-brand: #215491; /* odkazy, tlačítka, ikony, jména autorů */
+  --color-brand-deep: #1a3f6c; /* hlavička, nadpisy sekcí, hover tlačítek, avatar */
+  --color-brand-tint: #e6eef8; /* štítek počtu, podbarvený tip, jemné zvýraznění */
+
+  /* Zdůraznění (korálová): slevy, akční nabídky, „Nové“ */
+  --color-accent: #c2473c; /* bílý text na ní projde (4,9 : 1) */
+  --color-accent-bg: #fbe9e7;
+  --color-accent-ink: #a3271d;
+
+  /* Sémantické stavy */
+  --color-ok: #1b7a68;
+  --color-ok-bg: #e4f3ef;
+  --color-warn: #b45309;
+  --color-warn-bg: #fdf1de;
+  --color-err: #a3271d;
+  --color-err-bg: #fdeceb;
+  --color-star: #e9a11b; /* hvězdičky hodnocení (ikona, ne text) */
+
+  /* Sezóna / klima — čtyři stupně, tytéž hodnoty drží src/lib/climate.ts */
+  --color-season-ideal: #1b7a68;
+  --color-season-good: #5eb49f;
+  --color-season-mid: #9fb1c4;
+  --color-season-poor: #c9d3de;
+
+  /* Typografie článků (parita se starým webem — hodnoty záměrně mimo řadu modré) */
+  --color-prose-heading: #005580; /* h2/h3 v textu */
+  --color-prose-section: #004d94; /* sekční h2 Praktických informací */
+  --color-prose-link: #115194; /* odkazy v textu */
+  --color-prose-quote: #1f518e; /* linka citace */
+}
+
 /* Přilepený panel 20 px pod horní hranou, který uhne pod přilepené sekundární
    menu (obsah stránky, mapa, reklama). Proměnnou `--subnav-offset` řídí
    SubnavReveal — bez lišty je 0 a chová se jako `top-5`. Bez animace: `top`
@@ -41,7 +93,7 @@
     cursor: pointer;
   }
   body {
-    @apply bg-white text-[#353535] font-sans;
+    @apply bg-white text-ink font-sans;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -57,7 +109,7 @@
   .prose p {
     font-size: 18px;
     line-height: 1.9; /* vzdušné, ale řádky drží pohromadě jako odstavec */
-    color: #353535;
+    color: var(--color-ink);
     margin-bottom: 26px; /* ~1.55em: mezera mezi odstavci výrazně > mezera mezi řádky (~16px), aby odstavce byly jako oddělené vzdušné bloky */
     margin-top: 0;
     letter-spacing: 0.01rem;
@@ -69,7 +121,7 @@
   .prose > p:first-of-type {
     font-size: 20px;
     line-height: 1.8; /* 180% for lead paragraphs */
-    color: #5b666e;
+    color: var(--color-ink-2);
     margin-bottom: 20px;
     font-weight: 500;
   }
@@ -79,7 +131,7 @@
   .prose.prose-continued > p:first-of-type {
     font-size: 18px;
     line-height: 1.9;
-    color: #353535;
+    color: var(--color-ink);
     margin-bottom: 26px;
     font-weight: 400;
   }
@@ -93,7 +145,7 @@
   .prose.rubric-motto > :first-child {
     font-size: 26px;
     line-height: 1.4;
-    color: #005580;
+    color: var(--color-prose-heading);
     text-align: center;
     margin-top: 0;
     margin-bottom: 0;
@@ -112,7 +164,7 @@
   .prose h2 {
     font-size: 22px;
     line-height: 1.25; /* nadpis = těsné řádkování (ne 1.9 jako tělo) */
-    color: #005580;
+    color: var(--color-prose-heading);
     margin-top: 25px;
     margin-bottom: 12px;
     @apply font-heading font-bold;
@@ -129,7 +181,7 @@
   .prose h3 {
     font-size: 21px;
     line-height: 1.3;
-    color: #005580;
+    color: var(--color-prose-heading);
     margin-top: 33px;
     margin-bottom: 13px;
     @apply font-heading font-semibold;
@@ -138,7 +190,7 @@
   .prose h4 {
     font-size: 18px;
     line-height: 1.3;
-    color: #212529;
+    color: var(--color-ink);
     margin-top: 10px;
     margin-bottom: 10px;
     @apply font-heading font-semibold;
@@ -147,11 +199,11 @@
   /* Složená stránka „Praktické informace": nadpisy textů podstránek jsou
      posunuté o úroveň níž (sekce = h2, podkapitoly h3–h5), vizuálně ale drží
      vzhled starého webu — každá úroveň přebírá styl o stupeň vyššího nadpisu.
-     Sekce (h2) odpovídají sekčním h1 starého webu (28px, modrá #004d94). */
+     Sekce (h2) odpovídají sekčním h1 starého webu (28px, modrá `prose-section`). */
   .pi-prose h2 {
     font-size: 28px;
     line-height: 1.35;
-    color: #004d94;
+    color: var(--color-prose-section);
     margin-top: 30px;
     margin-bottom: 10px;
     /* Extrabold (800): bold Poppinsu je ve velkých velikostech opticky slabý
@@ -162,7 +214,7 @@
   .pi-prose h3 {
     font-size: 22px;
     line-height: 1.25;
-    color: #005580;
+    color: var(--color-prose-heading);
     margin-top: 25px;
     margin-bottom: 12px;
     @apply font-heading font-bold;
@@ -171,7 +223,7 @@
   .pi-prose h4 {
     font-size: 21px;
     line-height: 1.3;
-    color: #005580;
+    color: var(--color-prose-heading);
     margin-top: 33px;
     margin-bottom: 13px;
     @apply font-heading font-semibold;
@@ -180,7 +232,7 @@
   .pi-prose h5 {
     font-size: 18px;
     line-height: 1.3;
-    color: #212529;
+    color: var(--color-ink);
     margin-top: 10px;
     margin-bottom: 10px;
     @apply font-heading font-semibold;
@@ -216,7 +268,7 @@
   }
 
   .prose li::marker {
-    color: #353535;
+    color: var(--color-ink);
   }
 
   /* Visual fix for double bullets when a list is nested inside a list item */
@@ -229,7 +281,7 @@
 
   /* Link styling to match original site */
   .prose a {
-    color: #115194;
+    color: var(--color-prose-link);
     text-decoration: none;
     font-weight: 500;
   }
@@ -248,10 +300,10 @@
   .prose blockquote {
     margin: 20px 0;
     padding: 10px 0 10px 20px;
-    border-left: 3px solid #1f518e;
+    border-left: 3px solid var(--color-prose-quote);
     font-style: italic;
     font-size: 18px;
-    color: #76818a;
+    color: var(--color-ink-3);
   }
 
   .prose blockquote p {
@@ -316,7 +368,7 @@
     font-style: normal;
     font-size: 13px;
     margin-top: 6px;
-    color: #4b5563;
+    color: var(--color-ink-2);
     position: relative;
   }
 
@@ -334,7 +386,7 @@
   .prose .image-wrapper .image-attribution-trigger {
     border: 0;
     background: transparent;
-    color: #9ca3af;
+    color: var(--color-ink-3);
     line-height: 1;
     cursor: help;
     padding: 0;
@@ -358,9 +410,9 @@
 
   .prose .image-wrapper .image-attribution-trigger:hover,
   .prose .image-wrapper .image-attribution-trigger:focus-visible {
-    color: #6b7280;
+    color: var(--color-ink-3);
     outline: none;
-    background: #f3f4f6;
+    background: var(--color-surface);
   }
 
   .prose .image-wrapper .image-attribution-content {
@@ -373,9 +425,9 @@
     max-width: min(92vw, 640px);
     padding: 8px 10px;
     border-radius: 8px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-line);
     background: #ffffff;
-    color: #6b7280;
+    color: var(--color-ink-3);
     font-size: 11px;
     font-style: normal;
     line-height: 1.4;
@@ -443,7 +495,7 @@
   }
 
   .prose .image-wrapper .image-attribution-content a:hover {
-    color: #6b7280;
+    color: var(--color-ink-3);
   }
   /* Table styling within rich text (1:1 with production) */
   .prose .rich-text-table-container {
@@ -454,26 +506,26 @@
     }
 
     & .rich-text-table {
-      @apply w-full border-collapse bg-white m-0 text-[14px] text-[#212529] border-b border-[#dddddd];
+      @apply w-full border-collapse bg-white m-0 text-[14px] text-ink border-b border-line;
       line-height: 1.4;
 
       & .rich-text-table-row {
-        @apply transition-colors duration-200 hover:bg-[#f5f5f5];
+        @apply transition-colors duration-200 hover:bg-surface;
       }
 
       & .rich-text-table-cell {
-        @apply p-[10px_8px] border-t border-[#dddddd] text-center;
+        @apply p-[10px_8px] border-t border-line text-center;
 
         &:first-child {
           @apply text-left pl-4;
         }
 
         &:not(:first-child) {
-          @apply border-l border-[#dddddd];
+          @apply border-l border-line;
         }
 
         &.is-header {
-          @apply bg-[#297bbb] font-semibold pt-3 pb-3 border-t-0 border-l border-[rgba(255,255,255,0.2)];
+          @apply bg-brand font-semibold pt-3 pb-3 border-t-0 border-l border-[rgba(255,255,255,0.2)];
 
           &:first-child {
             @apply border-l-0;
@@ -507,17 +559,17 @@
   }
 
   .prose .rich-text-map-iframe-wrapper {
-    @apply relative w-full h-[300px] md:h-[360px] overflow-hidden rounded-xl shadow-md border border-gray-200;
+    @apply relative w-full h-[300px] md:h-[360px] overflow-hidden rounded-xl shadow-md border border-line;
   }
 
   .prose .rich-text-map-caption {
-    @apply text-sm text-gray-500 italic mt-3 text-center;
+    @apply text-sm text-ink-3 italic mt-3 text-center;
   }
 
   /* Propagační / reklamní box (legacy .article-rek) — tenká linka nahoře i dole */
   .prose .article-promo {
-    border-top: 1px solid #dbe6ec;
-    border-bottom: 1px solid #dbe6ec;
+    border-top: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
     margin: 20px 0;
     padding: 10px 0;
   }
@@ -534,11 +586,11 @@
   }
 
   .prose .seasonality-title {
-    @apply text-xl font-bold text-[#0c5c87] mb-4 border-none pb-0;
+    @apply text-xl font-bold text-brand mb-4 border-none pb-0;
   }
 
   .prose .seasonality-ideal-text {
-    @apply text-[15px] text-[#4c4c4c] mb-5 leading-normal font-normal;
+    @apply text-[15px] text-ink-2 mb-5 leading-normal font-normal;
     margin-top: 0 !important;
   }
 
@@ -563,11 +615,11 @@
   }
 
   .prose .month-label {
-    @apply text-[12px] font-bold text-[#99a9b3] mt-3 tracking-normal;
+    @apply text-[12px] font-bold text-ink-3 mt-3 tracking-normal;
   }
 
   /* Barvy podle stavu — táž škála jako klimatický graf na stránkách počasí
-     (SUITABILITY_COLOR v climate-section.tsx). Zelená dvojice = sezóna,
+     (SUITABILITY_COLOR v src/lib/climate.ts, tokeny season-*). Zelená dvojice = sezóna,
      šedomodrá = mimo ni; pruh bere všechny čtyři stupně.
      Při změně barev je nutné upravit obě místa.
 
@@ -575,19 +627,19 @@
      stupni (5,3 : 1), na světlejších blocích by propadla — dřívější bílá na
      #3bba9c měla 2,4 : 1, tedy pod normou. */
   .prose .seasonality-month.status-off .month-num {
-    @apply bg-[#c9d3de] text-[#4e5a68];
+    @apply bg-season-poor text-ink-2;
   }
 
   .prose .seasonality-month.status-shoulder .month-num {
-    @apply bg-[#9fb1c4] text-[#22303f];
+    @apply bg-season-mid text-ink;
   }
 
   .prose .seasonality-month.status-mid .month-num {
-    @apply bg-[#5eb49f] text-[#0e3a32];
+    @apply bg-season-good text-[#0e3a32];
   }
 
   .prose .seasonality-month.status-peak .month-num {
-    @apply bg-[#1b7a68];
+    @apply bg-season-ideal;
   }
 
   /* Legend */
@@ -602,11 +654,11 @@
   }
 
   .prose .legend-group-title {
-    @apply text-[10px] font-bold uppercase tracking-[0.1em] text-[#667085];
+    @apply text-[10px] font-bold uppercase tracking-[0.1em] text-ink-3;
   }
 
   .prose .legend-item {
-    @apply flex items-center gap-2 text-[#2d2d2d];
+    @apply flex items-center gap-2 text-ink;
   }
 
   .prose .legend-dot {
@@ -614,24 +666,24 @@
   }
 
   .prose .legend-item.status-off .legend-dot {
-    @apply bg-[#c9d3de];
+    @apply bg-season-poor;
   }
   .prose .legend-item.status-shoulder .legend-dot {
-    @apply bg-[#9fb1c4];
+    @apply bg-season-mid;
   }
   .prose .legend-item.status-mid .legend-dot {
-    @apply bg-[#5eb49f];
+    @apply bg-season-good;
   }
   .prose .legend-item.status-peak .legend-dot {
-    @apply bg-[#1b7a68];
+    @apply bg-season-ideal;
   }
 
   .prose .legend-label {
-    @apply font-bold text-[#2d2d2d] text-[12px];
+    @apply font-bold text-ink text-[12px];
   }
 
   .prose .legend-time {
-    @apply font-normal text-[#2d2d2d];
+    @apply font-normal text-ink;
   }
 
   /* ─── Nice to Know (Praktické informace) ─── */
@@ -677,7 +729,7 @@
   }
 
   .prose .nice-to-know-item__title {
-    color: #99a9b3;
+    color: var(--color-ink-3);
     font-size: 11px;
     font-weight: bold;
     text-transform: uppercase;
@@ -700,7 +752,7 @@
     font-size: 20px;
     font-weight: bold;
     color: #ffffff;
-    background-color: #3b444f;
+    background-color: var(--color-dusk);
     width: 150px;
     height: 63px;
     line-height: 20px;
@@ -719,9 +771,9 @@
   /* Electricity icon */
   .prose .electricity-icon {
     font-size: 48px;
-    color: #67747c;
+    color: var(--color-ink-3);
     line-height: 1;
-    border: 2px solid #67747c;
+    border: 2px solid var(--color-ink-3);
     border-radius: 8px;
     padding: 2px 10px;
   }
@@ -729,7 +781,7 @@
   /* Weather icon */
   .prose .weather-icon {
     font-size: 48px;
-    color: #67747c;
+    color: var(--color-ink-3);
     line-height: 1;
   }
 
@@ -792,7 +844,7 @@
 
   /* Time */
   .prose .nice-to-know__item--time-header {
-    background: #2c3643;
+    background: var(--color-dusk);
     border-radius: 3px;
     color: white;
     width: 110px;
@@ -808,7 +860,7 @@
   }
 
   .prose .nice-to-know__item--time-header:after {
-    border-top: 1px solid #505a60;
+    border-top: 1px solid var(--color-ink-2);
     top: 40%;
     width: 30%;
     content: '';
@@ -865,7 +917,7 @@
 
   .prose .pi-budget__heading {
     flex: 100%;
-    color: #005580;
+    color: var(--color-prose-heading);
     font-size: 19px;
     line-height: 1.7;
     margin-top: 3px;
@@ -906,23 +958,23 @@
 
   .prose .pi-budget-container__title--budget,
   .prose .pi-budget-container__title--budget::after {
-    border-color: #3bba9c;
+    border-color: var(--color-season-good);
   }
 
   .prose .pi-budget-container__title--midrange,
   .prose .pi-budget-container__title--midrange::after {
-    border-color: #287bbb;
+    border-color: var(--color-brand);
   }
 
   .prose .pi-budget-container__title--top,
   .prose .pi-budget-container__title--top::after {
-    border-color: #ba9a3b;
+    border-color: var(--color-warn);
   }
 
   /* Štítek rozpětí („nízký rozpočet") — vizuálně drobný popisek, ne nadpis
      (dřív h5, což přeskakovalo úroveň za h3 a plnilo obsah nadpisů). */
   .prose .pi-budget-container__range p {
-    color: #99a9b3;
+    color: var(--color-ink-3);
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
@@ -934,7 +986,7 @@
 
   .prose .pi-budget-container__price {
     font-size: 20px;
-    color: #212529;
+    color: var(--color-ink);
     margin: 10px 0;
     overflow-wrap: break-word;
   }
@@ -1001,7 +1053,7 @@
   height: 100%;
   /* Fallback šířka pro prefers-reduced-motion (animace je tam vypnutá). */
   width: 60%;
-  background: linear-gradient(90deg, #215491, #3c6eaa);
+  background: linear-gradient(90deg, var(--color-brand-deep), var(--color-brand));
   /* Jemná záře, ať je linka čitelná i na tmavém hero snímku pod průhledným headerem. */
   box-shadow:
     0 0 10px rgba(60, 110, 170, 0.7),
