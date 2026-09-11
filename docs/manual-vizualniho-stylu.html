@@ -111,10 +111,10 @@
   /* prvky */
   .ui { background: var(--paper); }
   .ui-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  .btn { display: inline-block; white-space: nowrap; background: var(--brand); color: #fff; font-size: 13px; font-weight: 700; border-radius: 999px; padding: 9px 20px; border: 1.5px solid var(--brand); font-family: var(--sans); letter-spacing: 0.01em; transition: box-shadow .15s, transform .15s; }
-  .btn:hover, .btn.hov { box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 22%, transparent), 0 6px 14px -6px color-mix(in srgb, var(--brand) 45%, transparent); transform: translateY(-1px); }
+  .btn { display: inline-block; white-space: nowrap; background: var(--brand); color: #fff; font-size: 13px; font-weight: 700; border-radius: 999px; padding: 9px 20px; border: 1.5px solid var(--brand); font-family: var(--sans); letter-spacing: 0.01em; transition: box-shadow .15s; }
+  .btn:hover, .btn.hov { box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 22%, transparent), 0 6px 14px -6px color-mix(in srgb, var(--brand) 45%, transparent); }
   .btn.foc { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--brand); }
-  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } .btn:hover, .btn.hov { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
   .btn.o { background: transparent; color: var(--brand); } .btn.d { background: var(--brand-deep); border-color: var(--brand-deep); } .btn.acc { background: var(--accent); border-color: var(--accent); } .btn.dis { background: var(--surface-2); border-color: var(--surface-2); color: var(--ink-3); }
   .bd { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 3px 10px; }
   .bd.new { background: var(--brand-tint); color: var(--brand); } .bd.sale { background: var(--accent-bg); color: var(--accent-ink); } .bd.ok { background: var(--ok-bg); color: var(--ok); } .bd.warn { background: var(--warn-bg); color: var(--warn); } .bd.err { background: var(--err-bg); color: var(--err); } .bd.neutral { background: var(--surface-2); color: var(--ink-2); }
@@ -348,7 +348,7 @@
       <h3>Tlačítka</h3>
       <div class="ui-row"><span class="btn">Vložit komentář</span><span class="btn o">Zobrazit více</span><span class="btn acc">Zobrazit let</span><span class="btn dis">Odesláno</span></div>
       <div class="ui-row" style="margin-top:14px"><span class="btn hov">Najetí myší</span><span class="btn o hov">Najetí myší</span><span class="btn foc">Fokus z klávesnice</span></div>
-      <p class="small" style="margin-top:10px">Pilulka, 13 px tučně, výplň modrá značky. Při najetí se barva nemění: kolem tlačítka se objeví průsvitné halo, jemný stín a tlačítko se zvedne o 1 px, stejně u plného i obrysového. Fokus z klávesnice kreslí ostrý dvojitý prstenec, aby se od hala lišil. Obrysová varianta pro druhou akci vedle první. Korálová jen u akčních nabídek a slev.</p>
+      <p class="small" style="margin-top:10px">Pilulka, 13 px tučně, výplň modrá značky. Při najetí se barva nemění a tlačítko se nehýbe: kolem něj se objeví průsvitné halo a jemný stín, stejně u plného i obrysového. Fokus z klávesnice kreslí ostrý dvojitý prstenec, aby se od hala lišil. Obrysová varianta pro druhou akci vedle první. Korálová jen u akčních nabídek a slev.</p>
 
       <h3>Štítky</h3>
       <div class="ui-row"><span class="bd new">Nové</span><span class="bd sale">Sleva 30 %</span><span class="bd ok">Ověřeno 2026</span><span class="bd warn">Hurikánová sezóna</span><span class="bd err">Zavřeno</span><span class="bd neutral">Archiv</span></div>
@@ -434,7 +434,7 @@ color: <span class="v">var(--color-ink-3)</span>;</pre>
           <tr><td>ink / ink-2 / ink-3</td><td class="num">#1f2a37 / #4f5d6b / #5f6b79</td><td>text / vedlejší / tlumený</td></tr>
           <tr><td>dusk / night</td><td class="num">#3b444f / #0a1626</td><td>hero bez fotky / překryv dialogu</td></tr>
           <tr><td>brand / brand-deep / brand-tint</td><td class="num">#224386 / #1a3366 / #e7ecf9</td><td>značka / tmavá / nádech</td></tr>
-          <tr><td>btn-lift (utilita)</td><td class="num">halo brand 22 % + stín</td><td>hover a fokus všech tlačítek</td></tr>
+          <tr><td>btn-halo (utilita)</td><td class="num">halo brand 22 % + stín</td><td>hover a fokus všech tlačítek</td></tr>
           <tr><td>accent / accent-bg / accent-ink</td><td class="num">#c2473c / #fbe9e7 / #a3271d</td><td>zdůraznění a jeho štítek</td></tr>
           <tr><td>ok / ok-bg</td><td class="num">#1b7a68 / #e4f3ef</td><td>úspěch</td></tr>
           <tr><td>warn / warn-bg</td><td class="num">#b45309 / #fdf1de</td><td>varování</td></tr>

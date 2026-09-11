@@ -91,7 +91,7 @@ export function ChangePasswordForm() {
       <button
         type="submit"
         disabled={pending}
-        className="mt-5 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-lift disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-5 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? 'Měním…' : 'Změnit heslo'}
       </button>

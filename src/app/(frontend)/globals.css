@@ -64,19 +64,19 @@
   --color-prose-quote: #1f518e; /* linka citace */
 }
 
-/* Tlačítka: společné chování při najetí a fokusu (rozhodnutí 11. 9. 2026, varianta „C2“).
-   Najetí = průsvitné halo v modré značky + jemný stín a posun o 1 px nahoru — stejně pro plná
-   i obrysová tlačítka, barva výplně se NEMĚNÍ (brand-deep zůstává pro nadpisy a hlavičku).
+/* Tlačítka: společné chování při najetí a fokusu (rozhodnutí 11. 9. 2026, varianta „C2“
+   bez posunu). Najetí = průsvitné halo v modré značky + jemný stín — stejně pro plná
+   i obrysová tlačítka, barva výplně se NEMĚNÍ a tlačítko se nehýbe (posun o 1 px
+   uživatel vyhodnotil jako rušivý). brand-deep zůstává pro nadpisy a hlavičku.
    Fokus z klávesnice = ostrý dvojitý prstenec (bílá mezera + modrá), aby se nepletl s halem.
-   Uživatelům s omezením pohybu se posun i přechod vypnou. */
-@utility btn-lift {
-  transition-property: box-shadow, transform, background-color, color, border-color;
+   Uživatelům s omezením pohybu se přechod vypne. */
+@utility btn-halo {
+  transition-property: box-shadow, background-color, color, border-color;
   transition-duration: 150ms;
   &:hover {
     box-shadow:
       0 0 0 4px color-mix(in srgb, var(--color-brand) 22%, transparent),
       0 6px 14px -6px color-mix(in srgb, var(--color-brand) 45%, transparent);
-    transform: translateY(-1px);
   }
   &:focus-visible {
     outline: none;
@@ -86,13 +86,9 @@
   }
   &:disabled:hover {
     box-shadow: none;
-    transform: none;
   }
   @media (prefers-reduced-motion: reduce) {
     transition: none;
-    &:hover {
-      transform: none;
-    }
   }
 }
 

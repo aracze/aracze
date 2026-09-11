@@ -67,7 +67,7 @@ function Field({
 const ERROR_CLASS =
   'mb-5 rounded-xl bg-err-bg px-4 py-3 text-center text-[14px] font-medium text-err'
 const BUTTON_CLASS =
-  'mx-auto mt-5 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors btn-lift disabled:opacity-60'
+  'mx-auto mt-5 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:opacity-60'
 
 /** Krok 1 — pošli mi odkaz na e-mail. */
 export function ForgotPasswordForm({ turnstileSiteKey }: { turnstileSiteKey: string | null }) {

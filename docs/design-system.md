@@ -100,8 +100,8 @@ nejsou v řadě modré značky. Mění se jen po výslovném rozhodnutí.
    a tučností, ne dalším odstínem šedé.
 3. **Jedna modrá pro „dá se kliknout“.** Odkazy, tlačítka, ikony = `brand`;
    `brand-deep` je pro rámec webu (hlavička, nadpisy), ne pro odkazy ani hover.
-   **Tlačítka** (plná i obrysová) mají společnou utilitu `btn-lift`: při najetí průsvitné
-   halo v `brand` + jemný stín a posun o 1 px, barva výplně se nemění; fokus z klávesnice
+   **Tlačítka** (plná i obrysová) mají společnou utilitu `btn-halo`: při najetí průsvitné
+   halo v `brand` + jemný stín, barva výplně se nemění a tlačítko se nehýbe; fokus z klávesnice
    = ostrý dvojitý prstenec (bílá mezera + `brand`). Žádné vlastní `hover:bg-*` ani
    `focus-visible:ring-*` na tlačítkách.
 4. **Stavové barvy jen pro stav.** Zelená říká „v pořádku / sezóna“, korálová „akce /
