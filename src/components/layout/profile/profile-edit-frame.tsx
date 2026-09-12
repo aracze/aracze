@@ -96,7 +96,7 @@ export function ProfileSaveRow() {
         <button
           type="submit"
           disabled={pending}
-          className="whitespace-nowrap rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-60"
+          className="whitespace-nowrap rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? 'Ukládám…' : 'Uložit změny'}
         </button>

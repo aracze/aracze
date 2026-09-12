@@ -61,7 +61,7 @@ export function SearchPageBox({ initialQuery }: { initialQuery: string }) {
           type="button"
           onClick={submit}
           aria-label="Hledat"
-          className="rounded-full bg-brand hover:bg-brand-deep flex items-center justify-center shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 w-10 h-10"
+          className="rounded-full bg-brand btn-halo flex items-center justify-center shrink-0 transition-colors w-10 h-10"
         >
           <SearchGraphic className="w-5 h-5 text-white" strokeWidth={2.5} />
         </button>

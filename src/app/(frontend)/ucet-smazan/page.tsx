@@ -38,7 +38,7 @@ export default function AccountDeletedPage() {
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link
             href="/"
-            className="rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep"
+            className="rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo"
           >
             Zpět na web
           </Link>

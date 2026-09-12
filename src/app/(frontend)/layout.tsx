@@ -72,7 +72,7 @@ export const metadata: Metadata = {
 
 // Barva lišty prohlížeče na mobilu (a v manifestu) = modrá hlavičky webu.
 export const viewport: Viewport = {
-  themeColor: '#215491',
+  themeColor: '#224386',
 }
 
 export default async function RootLayout({

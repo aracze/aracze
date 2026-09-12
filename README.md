@@ -657,7 +657,7 @@ průvodce Ara.cz`, `- Cestovní inspirace Ara.cz`, překlep `•vAra.cz`) i už 
   bílé pozadí. Ikona záložky `src/app/favicon.ico` (16/32/48) se NEgeneruje — je původní, papoušek
   od kraje ke kraji a průhledný, v záložce je potřeba velký (rozhodnutí uživatele). Barva
   generovaných ikon `#224386` je původní modrá loga; `src/app/manifest.ts` a `themeColor`
-  (`viewport` v layoutu) drží modrou hlavičky `#215491`.
+  (`viewport` v layoutu) drží modrou značky `#224386` (= modrá loga).
 - **Obrázky**: hero fotka má `alt` = popisek média z CMS (`Media.alt`, doplňuje ho
   `fetchMediaBasicsByIds`), bez něj název stránky/článku; sdílená výchozí obálka (profil,
   přihlášení, hledání, statické stránky bez fotky) `alt=""`, je to dekorace; fotky v rich textu nesou `width`/`height` (žádný posun rozvržení),

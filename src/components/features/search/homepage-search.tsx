@@ -105,7 +105,7 @@ export function HomepageSearch({ placeholderExample, onLightSurface }: HomepageS
           // (dřív nedělalo tlačítko nic ani s dotazem).
           onClick={() => (query.trim() ? submitToSearchPage() : setIsExpanded(true))}
           aria-label="Hledat"
-          className={`rounded-full bg-brand hover:bg-brand-deep flex items-center justify-center shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${
+          className={`rounded-full bg-brand btn-halo flex items-center justify-center shrink-0 transition-colors ${
             onLightSurface ? 'w-10 h-10' : 'w-11 h-11'
           }`}
         >

@@ -16,7 +16,7 @@ import { isCloudinary } from '@/lib/cloudinary-loader'
  */
 
 const GRADIENTS = [
-  'linear-gradient(135deg, #2f7d9a, #215491)',
+  'linear-gradient(135deg, #2f7d9a, #224386)',
   'linear-gradient(135deg, #8a6cc4, #b05a86)',
   'linear-gradient(135deg, #3a8f6f, #1f6d84)',
   'linear-gradient(135deg, #c98a3e, #b0553f)',

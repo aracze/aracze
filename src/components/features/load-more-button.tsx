@@ -23,7 +23,7 @@ type Variant = 'pill' | 'text'
 const VARIANT: Record<Variant, { button: string; icon: string }> = {
   pill: {
     button:
-      'inline-flex items-center gap-2 rounded-full border-2 border-brand/30 px-7 py-3 text-sm font-bold uppercase tracking-wider text-brand font-heading transition-all hover:border-brand hover:bg-brand hover:text-white',
+      'inline-flex items-center gap-2 rounded-full border-2 border-brand/30 px-7 py-3 text-sm font-bold uppercase tracking-wider text-brand font-heading transition-all btn-halo hover:border-brand',
     icon: 'h-4 w-4',
   },
   text: {

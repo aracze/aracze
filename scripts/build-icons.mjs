@@ -13,7 +13,7 @@
 // posune doleva, kulatá levá strana smí až ke kraji kolečka. src/app/icon.png je
 // průhledný, ikony pro PWA/Apple/JSON-LD jsou na bílé (launchery a schema.org chtějí
 // neprůhledné).
-// Barva #224386 je původní modrá loga (podklad „logo-fb-small“), tmavší než modrá hlavičky.
+// Barva #224386 je modrá loga (podklad „logo-fb-small“) — od 11. 9. 2026 i modrá značky webu (token brand).
 import sharp from 'sharp'
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'

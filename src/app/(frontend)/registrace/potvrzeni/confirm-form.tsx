@@ -24,7 +24,7 @@ export function ConfirmErrorView() {
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Link
           href="/prihlaseni"
-          className="rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep"
+          className="rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo"
         >
           Přihlásit se
         </Link>
@@ -62,7 +62,7 @@ export function ConfirmAccountForm({ token }: { token: string }) {
         </p>
         <Link
           href="/prihlaseni"
-          className="mx-auto mt-6 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep"
+          className="mx-auto mt-6 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors btn-halo"
         >
           Přihlásit se
         </Link>
@@ -87,7 +87,7 @@ export function ConfirmAccountForm({ token }: { token: string }) {
         <button
           type="submit"
           disabled={isPending}
-          className="mx-auto mt-6 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-brand-deep disabled:cursor-default disabled:opacity-60"
+          className="mx-auto mt-6 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-default disabled:opacity-60"
         >
           {isPending ? 'Potvrzuji…' : 'Potvrdit účet'}
         </button>

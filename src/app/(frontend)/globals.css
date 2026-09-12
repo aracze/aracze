@@ -32,9 +32,9 @@
   --color-night: #0a1626; /* překryv za dialogy (s průhledností), tmavé plátno */
 
   /* Modrá značky (rozhraní webu). Originál loga má #224386 — tu drží ikony webu (build-icons.mjs) */
-  --color-brand: #215491; /* odkazy, tlačítka, ikony, jména autorů */
-  --color-brand-deep: #1a3f6c; /* hlavička, nadpisy sekcí, hover tlačítek, avatar */
-  --color-brand-tint: #e6eef8; /* štítek počtu, podbarvený tip, jemné zvýraznění */
+  --color-brand: #224386; /* odkazy, tlačítka, ikony, jména autorů — POKUS: modrá originálu loga (odstín 220°) */
+  --color-brand-deep: #1a3366; /* hlavička, nadpisy sekcí, hover tlačítek, avatar — tmavší stupeň téhož odstínu */
+  --color-brand-tint: #e7ecf9; /* štítek počtu, podbarvený tip, jemné zvýraznění — světlý stupeň téhož odstínu */
 
   /* Zdůraznění (korálová): slevy, akční nabídky, „Nové“ */
   --color-accent: #c2473c; /* bílý text na ní projde (4,9 : 1) */
@@ -62,6 +62,34 @@
   --color-prose-section: #004d94; /* sekční h2 Praktických informací */
   --color-prose-link: #115194; /* odkazy v textu */
   --color-prose-quote: #1f518e; /* linka citace */
+}
+
+/* Tlačítka: společné chování při najetí a fokusu (rozhodnutí 11. 9. 2026, varianta „C2“
+   bez posunu). Najetí = průsvitné halo v modré značky + jemný stín — stejně pro plná
+   i obrysová tlačítka, barva výplně se NEMĚNÍ a tlačítko se nehýbe (posun o 1 px
+   uživatel vyhodnotil jako rušivý). brand-deep zůstává pro nadpisy a hlavičku.
+   Fokus z klávesnice = ostrý dvojitý prstenec (bílá mezera + modrá), aby se nepletl s halem.
+   Uživatelům s omezením pohybu se přechod vypne. */
+@utility btn-halo {
+  transition-property: box-shadow, background-color, color, border-color;
+  transition-duration: 150ms;
+  &:hover {
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--color-brand) 22%, transparent),
+      0 6px 14px -6px color-mix(in srgb, var(--color-brand) 45%, transparent);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--color-paper),
+      0 0 0 4px var(--color-brand);
+  }
+  &:disabled:hover {
+    box-shadow: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
 /* Přilepený panel 20 px pod horní hranou, který uhne pod přilepené sekundární
