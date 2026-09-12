@@ -39,8 +39,9 @@ export async function CommentsSection({
           </span>
         </h2>
         {/* Ghost/outline (varianta C): stejná výška jako dřív, širší, s ikonou;
-            na hover se vyplní. Sekundární akce (skok na formulář) — plné modré
-            tlačítko zůstává až u samotného odeslání ve formuláři. */}
+            při najetí dostane halo (`btn-halo`), výplň ani barva textu se nemění.
+            Sekundární akce (skok na formulář) — plné modré tlačítko zůstává až
+            u samotného odeslání ve formuláři. */}
         <a
           href="#napsat-komentar"
           className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-brand px-6 py-2.5 text-[13px] font-bold tracking-wide text-brand transition-colors btn-halo"
