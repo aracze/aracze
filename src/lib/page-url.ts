@@ -2,8 +2,8 @@ import { PageCategory } from '../types/payload'
 
 /**
  * Kategorie, které jsou v hierarchii „místem" (legacy: bod zájmu — stát, město,
- * oblast). Jen pro ně platí vypnuté „Zobrazit v URL" na předkovi. Turistický cíl
- * tu ZÁMĚRNĚ není: legacy `createUniqueUrl` přeskakovalo mezistupně jen u
+ * oblast). Jen pro ně platí vypnuté „Include Place in Child URLs" na předkovi.
+ * Turistický cíl tu ZÁMĚRNĚ není: legacy `createUniqueUrl` přeskakovalo mezistupně jen u
  * PLACE_TO_VISIT, takže cíl pod skrytým státem si stát v adrese drží
  * (/usa/wyoming/devils-tower, ne /usa/devils-tower).
  */
@@ -21,8 +21,8 @@ type UrlAncestor = {
  * Používá ji plugin nested-docs při každém uložení (`generateURL`) i opravný
  * skript `pnpm fix:page-urls`.
  *
- * Pravidlo pro „Zobrazit v URL" (`includeInChildUrlPaths`): vypnuté na stránce
- * znamená, že se vynechá z adres MÍST pod ní — a tím i ze všeho, co je pod těmi
+ * Pravidlo pro „Include Place in Child URLs" (`includeInChildUrlPaths`): vypnuté
+ * na stránce znamená, že se vynechá z adres MÍST pod ní — a tím i ze všeho, co je pod těmi
  * místy. NEplatí pro její vlastní informační podstránky. Wyoming (vypnuto) tedy
  * z /usa/narodni-park-yellowstone (místo) ani z /usa/narodni-park-yellowstone/pocasi
  * není vidět, ale ve /usa/wyoming/pocasi zůstává — počasí není místo, patří

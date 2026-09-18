@@ -169,8 +169,8 @@ export default buildConfig({
     nestedDocsPlugin({
       collections: ['pages'],
       generateLabel: (_, doc) => doc.title as string,
-      // Pravidlo pro vypnuté „Zobrazit v URL" viz buildPageUrl — platí jen pro
-      // místa pod danou stránkou, ne pro její informační podstránky.
+      // Pravidlo pro vypnuté „Include Place in Child URLs" viz buildPageUrl —
+      // platí jen pro místa pod danou stránkou, ne pro její informační podstránky.
       generateURL: (docs) => buildPageUrl(docs),
       parentFieldSlug: 'parent',
       breadcrumbsFieldSlug: 'breadcrumbs',

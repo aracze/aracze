@@ -14,17 +14,19 @@ Z hierarchie plugin při každém uložení počítá dvě věci:
 | `breadcrumbs[]` | celý řetězec předků od nejvyšší úrovně po stránku samotnou (`label`, `url`, `doc`) |
 | `fullSlug`      | adresa stránky = `url` posledního drobečku                                         |
 
-### Zaškrtávátko „Zobrazit v URL" (`includeInChildUrlPaths`)
+### Zaškrtávátko „Include Place in Child URLs" (`includeInChildUrlPaths`)
 
 Vypnuté znamená: **tato stránka se vynechá z adres míst pod ní** — a tím i ze všeho,
 co je pod těmi místy. **Neplatí** pro její vlastní informační podstránky.
+V adminu (postranní panel) je vidět **jen u kategorie Místo k navštívení** — u podstránek
+a cílů nemá účinek, tak se tam neukazuje (uložená hodnota jim zůstává, jen je bez vlivu).
 
-„Místem" jsou pro tohle pravidlo kategorie **Místo k navštívení** a **Místa**.
+„Místem" je pro tohle pravidlo kategorie **Místo k navštívení**.
 Turistický cíl místo NENÍ (drží si předka v adrese) a informační podstránky
 (Počasí, Doprava, Měna a ceny, Vstupní podmínky, Zdraví a bezpečí, Jazyk a kultura,
 Jídlo a pití, Ubytování, Cesta, Praktické informace) taky ne.
 
-Příklad — Wyoming má „Zobrazit v URL" vypnuté:
+Příklad — Wyoming má „Include Place in Child URLs" vypnuté:
 
 | Stránka                                  | Kategorie          | Adresa                                             |
 | ---------------------------------------- | ------------------ | -------------------------------------------------- |
@@ -100,7 +102,7 @@ Drží uživatele v kontextu **místa** — ne aktuální podstránky.
 
 ### Kdo menu „vlastní"
 
-Vlastníkem může být jen kategorie **Místa** nebo **Místo k navštívení**
+Vlastníkem může být jen kategorie **Místo k navštívení**
 (`menuOwnerCategories` v `src/lib/page-hierarchy.ts`). Turistický cíl ani článek menu
 nevlastní — vždy delegují na nadřazené místo.
 
