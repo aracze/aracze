@@ -43,6 +43,10 @@ export const RSS_ALTERNATE = { 'application/rss+xml': [{ url: RSS_PATH, title: R
 export const SITE_LOGO_PATH = '/icon-512.png'
 /** Výchozí náhled ke sdílení (1200×630, logo na modré) pro stránky bez fotky. */
 export const OG_FALLBACK_IMAGE_PATH = '/og-default.png'
+export const OG_FALLBACK_IMAGE_WIDTH = 1200
+export const OG_FALLBACK_IMAGE_HEIGHT = 630
+/** Popisek výchozího náhledu (`og:image:alt`) — říká, co je na obrázku, ne co je na stránce. */
+export const OG_FALLBACK_IMAGE_ALT = 'Logo Ara.cz – cestovní průvodce po světě'
 
 /** SEO záložka z CMS (plugin-seo) — stránky i články mají stejný tvar. */
 export type SeoMeta = { title?: string | null; description?: string | null } | null | undefined
@@ -137,6 +141,8 @@ export type PageMetadataInput = {
   /** Kanonická cesta na webu (s úvodním lomítkem). */
   path: string
   imageUrl?: string | null
+  /** Popisek fotky pro `og:image:alt`; bez něj se použije titulek stránky. */
+  imageAlt?: string | null
   type?: 'website' | 'article'
   publishedTime?: string | null
   modifiedTime?: string | null
@@ -153,7 +159,19 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
   const url = absoluteUrl(input.path)
   // Bez fotky (homepage, statické stránky, cíl bez obrázku) jde ven výchozí
   // obrázek se značkou — sdílený odkaz bez náhledu má výrazně nižší proklik.
-  const image = ogImageUrl(input.imageUrl) ?? absoluteUrl(OG_FALLBACK_IMAGE_PATH)
+  const photo = ogImageUrl(input.imageUrl)
+  // `og:image:alt` (Facebook debugger ho jinak hlásí prázdný): u fotky popisek,
+  // jinak titulek stránky — fotka je vždy hero k danému titulku. U výchozího
+  // obrázku známe i rozměry; Facebook pak při prvním sdílení ukáže velký náhled
+  // rovnou, bez čekání na stažení obrázku.
+  const image = photo
+    ? { url: photo, alt: input.imageAlt?.trim() || metadataTitleText(input.title) }
+    : {
+        url: absoluteUrl(OG_FALLBACK_IMAGE_PATH),
+        width: OG_FALLBACK_IMAGE_WIDTH,
+        height: OG_FALLBACK_IMAGE_HEIGHT,
+        alt: OG_FALLBACK_IMAGE_ALT,
+      }
   const type = input.type ?? 'website'
 
   return {
@@ -167,7 +185,7 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
       url,
       siteName: SITE_NAME,
       locale: 'cs_CZ',
-      images: [{ url: image }],
+      images: [image],
       ...(type === 'article'
         ? {
             ...(input.publishedTime ? { publishedTime: input.publishedTime } : {}),
@@ -178,6 +196,14 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
     },
     twitter: { card: 'summary_large_image' },
   }
+}
+
+/** Titulek metadat jako prostý text (`{ absolute }`/`{ default }` homepage i řetězec stránek). */
+function metadataTitleText(title: NonNullable<Metadata['title']>): string {
+  if (typeof title === 'string') return title
+  if ('absolute' in title && title.absolute) return title.absolute
+  if ('default' in title && title.default) return title.default
+  return SITE_NAME
 }
 
 export type ArticleJsonLdInput = {
