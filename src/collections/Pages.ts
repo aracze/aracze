@@ -411,10 +411,16 @@ export const Pages: CollectionConfig = {
     },
     {
       name: 'includeInChildUrlPaths',
+      label: 'Include Place in Child URLs',
       type: 'checkbox',
       defaultValue: true,
       admin: {
         position: 'sidebar',
+        // Účinek má jen u míst (pravidlo v buildPageUrl), u podstránek a cílů
+        // by zaškrtávátko jen matlo — ukazuje se tedy jen tam, kde něco dělá.
+        condition: (data) => data?.category === 'Místo k navštívení',
+        description:
+          'Vypnuté = toto místo se vynechá z adres všech míst pod ním (Kalifornie vypnutá → /usa/san-francisco, ne /usa/kalifornie/san-francisco). Vlastní podstránky (Počasí, Doprava…) a turistické cíle si ho v adrese nechají. Po publikování se adresy všech stránek pod ním přepočítají samy (uložení konceptu je nepřepočítá; u velkého podstromu, např. USA, to trvá i minuty).',
       },
     },
     {

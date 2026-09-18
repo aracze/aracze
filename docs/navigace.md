@@ -14,17 +14,19 @@ Z hierarchie plugin při každém uložení počítá dvě věci:
 | `breadcrumbs[]` | celý řetězec předků od nejvyšší úrovně po stránku samotnou (`label`, `url`, `doc`) |
 | `fullSlug`      | adresa stránky = `url` posledního drobečku                                         |
 
-### Zaškrtávátko „Zobrazit v URL" (`includeInChildUrlPaths`)
+### Zaškrtávátko „Include Place in Child URLs" (`includeInChildUrlPaths`)
 
 Vypnuté znamená: **tato stránka se vynechá z adres míst pod ní** — a tím i ze všeho,
 co je pod těmi místy. **Neplatí** pro její vlastní informační podstránky.
+V adminu (postranní panel) je vidět **jen u kategorie Místo k navštívení** — u podstránek
+a cílů nemá účinek, tak se tam neukazuje (uložená hodnota jim zůstává, jen je bez vlivu).
 
-„Místem" jsou pro tohle pravidlo kategorie **Místo k navštívení** a **Místa**.
+„Místem" je pro tohle pravidlo kategorie **Místo k navštívení**.
 Turistický cíl místo NENÍ (drží si předka v adrese) a informační podstránky
 (Počasí, Doprava, Měna a ceny, Vstupní podmínky, Zdraví a bezpečí, Jazyk a kultura,
 Jídlo a pití, Ubytování, Cesta, Praktické informace) taky ne.
 
-Příklad — Wyoming má „Zobrazit v URL" vypnuté:
+Příklad — Wyoming má „Include Place in Child URLs" vypnuté:
 
 | Stránka                                  | Kategorie          | Adresa                                             |
 | ---------------------------------------- | ------------------ | -------------------------------------------------- |
@@ -34,18 +36,15 @@ Příklad — Wyoming má „Zobrazit v URL" vypnuté:
 | Národní Park Yellowstone (pod Wyomingem) | Místo k navštívení | `/usa/narodni-park-yellowstone` — Wyoming vypadne  |
 | Jezero Yellowstone (pod Yellowstonem)    | Turistický cíl     | `/usa/narodni-park-yellowstone/jezero-yellowstone` |
 
-Pravidlo je v `buildPageUrl` (`src/lib/page-url.ts`) a používá ho jak CMS při ukládání
-(`generateURL` v `src/payload.config.ts`), tak opravný skript.
+Pravidlo je v `buildPageUrl` (`src/lib/page-url.ts`) a používá ho CMS při ukládání
+(`generateURL` v `src/payload.config.ts`).
 
-> **Po změně pravidla spusť přepočet.** Payload adresy přepočítává jen při uložení
-> dokumentu, takže staré stránky si drží staré adresy:
->
-> ```bash
-> pnpm fix:page-urls -- --dry-run   # jen vypíše, co by se změnilo
-> pnpm fix:page-urls               # ostrý běh
-> ```
->
-> Skript je idempotentní. Na produkci se musí spustit zvlášť (má vlastní databázi).
+> **Kdy se adresy přepočítají.** Payload adresu počítá jen při uložení dokumentu.
+> Po přepnutí zaškrtávátka stačí stránku **publikovat** (uložení konceptu potomky nemění)
+> — plugin nested-docs pak přeuloží celý podstrom (u velkých zemí, např. USA, to trvá i minuty). Po změně **pravidla**
+> v kódu je potřeba hromadný přepočet všech stránek; jednorázový skript
+> `fix:page-urls`, který to dělal, je hotový a odstraněný (najdeš ho v git historii,
+> viz README). Na produkci se takový doběh musí spustit zvlášť (má vlastní databázi).
 
 ## 2. Drobečková navigace
 
@@ -100,7 +99,7 @@ Drží uživatele v kontextu **místa** — ne aktuální podstránky.
 
 ### Kdo menu „vlastní"
 
-Vlastníkem může být jen kategorie **Místa** nebo **Místo k navštívení**
+Vlastníkem může být jen kategorie **Místo k navštívení**
 (`menuOwnerCategories` v `src/lib/page-hierarchy.ts`). Turistický cíl ani článek menu
 nevlastní — vždy delegují na nadřazené místo.
 
