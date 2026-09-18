@@ -320,6 +320,18 @@
     text-decoration: underline;
   }
 
+  /* Přepočet částek na koruny za autorovou částkou — „120 EUR (≈ 2 900 Kč)“
+     (src/lib/currency-amounts.ts). Tlumený doplněk, tooltip nese kurz. */
+  .prose .amount[title] {
+    cursor: help;
+  }
+
+  .prose .amount-czk {
+    color: var(--color-ink-3);
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
   /* Emphasis (legacy used font-weight:600 / semibold, not the browser-default 700). */
   .prose strong,
   .prose b {

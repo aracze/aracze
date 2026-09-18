@@ -1,6 +1,11 @@
 import DOMPurify from 'isomorphic-dompurify'
 import { LEGEND_GROUPS, SUITABILITY_LABEL, type Suitability } from '@/lib/climate'
 import { fromMediaProxy, toMediaProxy } from '@/lib/cloudinary-loader'
+import {
+  annotateAmountsHtml,
+  replaceLegacyRateLine,
+  type ExchangeRates,
+} from '@/lib/currency-amounts'
 
 // Rendering Lexical rich-textu do (sanitizovaného) HTML. Vyčleněno z `utils.ts`,
 // protože `isomorphic-dompurify` je těžká závislost a `utils.ts` importují i
@@ -10,6 +15,13 @@ import { fromMediaProxy, toMediaProxy } from '@/lib/cloudinary-loader'
 export type RichTextRenderContext = {
   currencyCode?: string | null
   exchangeRate?: number | null
+  /**
+   * Tabulka kurzů (Kč za jednotku) pro přepočet částek v textu a živý řádek
+   * „aktuální kurz“ — viz currency-amounts.ts. Bez ní text zůstává beze změny.
+   */
+  exchangeRates?: ExchangeRates | null
+  /** Uvnitř nadpisu a odkazu se částky nepřepočítávají (kotvy, text odkazu). */
+  noAmounts?: boolean
   /** Časové pásmo stránky (vlastní nebo zděděné) pro kartu „Aktuální čas". */
   timezone?: string | null
   /** Už použitá heading id v rámci jednoho dokumentu (unikátnost kotev). */
@@ -106,17 +118,24 @@ function richTextToHtmlInternal(value: unknown, context: RichTextRenderContext =
   const node = value as Record<string, unknown>
   if ('root' in node) return richTextToHtmlInternal(node.root, context)
 
+  const type = node.type as string | undefined
+
+  // Částky v korunách se nedoplňují do nadpisů (kotva z textu, obsah v TOC)
+  // ani do textu odkazů — tam by přepočet měnil to, na co čtenář kliká.
+  const childContext =
+    type === 'heading' || type === 'link' ? { ...context, noAmounts: true } : context
   const children = Array.isArray(node.children)
     ? (node.children as Record<string, unknown>[])
-        .map((child) => richTextToHtmlInternal(child, context))
+        .map((child) => richTextToHtmlInternal(child, childContext))
         .join('')
     : ''
-
-  const type = node.type as string | undefined
 
   // Text leaf node
   if (type === 'text' || ('text' in node && typeof node.text === 'string')) {
     let text = escapeHtml(node.text as string)
+    if (!context.noAmounts) {
+      text = annotateAmountsHtml(text, context.exchangeRates, context.currencyCode)
+    }
     const format = (node.format as number) ?? 0
     if (format & 1) text = `<strong>${text}</strong>`
     if (format & 2) text = `<em>${text}</em>`
@@ -142,7 +161,8 @@ function richTextToHtmlInternal(value: unknown, context: RichTextRenderContext =
       return `<${tag} class="${className}">${children}</${tag}>`
     }
     case 'paragraph':
-      return `<p>${children}</p>`
+      // Řádek „a aktuální kurz: 1 EUR = 1 CZK“ z migrace → živý kurz, nebo pryč.
+      return `<p>${replaceLegacyRateLine(children, context.exchangeRates, context.currencyCode)}</p>`
     case 'heading': {
       const rawTag = String((node.tag as string | undefined) || 'h2').toLowerCase()
       const tag = allowedHeadingTags.has(rawTag) ? rawTag : 'h2' // h1 i neznámé → h2

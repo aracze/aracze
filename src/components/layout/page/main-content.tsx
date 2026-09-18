@@ -6,6 +6,7 @@ import { LocalTime } from '@/components/features/local-time'
 import { MapLibreMap } from '@/components/features/maplibre-map'
 import { UserAvatar } from '@/components/user-avatar'
 import { richTextToHtml } from '@/lib/rich-text-html'
+import type { ExchangeRates } from '@/lib/currency-amounts'
 import { websiteHref, websiteLabel } from '@/lib/utils'
 import { CollapsiblePageTextWithContributor } from './collapsible-page-text'
 import { PageContributor } from './page-contributor'
@@ -172,6 +173,7 @@ export const MainContent = ({
   timezone,
   currencyCode,
   exchangeRate,
+  exchangeRates = null,
   practicalInfo = null,
   seasonPanel = null,
   panelWeather = null,
@@ -190,6 +192,8 @@ export const MainContent = ({
   timezone?: string | null
   currencyCode?: string | null
   exchangeRate?: number | null
+  /** Tabulka kurzů pro přepočet částek v textu (currency-amounts.ts). */
+  exchangeRates?: ExchangeRates | null
   /**
    * Karta „Praktické informace" v pravém sloupci u míst — `fullSlug` může být
    * vlastní podstránka místa, nebo (San Francisco → USA) zděděná od nejbližšího
@@ -276,6 +280,7 @@ export const MainContent = ({
   const renderContext = {
     currencyCode,
     exchangeRate,
+    exchangeRates,
     timezone,
     usedHeadingIds: new Set<string>(),
   }

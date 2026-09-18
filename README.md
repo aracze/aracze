@@ -1020,6 +1020,30 @@ m.cloudinary_public_id = a.cloudinary_public_id` musí vrátit 0.
   Portugalskem. Před spuštěním vždy `pg_dump` — obsah mazané stránky v záloze polí není.
   **Na produkci spustit ručně + `force-recreate cms`**; spuštěno tam 17. 8. 2026.
 
+- **Částky v cizí měně v textu se přepočítávají na koruny** (`src/lib/currency-amounts.ts`,
+  volá se z `richTextToHtml`): za autorovou částkou přibude tlumený doplněk
+  „120 EUR (≈ 2 900 Kč)“ s kurzem v tooltipu. Původní zápis zůstává (na místě se platí
+  místní měnou a čtenář porovnává s cenovkou), koruny jsou orientace — proto se
+  **zaokrouhlují** podle velikosti (do 100 Kč na pětikoruny, do 1 000 na desítky, do
+  10 000 na stovky, výš na tisíce) a nesou znak ≈. Rozpoznávají se ISO kódy, symboly
+  (€, $, £, ฿…) a české tvary slov („2 eura“, „10 eur“, „20 bahtů“); víceznačné rodiny
+  („dolar“, „$“, „libra“, „rupie“, „peso“) rozhoduje měna země stránky (v Austrálii je
+  dolar AUD), bez ní výchozí člen rodiny nebo nic. Nepřepočítává se v nadpisech a
+  odkazech, u částek v Kč, u letopočtů („v roce 2002 euro…“), pod půl koruny a bez
+  kurzu — text pak zůstane doslova beze změny. **Kurzy** stahuje `fetchExchangeRates`
+  (`src/lib/exchange-rate.ts`) jako **jednu tabulku** Kč za jednotku pro všechny měny
+  naráz, cache 24 h: **ČNB denní kurzovní lístek** (31 měn) doplněný o **ČNB kurzy
+  ostatních měn** (měsíční, ~150 měn: EGP, MAD, VND, PEN, LKR, KGS…), Frankfurter/ECB
+  jen jako záloha, když denní lístek nejde načíst. Z 38 měn na webu tak kurz chybí jen
+  u zrušených (BGN po přechodu Bulharska na euro 2026 — stránka má mít EUR). Tabulka se
+  stahuje na stránkách míst a cílů, Praktických informací a všude, kde text podle levné
+  kontroly `mayContainAmounts` nějakou částku nese (ta zároveň zapíná dědění měny země
+  pro takovou stránku).
+  Tentýž modul opravuje **řádek z migrace „a aktuální kurz: 1 EUR = 1 CZK“** v prvním
+  odstavci 61 stránek „Měna a ceny“ (55× s hodnotou 1): při vykreslení se nahradí živým
+  „1 EUR = 24,31 Kč“ (drobné měny po stovkách či tisících: „100 JPY = …“), a když kurz
+  chybí nebo kód neodpovídá měně země, celý dovětek se vypustí. Vzhled: `.amount-czk`
+  v `globals.css` (`text-ink-3`, bez podtržení). Testy: `tests/int/currency-amounts.int.spec.ts`.
 - **Sekce „Příprava do …“** (`src/components/layout/page/preparation-section.tsx`): na
   stránkách kategorie **Místo k navštívení** mezi „Co vidět“ a „Články a cestopisy“ (legacy
   parita s `_affiliate.gsp`). Pět karet: **Cestovní pojištění** (redirect `/go/pojisteni`

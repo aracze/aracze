@@ -44,7 +44,8 @@ import { extractSeasonalityBlock, seasonFromClimate } from '@/lib/seasonality'
 import { TeamSection } from './team-section'
 import { ABOUT_PAGE_SLUG } from '@/lib/team'
 import { composePracticalInfoHtml } from '@/lib/practical-info'
-import { fetchExchangeRate } from '@/lib/exchange-rate'
+import { fetchExchangeRates } from '@/lib/exchange-rate'
+import { mayContainAmounts } from '@/lib/currency-amounts'
 import { buildPageTitle, getGenitivePlace, rootPageCategories } from '@/lib/page-title'
 import {
   ancestorSlugsNearestFirst,
@@ -130,10 +131,15 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
   // jen zahodí.
   const ownCurrencyCode = page.detail?.currencyCode?.trim() || null
   const ownTimezone = page.detail?.timezone?.trim() || null
+  // Částky v cizí měně („120 EUR“) i řádek „aktuální kurz“ z migrace mohou
+  // být v textu jakékoli podstránky (Měna a ceny, Doprava…) — pro přepočet
+  // na koruny potřebují měnu země a tabulku kurzů (currency-amounts.ts).
+  const textHasAmounts = mayContainAmounts(page.text)
   const rendersInheritedDetail =
     placePanelCategories.includes(page.category) ||
     exchangeRateCategories.includes(page.category) ||
-    hasNiceToKnowBlock(page.text)
+    hasNiceToKnowBlock(page.text) ||
+    textHasAmounts
   const inheritedDetailPromise: Promise<InheritedPlaceDetail> =
     rendersInheritedDetail && (!ownCurrencyCode || !ownTimezone) && ancestorSlugs.length > 0
       ? fetchInheritedPlaceDetail(ancestorSlugs).catch(() => EMPTY_INHERITED_PLACE_DETAIL)
@@ -163,14 +169,13 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
   // (breadcrumbs i menuContext čtou stejné ancestor fetche — dedupováno.)
   const effectiveCurrencyCode = ownCurrencyCode ?? inheritedDetail.currencyCode
   const effectiveTimezone = ownTimezone ?? inheritedDetail.timezone
-  // Kurz dává smysl jen na stránkách typu „místo" (sidebar s časem/kurzem).
-  // Na ostatních podstránkách by to byl jen zbytečný externí request navíc.
-  const shouldFetchExchangeRate = exchangeRateCategories.includes(page.category)
-  // Kurz rozjedeme hned (await až v poslední vlně), ale jen když se bude renderovat.
-  const exchangePromise =
-    shouldFetchExchangeRate && effectiveCurrencyCode
-      ? fetchExchangeRate(effectiveCurrencyCode)
-      : Promise.resolve(null)
+  // Kurzy dávají smysl na stránkách typu „místo" (sidebar s časem/kurzem)
+  // a tam, kde text nese částky v cizí měně. Jinde by to byl zbytečný externí
+  // request navíc (jeden pro celou tabulku, cache 24 h).
+  const shouldFetchExchangeRate =
+    (exchangeRateCategories.includes(page.category) && !!effectiveCurrencyCode) || textHasAmounts
+  // Kurzy rozjedeme hned (await až v poslední vlně), ale jen když se budou renderovat.
+  const exchangePromise = shouldFetchExchangeRate ? fetchExchangeRates() : Promise.resolve(null)
   // Recenze mají jen turistické cíle (jako na legacy webu). Dotaz startuje hned,
   // await až v poslední vlně s ostatními.
   const reviewsPromise =
@@ -387,7 +392,7 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
   const [
     practicalInfoSource,
     contextFlags,
-    exchangeData,
+    exchangeRates,
     reviewsData,
     reviewStats,
     derivedPlaceRatings,
@@ -443,6 +448,10 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
     panelWeatherPromise,
     accommodationMapPromise,
   ])
+  // Kurz měny země pro kartu v panelu a blok „Aktuální měna" (Kč za jednotku).
+  const exchangeRate = effectiveCurrencyCode
+    ? (exchangeRates?.[effectiveCurrencyCode] ?? null)
+    : null
 
   // Blok mapy se štítkem (viz accommodationMapPromise). Bez souřadnic místa
   // zůstane jen štítek. Blok nemá nadpis, takže ani položku v obsahu vpravo.
@@ -518,7 +527,8 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
     page.category === PageCategory.Prakticke_informace && practicalInfoSections.length > 0
       ? composePracticalInfoHtml(page.text, practicalInfoSections, {
           currencyCode: effectiveCurrencyCode,
-          exchangeRate: exchangeData?.rate,
+          exchangeRate,
+          exchangeRates,
           timezone: effectiveTimezone,
         })
       : page.text
@@ -745,7 +755,8 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
           pageCategory={page.category}
           timezone={effectiveTimezone}
           currencyCode={effectiveCurrencyCode}
-          exchangeRate={exchangeData?.rate}
+          exchangeRate={exchangeRate}
+          exchangeRates={exchangeRates}
           // Země (místo s dalšími místy uvnitř) kartu Praktických informací
           // v panelu nemá — vede na tutéž stránku, kterou má hned vedle
           // v sekundárním menu. U konkrétních míst zůstává.
