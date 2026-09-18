@@ -15,6 +15,9 @@ import type { Page as GeneratedPage, Article as GeneratedArticle } from '@/paylo
 export interface StrapiMedia {
   url: string
   alternativeText: string | null
+  /** Rozměry originálu (Payload upload) — Open Graph `og:image:width/height`. */
+  width?: number | null
+  height?: number | null
 }
 
 export interface Homepage {

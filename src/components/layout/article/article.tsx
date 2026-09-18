@@ -1,19 +1,21 @@
 import React from 'react'
 import { Article as ArticleType, type Page as PayloadPage } from '@/types/payload'
-import { articlePath, getPayloadURL, getSiteURL } from '@/lib/utils'
+import { articlePath, getSiteURL } from '@/lib/utils'
+import { resolveArticleHeroImage } from '@/lib/article-hero'
+import { resolveArticleContext } from '@/lib/article-context'
 import { richTextToHtml } from '@/lib/rich-text-html'
 import { articleJsonLd, resolveSeoDescription } from '@/lib/seo'
 import { formatPublishDate } from '@/lib/relative-time'
 import Link from 'next/link'
 import { UserAvatar } from '@/components/user-avatar'
-import { fetchPageLightByFullSlug, pageHasArticles, fetchArticleComments } from '@/lib/payload'
+import { pageHasArticles, fetchArticleComments } from '@/lib/payload'
 import {
   breadcrumbListJsonLd,
   buildBreadcrumbs,
   menuOwnerCategories,
   type Breadcrumb,
 } from '@/lib/page-hierarchy'
-import { breadcrumbsFromSlug, fetchAncestorChain } from '@/lib/page-ancestors'
+import { breadcrumbsFromSlug } from '@/lib/page-ancestors'
 import { Subnavigation } from '@/components/layout/page/subnavigation'
 import { HeroSection } from '@/components/layout/page/hero-section'
 import { ArticleAd } from '@/components/features/article-ad'
@@ -32,13 +34,10 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
   // dotaz); počet potřebuje horní lišta (ArticleActions), seznam sekce dole.
   const commentsPromise = fetchArticleComments(article.id)
 
-  // Resolve the context page (the page the user came from based on URL)
-  const contextPageSlug = contextSlug || article.mainPage?.fullSlug?.replace(/^\//, '') || null
-  const { contextPage, rootPage } = await resolveContextPages(contextPageSlug)
-
-  // Článek se chová jako turistický cíl: sekundární menu patří MÍSTU, pod
-  // kterým visí (např. San Francisco), ne zemi z prvního segmentu URL.
-  const placePage = await resolvePlacePage(contextPage, rootPage)
+  // Kontext (stránka z URL, kořen, místo článku) sdílený s generateMetadata
+  // (src/lib/article-context.ts, React cache) — náhled ke sdílení tak ukazuje
+  // tutéž fotku jako viditelné hero.
+  const { contextPage, placePage, heroPage } = await resolveArticleContext(article, contextSlug)
 
   // Kontext ale nemusí být místo — články visí i pod rubrikami („Rady na
   // cestu"). Stránka rubriky JE sama výpis článků (a kotvy #mista/#clanky na ní
@@ -58,7 +57,7 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
 
   // Hero fotka ze STEJNÉHO místa jako menu a drobečky (legacy: obrázek článku,
   // jinak fotka nejbližšího místa).
-  const heroImage = resolveHeroImage(placePage || contextPage, article)
+  const heroImage = resolveArticleHeroImage(heroPage, article)
 
   // Author (safe public subset from the backend virtual field)
   const author = article.createdByPublic ?? null
@@ -245,40 +244,6 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
 }
 
 /**
- * Místo, kterému patří sekundární menu, drobečky i hero fotka článku = NEJBLIŽŠÍ
- * místo nad článkem (stejné pravidlo jako u podstránek a turistických cílů).
- *
- * Článek jde v CMS připojit k libovolné stránce (`mainPage` i vedlejší `pages`),
- * takže nad ním může být i stránka, která místem není (rubrika, informační
- * podstránka). Pak hledáme nejbližší místo v jejích předcích a teprve když žádné
- * není, spadneme na kořenovou stránku.
- */
-async function resolvePlacePage(
-  contextPage: PayloadPage | null,
-  rootPage: PayloadPage | null,
-): Promise<PayloadPage | null> {
-  if (!contextPage) return rootPage
-
-  if (contextPage.category && menuOwnerCategories.includes(contextPage.category)) {
-    return contextPage
-  }
-
-  const ancestors = await fetchAncestorChain(contextPage.fullSlug)
-  for (let i = ancestors.length - 1; i >= 0; i--) {
-    const ancestor = ancestors[i]
-    if (
-      !('isPlaceholder' in ancestor) &&
-      ancestor.category &&
-      menuOwnerCategories.includes(ancestor.category)
-    ) {
-      return ancestor
-    }
-  }
-
-  return rootPage
-}
-
-/**
  * Drobečky článku končí místem, pod kterým visí (stejně jako u turistického
  * cíle). Hlavní cesta jde po hierarchii v CMS; když místu chybí uložený řetězec
  * `breadcrumbs` (starý import bez resave), dopočítáme předky z adresy a místo
@@ -294,63 +259,4 @@ async function getArticleBreadcrumbs(placePage: PayloadPage | null): Promise<Bre
 
   const ancestors = await breadcrumbsFromSlug(placePage.fullSlug)
   return [...ancestors, { title: placePage.title, href: placePage.fullSlug }]
-}
-
-async function resolveContextPages(contextPageSlug: string | null) {
-  if (!contextPageSlug) return { contextPage: null, rootPage: null }
-
-  // Root = první segment slugu. Když je stejný jako celý slug, kontext JE kořen
-  // → stačí jeden dotaz.
-  // Používáme LEHKÝ fetch: detail článku potřebuje z (kořenové) stránky jen
-  // menu/hero pole (title, fullSlug, category, children, featuredImage), NE plná
-  // data stránky včetně všech jejích článků a enriche obrázků (to dělal těžký
-  // fetchPageByFullSlug zbytečně). Počet článků pro záložku „Články" řešíme zvlášť
-  // levným countem (pageHasArticles) v komponentě.
-  const rootSlug = contextPageSlug.split('/')[0]
-  if (rootSlug === contextPageSlug) {
-    const { data } = await fetchPageLightByFullSlug(contextPageSlug)
-    const contextPage = data?.pages[0] ?? null
-    return { contextPage, rootPage: contextPage }
-  }
-
-  // Nezávislé dotazy běží paralelně (fetchPageLightByFullSlug je navíc dedup přes cache).
-  const [ctxRes, rootRes] = await Promise.all([
-    fetchPageLightByFullSlug(contextPageSlug),
-    fetchPageLightByFullSlug(rootSlug),
-  ])
-
-  const contextPage = ctxRes.data?.pages[0] ?? null
-  if (!contextPage) return { contextPage: null, rootPage: null }
-
-  const rootPage = rootRes.data?.pages[0] ?? contextPage
-  return { contextPage, rootPage }
-}
-
-function resolveHeroImage(
-  page: {
-    featuredImage?: {
-      image?: { url?: string; alternativeText?: string | null } | null
-      featureImageStyleCss?: string | null
-    } | null
-  } | null,
-  article: ArticleType,
-) {
-  // Prefer article's own featured image (a populated media object), fall back to context page.
-  const articleImage = article.featuredImage?.image
-  const articleUrl = articleImage && typeof articleImage === 'object' ? articleImage.url : null
-  const url = articleUrl ?? page?.featuredImage?.image?.url ?? null
-  // Popisek ze STEJNÉ fotky jako URL (alt média z CMS), bez něj null → název článku.
-  const alt = articleUrl
-    ? (articleImage && typeof articleImage === 'object' && articleImage.alternativeText) || null
-    : page?.featuredImage?.image?.alternativeText || null
-
-  return {
-    url: url ? (url.startsWith('/') ? `${getPayloadURL()}${url}` : url) : null,
-    alt,
-    // styleCss (ohnisko/pozice) musí pocházet ze STEJNÉHO obrázku jako `url` —
-    // u fallbacku na obrázek stránky tedy z featuredImage stránky, ne z článku.
-    styleCss: articleUrl
-      ? article.featuredImage?.featureImageStyleCss || undefined
-      : page?.featuredImage?.featureImageStyleCss || undefined,
-  }
 }

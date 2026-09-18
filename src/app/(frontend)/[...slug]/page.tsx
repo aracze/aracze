@@ -3,7 +3,9 @@ import { Article } from '@/components/layout/article/article'
 import { LeaderboardAd } from '@/components/features/article-ad'
 import { fetchPageLightByFullSlug, pageHasArticlesBySlug } from '@/lib/payload'
 import { PageCategory } from '@/types/payload'
-import { articlePath, getArticleImageUrl } from '@/lib/utils'
+import { articlePath } from '@/lib/utils'
+import { resolveArticleHeroImage } from '@/lib/article-hero'
+import { resolveArticleContext } from '@/lib/article-context'
 import { resolveSlugRoute } from '@/lib/resolve-route'
 import { resolvePageSeo } from '@/lib/page-seo'
 import { absoluteUrl, buildPageMetadata, resolveSeoDescription, resolveSeoTitle } from '@/lib/seo'
@@ -35,8 +37,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (resolution.kind === 'page') {
     // Titulek, popisek i fotka sdílené s komponentou Page (src/lib/page-seo.ts),
     // aby meta description a JSON-LD říkaly totéž.
-    const { title, description, imageUrl } = await resolvePageSeo(resolution.page)
-    return buildPageMetadata({ title, description, path: resolution.page.fullSlug, imageUrl })
+    const { title, description, image } = await resolvePageSeo(resolution.page)
+    return buildPageMetadata({ title, description, path: resolution.page.fullSlug, image })
   }
 
   if (resolution.kind === 'article') {
@@ -49,20 +51,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const author = article.createdByPublic
     const title = resolveSeoTitle(article.meta, article.title)
 
-    // Náhled ke sdílení jako viditelné hero (resolveHeroImage v Article): vlastní
-    // fotka článku, jinak fotka hlavní stránky (lehký fetch, React-cache
-    // sdílená s renderem článku).
-    let imageUrl = getArticleImageUrl(article)
-    if (!imageUrl && article.mainPage?.fullSlug) {
-      const { data } = await fetchPageLightByFullSlug(article.mainPage.fullSlug.replace(/^\//, ''))
-      imageUrl = data?.pages[0]?.featuredImage?.image?.url ?? null
-    }
+    // Náhled ke sdílení = viditelné hero: tentýž kontext (stránka z URL, místo
+    // nad ní) jako komponenta Article — resolveArticleContext je React-cache,
+    // render ho už nepočítá znovu. Popisek i rozměry jdou ze stejné fotky.
+    const { heroPage } = await resolveArticleContext(article, resolution.parentSlug)
+    const image = resolveArticleHeroImage(heroPage, article).share
 
     return buildPageMetadata({
       title,
       description: resolveSeoDescription(article.meta, article.text),
       path: canonicalPath,
-      imageUrl,
+      image,
       type: 'article',
       publishedTime: article.publishedAt ?? article.createdAt ?? null,
       modifiedTime: article.updatedAt ?? null,
