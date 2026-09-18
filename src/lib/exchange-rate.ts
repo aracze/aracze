@@ -5,7 +5,7 @@ import type { ExchangeRates } from './currency-amounts'
  * Kurzy měn jako JEDNA tabulka „Kč za jednotku měny“ pro všechny stránky:
  * kartu kurzu v panelu, blok „Aktuální měna“ i přepočet částek v textu
  * (currency-amounts.ts), kde se na jedné stránce potkává měna země s eurem
- * či dolarem.
+ * či dolarem. K číslu jde i datum platnosti (do bubliny u částky) a zdroj.
  *
  * Zdroje (všechny bez klíče, cache 24 h — externí API mimo CMS, v dev povolená):
  * 1. ČNB denní kurzovní lístek (31 měn, vyhlašuje se v pracovní dny ve 14:30).
@@ -13,9 +13,10 @@ import type { ExchangeRates } from './currency-amounts'
  *    Doplňují jen to, co v denním lístku není.
  * 3. Frankfurter (data ECB, 29 měn) — záloha, když ČNB denní lístek nejde načíst.
  *
- * Řádky ČNB: `země|měna|množství|kód|kurz`, kurz je za `množství` jednotek
- * (JPY, HUF, IDR… po 100), desetinná čárka. Web tak ukazuje oficiální kurz ČNB,
- * který český čtenář zná z banky i ze zpráv.
+ * Řádky ČNB: první řádek `18.09.2026 #181`, druhý hlavička, dál
+ * `země|měna|množství|kód|kurz`; kurz je za `množství` jednotek (JPY, HUF,
+ * IDR… po 100), desetinná čárka. Web tak ukazuje oficiální kurz ČNB, který
+ * český čtenář zná z banky i ze zpráv.
  */
 
 const CNB_DAILY_URL =
@@ -31,23 +32,37 @@ const FETCH_INIT: RequestInit & { next: { revalidate: number } } = {
   next: { revalidate: 86400 },
 }
 
-/** Text lístku ČNB → tabulka Kč za jednotku. Prázdný/nečitelný vstup → null. */
-export function parseCnbRates(text: string): ExchangeRates | null {
-  const table: ExchangeRates = {}
+/** Jeden načtený lístek: kurzy a datum platnosti společné pro všechny jeho měny. */
+export type RateSheet = { rates: Record<string, number>; date: string | null }
+
+/** „18.09.2026“ i „2026-09-18“ → „18. 9. 2026“ (česky, bez úvodních nul). */
+export function formatRateDate(raw: string): string | null {
+  const cz = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/)
+  if (cz) return `${Number(cz[1])}. ${Number(cz[2])}. ${cz[3]}`
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (iso) return `${Number(iso[3])}. ${Number(iso[2])}. ${iso[1]}`
+  return null
+}
+
+/** Text lístku ČNB → kurzy Kč za jednotku + datum z hlavičky. Nečitelný vstup → null. */
+export function parseCnbRates(text: string): RateSheet | null {
+  const lines = text.split('\n')
+  const rates: Record<string, number> = {}
   // První řádek je datum a číslo lístku, druhý hlavička sloupců.
-  for (const line of text.split('\n').slice(2)) {
+  for (const line of lines.slice(2)) {
     const cols = line.trim().split('|')
     if (cols.length < 5) continue
     const amount = Number(cols[2])
     const code = cols[3]
     const rate = Number(cols[4].replace(',', '.'))
     if (!/^[A-Z]{3}$/.test(code) || !(amount > 0) || !(rate > 0)) continue
-    table[code] = rate / amount
+    rates[code] = rate / amount
   }
-  return Object.keys(table).length > 0 ? table : null
+  if (Object.keys(rates).length === 0) return null
+  return { rates, date: formatRateDate(lines[0]?.trim() ?? '') }
 }
 
-async function fetchCnbRates(url: string): Promise<ExchangeRates | null> {
+async function fetchCnbRates(url: string): Promise<RateSheet | null> {
   try {
     const res = await fetch(url, FETCH_INIT)
     if (!res.ok) return null
@@ -64,22 +79,39 @@ interface FrankfurterResponse {
 }
 
 /** Frankfurter kótuje vše k euru — křížem přes CZK/EUR vznikne Kč za jednotku. */
-async function fetchFrankfurterRates(): Promise<ExchangeRates | null> {
+async function fetchFrankfurterRates(): Promise<RateSheet | null> {
   try {
     const res = await fetch(FRANKFURTER_URL, FETCH_INIT)
     if (!res.ok) return null
     const data: FrankfurterResponse = await res.json()
     const czkPerEur = data.rates?.CZK
     if (!czkPerEur) return null
-    const table: ExchangeRates = { EUR: czkPerEur }
+    const rates: Record<string, number> = { EUR: czkPerEur }
     for (const [code, perEur] of Object.entries(data.rates)) {
       if (code === 'CZK' || !(perEur > 0)) continue
-      table[code] = czkPerEur / perEur
+      rates[code] = czkPerEur / perEur
     }
-    return table
+    return { rates, date: formatRateDate(String(data.date ?? '')) }
   } catch {
     return null
   }
+}
+
+/** Slije lístky do tabulky; pozdější lístek v pořadí přepisuje dřívější. */
+export function mergeRateSheets(
+  sheets: (RateSheet | null)[],
+  source: ExchangeRates['source'],
+): ExchangeRates | null {
+  const table: ExchangeRates = { rates: {}, dates: {}, source }
+  for (const sheet of sheets) {
+    if (!sheet) continue
+    for (const [code, rate] of Object.entries(sheet.rates)) {
+      table.rates[code] = rate
+      if (sheet.date) table.dates[code] = sheet.date
+      else delete table.dates[code]
+    }
+  }
+  return Object.keys(table.rates).length > 0 ? table : null
 }
 
 async function fetchExchangeRatesRaw(): Promise<ExchangeRates | null> {
@@ -87,10 +119,10 @@ async function fetchExchangeRatesRaw(): Promise<ExchangeRates | null> {
     fetchCnbRates(CNB_DAILY_URL),
     fetchCnbRates(CNB_OTHER_URL),
   ])
-  const primary = daily ?? (await fetchFrankfurterRates())
-  if (!primary && !other) return null
-  // Denní lístek má přednost před měsíčním (u měn, které jsou v obou).
-  return { ...(other ?? {}), ...(primary ?? {}) }
+  if (daily) return mergeRateSheets([other, daily], 'ČNB')
+  // Bez denního lístku ČNB: ECB jako hlavní, měsíční „ostatní měny“ ČNB doplní zbytek.
+  const ecb = await fetchFrankfurterRates()
+  return mergeRateSheets([other, ecb], ecb ? 'ECB' : 'ČNB')
 }
 
 export const fetchExchangeRates = cache(fetchExchangeRatesRaw)
@@ -100,6 +132,6 @@ export async function fetchExchangeRate(
   currencyCode: string,
 ): Promise<{ rate: number; base: string } | null> {
   if (!currencyCode || currencyCode === 'CZK') return null
-  const rate = (await fetchExchangeRates())?.[currencyCode]
+  const rate = (await fetchExchangeRates())?.rates[currencyCode]
   return rate ? { rate, base: currencyCode } : null
 }

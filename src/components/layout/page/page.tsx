@@ -450,7 +450,7 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
   ])
   // Kurz měny země pro kartu v panelu a blok „Aktuální měna" (Kč za jednotku).
   const exchangeRate = effectiveCurrencyCode
-    ? (exchangeRates?.[effectiveCurrencyCode] ?? null)
+    ? (exchangeRates?.rates[effectiveCurrencyCode] ?? null)
     : null
 
   // Blok mapy se štítkem (viz accommodationMapPromise). Bez souřadnic místa

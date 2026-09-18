@@ -5,7 +5,8 @@
  * a tabulku kurzů, vrátí HTML s doplněnými korunami. Autorova částka zůstává
  * doslova (cestovatel platí místní měnou a porovnává s cenovkou), koruny jsou
  * tlumený doplněk za ní: „120 EUR (≈ 2 900 Kč)“. Rozhodnutí uživatele
- * 18. 9. 2026 — varianta B z návrhu, bez data kurzu.
+ * 18. 9. 2026 — varianta B z návrhu. Bublina po najetí/klepnutí nese kurz,
+ * zdroj a datum (CSS `.amount::after` z `data-tip`, viz globals.css).
  *
  * Druhá služba téhož modulu: řádek „aktuální kurz: 1 EUR = 1 CZK“, který
  * do prvního odstavce 61 stránek „Měna a ceny“ zapsala migrace natvrdo
@@ -13,10 +14,20 @@
  * vypustí i s úvodem „a aktuální kurz:“.
  */
 
-/** Kurzy: kolik Kč stojí jedna jednotka měny (klíč = ISO kód). */
-export type ExchangeRates = Record<string, number>
+/** Tabulka kurzů: Kč za jednotku měny, datum platnosti podle měny a zdroj. */
+export type ExchangeRates = {
+  /** Klíč = ISO kód, hodnota = kolik Kč stojí jedna jednotka měny. */
+  rates: Record<string, number>
+  /**
+   * Datum platnosti kurzu („18. 9. 2026“) podle měny — denní lístek ČNB a
+   * měsíční „ostatní měny“ mají různá data. Chybí-li, bublina datum neuvede.
+   */
+  dates: Record<string, string>
+  /** Zdroj kurzů; do bubliny („Kurz ČNB …“). */
+  source: 'ČNB' | 'ECB'
+}
 
-export const NBSP = '\u00a0'
+export const NBSP = ' '
 
 /**
  * Rodiny měn sdílející symbol nebo české slovo. Když stránka patří zemi
@@ -53,7 +64,11 @@ const FAMILIES: Record<string, { members: string[]; fallback: string | null }> =
   rupiah: { members: ['IDR'], fallback: 'IDR' },
 }
 
-/** Symboly měn → rodina. „Kč“ tu schválně není: koruny se nepřepočítávají. */
+/**
+ * Symboly a zkratky měn → rodina (malá písmena) nebo přímo ISO kód (velká).
+ * Před číslem i za ním („E£ 1000“, „S/ 50“, „Rp 10.000“, „20 €“, „100 kr“).
+ * „Kč“ tu schválně není: koruny se nepřepočítávají.
+ */
 const SYMBOLS: Record<string, string> = {
   '€': 'euro',
   $: 'dollar',
@@ -62,11 +77,31 @@ const SYMBOLS: Record<string, string> = {
   '฿': 'baht',
   '₺': 'lira',
   '₹': 'rupee',
+  '₨': 'rupee',
+  Rs: 'rupee',
   '₩': 'won',
   '₪': 'shekel',
   '₫': 'dong',
+  kr: 'krona',
   zł: 'zloty',
   Ft: 'forint',
+  'E£': 'EGP',
+  'S/': 'PEN',
+  R$: 'BRL',
+  Rp: 'IDR',
+  RM: 'MYR',
+  '₱': 'PHP',
+  '₴': 'UAH',
+  '₸': 'KZT',
+  '₾': 'GEL',
+  '₼': 'AZN',
+  '₮': 'MNT',
+  '₦': 'NGN',
+  '₵': 'GHS',
+  '₡': 'CRC',
+  '₲': 'PYG',
+  '₭': 'LAK',
+  '៛': 'KHR',
 }
 
 /**
@@ -100,11 +135,14 @@ const WORD_STEMS: [RegExp, string][] = [
   [/^dong(?:y|ů|u|ům|ech|em)?$/i, 'dong'],
 ]
 
-/** Kódy, které v textu bereme za měnu: všechny členy rodin + koruna (kvůli vynechání). */
-const KNOWN_CODES = new Set<string>(Object.values(FAMILIES).flatMap((f) => f.members))
+/** Kódy, které v textu bereme za měnu: členy rodin + kódy za symboly. */
+const KNOWN_CODES = new Set<string>([
+  ...Object.values(FAMILIES).flatMap((f) => f.members),
+  ...Object.values(SYMBOLS).filter((v) => /^[A-Z]{3}$/.test(v)),
+])
 
 /**
- * Z tokenu za číslem (kód, symbol, české slovo) určí ISO kód měny.
+ * Z tokenu u čísla (kód, symbol, české slovo) určí ISO kód měny.
  * `pageCurrency` je měna země, pod kterou stránka patří (rozhoduje
  * u víceznačných rodin). Vrací null, když je token neznámý nebo koruna.
  */
@@ -112,7 +150,9 @@ export function resolveCurrency(token: string, pageCurrency?: string | null): st
   const t = token.trim()
   if (!t) return null
   if (/^[A-Z]{3}$/.test(t)) return t === 'CZK' ? null : KNOWN_CODES.has(t) ? t : null
-  const family = SYMBOLS[t] ?? WORD_STEMS.find(([re]) => re.test(t))?.[1] ?? null
+  const symbol = SYMBOLS[t]
+  if (symbol && /^[A-Z]{3}$/.test(symbol)) return symbol
+  const family = symbol ?? WORD_STEMS.find(([re]) => re.test(t))?.[1] ?? null
   if (!family) return null
   const def = FAMILIES[family]
   if (pageCurrency && def.members.includes(pageCurrency)) return pageCurrency
@@ -153,9 +193,15 @@ export function formatRateLine(code: string, czkPerUnit: number): string {
   return `${unitText}${NBSP}${code} = ${formatRateNumber(czkPerUnit * unit)}${NBSP}Kč`
 }
 
-/** Popisek tooltipu u přepočtené částky. */
-function rateTitle(code: string, czkPerUnit: number): string {
-  return `Kurz ${formatRateLine(code, czkPerUnit)}`
+/** Text bubliny: „Kurz ČNB 1 EUR = 24,31 Kč (18. 9. 2026)“. */
+export function rateTip(code: string, table: ExchangeRates): string {
+  const date = table.dates[code]
+  return `Kurz ${table.source} ${formatRateLine(code, table.rates[code])}${date ? ` (${date})` : ''}`
+}
+
+/** Obal s bublinou: fokusovatelný (klepnutí na mobilu i klik ukážou bublinu). */
+function tipSpan(tip: string, inner: string): string {
+  return `<span class="amount" tabindex="0" data-tip="${tip}">${inner}</span>`
 }
 
 /**
@@ -164,13 +210,14 @@ function rateTitle(code: string, czkPerUnit: number): string {
  * identifikátor), stejně jako číslo s tečkou jako desetinným oddělovačem
  * následované třemi číslicemi (to je tisícová tečka „1.500“).
  */
-const NUMBER = String.raw`\d{1,3}(?:[ \u00a0.]\d{3})+(?:,\d{1,2})?|\d{1,9}(?:,\d{1,2})?`
-const SYMBOL = String.raw`€|\$|£|¥|฿|₺|₹|₩|₪|₫|zł|Ft`
+const NUMBER = String.raw`\d{1,3}(?:[  .]\d{3})+(?:,\d{1,2})?|\d{1,9}(?:,\d{1,2})?`
+// Delší symboly před kratšími (E£ před £, R$ před $).
+const SYMBOL = String.raw`E£|R\$|S/|Rp|RM|Rs|₨|kr|€|\$|£|¥|฿|₺|₹|₩|₪|₫|₱|₴|₸|₾|₼|₮|₦|₵|₡|₲|₭|៛|zł|Ft`
 const WORD = String.raw`\p{L}{2,10}`
 const AMOUNT_RE = new RegExp(
-  // 1: text před číslem (kvůli roku), 2: číslo, 3: mezera mezi číslem a měnou,
+  // 1: znak před číslem (kvůli roku), 2: číslo, 3: mezera mezi číslem a měnou,
   // 4: token měny. Symbol může být i před číslem (5: symbol, 6: číslo).
-  String.raw`(^|[^\d\p{L}.,])(?:(${NUMBER})([ \u00a0]?)([A-Z]{3}|${SYMBOL}|${WORD})(?![\p{L}\d])|(${SYMBOL})[ \u00a0]?(${NUMBER})(?![\d,]))`,
+  String.raw`(^|[^\d\p{L}.,])(?:(${NUMBER})([  ]?)([A-Z]{3}|${SYMBOL}|${WORD})(?![\p{L}\d])|(${SYMBOL})[  ]?(${NUMBER})(?![\d,]))`,
   'gu',
 )
 
@@ -179,29 +226,29 @@ const YEAR_CONTEXT_RE = /(?:^|\s)(?:v\s+)?(?:roce|roku|rok|letech|let|r\.)\s*$/i
 
 function parseCzechNumber(text: string): number {
   const normalized = text
-    .replace(/[ \u00a0]/g, '')
+    .replace(/[  ]/g, '')
     .replace(/\.(?=\d{3})/g, '')
     .replace(',', '.')
   return Number(normalized)
 }
 
 /**
- * Obal částky: autorův zápis, za ním tlumené koruny, v tooltipu kurz.
+ * Obal částky: autorův zápis, za ním tlumené koruny, v bublině kurz.
  * Vrací null, když kurz chybí nebo je přepočet pod půl koruny.
  */
 function annotatedAmountHtml(
   original: string,
   code: string,
   amount: number,
-  rates: ExchangeRates,
+  table: ExchangeRates,
 ): string | null {
-  const rate = rates[code]
+  const rate = table.rates[code]
   if (!rate || !Number.isFinite(rate)) return null
   const czk = roundCzk(amount * rate)
   if (czk === null) return null
-  return (
-    `<span class="amount" title="${rateTitle(code, rate)}">${original}${NBSP}` +
-    `<span class="amount-czk">(≈${NBSP}${formatCzk(czk)})</span></span>`
+  return tipSpan(
+    rateTip(code, table),
+    `${original}${NBSP}<span class="amount-czk">(≈${NBSP}${formatCzk(czk)})</span>`,
   )
 }
 
@@ -216,10 +263,10 @@ function annotatedAmountHtml(
  */
 export function annotateAmountsHtml(
   escapedText: string,
-  rates: ExchangeRates | null | undefined,
+  table: ExchangeRates | null | undefined,
   pageCurrency?: string | null,
 ): string {
-  if (!rates || !escapedText || !/\d/.test(escapedText)) return escapedText
+  if (!table || !escapedText || !/\d/.test(escapedText)) return escapedText
   if (isLegacyRateLine(escapedText)) return escapedText
 
   return escapedText.replace(
@@ -255,7 +302,7 @@ export function annotateAmountsHtml(
         num !== undefined
           ? `${numberNb}${gap ? NBSP : ''}${token}`
           : `${symBefore}${NBSP}${numberNb}`
-      const annotated = annotatedAmountHtml(original, code, amount, rates)
+      const annotated = annotatedAmountHtml(original, code, amount, table)
       return annotated ? `${lead}${annotated}` : match
     },
   )
@@ -272,13 +319,14 @@ export function isLegacyRateLine(text: string): boolean {
 
 /**
  * V HTML odstavce nahradí řádek kurzu z migrace živou hodnotou: „1 EUR =
- * 24,31 Kč“. Bez kurzu (měna mimo zdroj, výpadek) vypustí celý dovětek
- * „a aktuální kurz: …“ — lepší nic než „1 EGP = 1 CZK“. Kód v textu musí
- * odpovídat měně stránky; cizí kód (text říká EUR, země má BAM) se vypustí.
+ * 24,31 Kč“ s bublinou (zdroj a datum). Bez kurzu (měna mimo zdroj, výpadek)
+ * vypustí celý dovětek „a aktuální kurz: …“ — lepší nic než „1 EGP = 1 CZK“.
+ * Kód v textu musí odpovídat měně stránky; cizí kód (text říká EUR, země má
+ * BAM) se vypustí.
  */
 export function replaceLegacyRateLine(
   paragraphHtml: string,
-  rates: ExchangeRates | null | undefined,
+  table: ExchangeRates | null | undefined,
   pageCurrency?: string | null,
 ): string {
   if (!paragraphHtml.includes(' CZK')) return paragraphHtml
@@ -291,10 +339,12 @@ export function replaceLegacyRateLine(
       code: string,
       close: string | undefined,
     ) => {
-      const rate = rates?.[code]
+      const rate = table?.rates[code]
       const matchesPage = !pageCurrency || pageCurrency === code
-      if (!rate || !matchesPage) return ''
-      return `${lead ?? ''}${open ?? ''}${formatRateLine(code, rate)}${close ?? ''}`
+      if (!table || !rate || !matchesPage) return ''
+      const date = table.dates[code]
+      const tip = `Kurz ${table.source}${date ? ` z ${date}` : ''}`
+      return `${lead ?? ''}${open ?? ''}${tipSpan(tip, formatRateLine(code, rate))}${close ?? ''}`
     },
   )
 }
@@ -306,8 +356,10 @@ export function replaceLegacyRateLine(
  * výsledek stojí jen jeden cachovaný request, falešně záporný by přepočet
  * potichu vypnul — proto je záměrně široká (kmeny slov bez koncovek).
  */
-const MAY_CONTAIN_CODE_OR_SYMBOL =
-  /\d[  ]?(?:[A-Z]{3}(?![a-z])|€|\$|£|¥|฿|₺|₹|₩|₪|₫|zł|Ft)|(?:€|\$|£|¥|฿)[  ]?\d/u
+const MAY_CONTAIN_CODE_OR_SYMBOL = new RegExp(
+  String.raw`\d[  ]?(?:[A-Z]{3}(?![a-z])|${SYMBOL})|(?:${SYMBOL})[  ]?\d`,
+  'u',
+)
 const MAY_CONTAIN_WORD =
   /\d[  ]?(?:eur|dolar|lib(?:ra|ry|er|ře|rou|rám|rách)|bah?t|lir|rupi|pes(?:o|a|os)|frank|forint|zlot|won|ringgit|rand|real|le[iu]\b|lev|dirham|din[aá]r|ri[ay]l|šekel|dong)/iu
 

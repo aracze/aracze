@@ -1022,11 +1022,14 @@ m.cloudinary_public_id = a.cloudinary_public_id` musí vrátit 0.
 
 - **Částky v cizí měně v textu se přepočítávají na koruny** (`src/lib/currency-amounts.ts`,
   volá se z `richTextToHtml`): za autorovou částkou přibude tlumený doplněk
-  „120 EUR (≈ 2 900 Kč)“ s kurzem v tooltipu. Původní zápis zůstává (na místě se platí
+  „120 EUR (≈ 2 900 Kč)“; po najetí nebo klepnutí se ukáže bublina „Kurz ČNB 1 EUR =
+  24,31 Kč (18. 9. 2026)“ (CSS `.amount::after` z `data-tip`, span má `tabindex`, takže
+  funguje i dotykem — nativní `title` na klik nereaguje). Původní zápis zůstává (na místě se platí
   místní měnou a čtenář porovnává s cenovkou), koruny jsou orientace — proto se
   **zaokrouhlují** podle velikosti (do 100 Kč na pětikoruny, do 1 000 na desítky, do
   10 000 na stovky, výš na tisíce) a nesou znak ≈. Rozpoznávají se ISO kódy, symboly
-  (€, $, £, ฿…) a české tvary slov („2 eura“, „10 eur“, „20 bahtů“); víceznačné rodiny
+  (€, $, £, ฿… i před číslem: „E£ 1000“, „S/ 50“, „Rp 10.000“) a české tvary slov
+  („2 eura“, „10 eur“, „20 bahtů“); víceznačné rodiny
   („dolar“, „$“, „libra“, „rupie“, „peso“) rozhoduje měna země stránky (v Austrálii je
   dolar AUD), bez ní výchozí člen rodiny nebo nic. Nepřepočítává se v nadpisech a
   odkazech, u částek v Kč, u letopočtů („v roce 2002 euro…“), pod půl koruny a bez
@@ -1042,8 +1045,9 @@ m.cloudinary_public_id = a.cloudinary_public_id` musí vrátit 0.
   Tentýž modul opravuje **řádek z migrace „a aktuální kurz: 1 EUR = 1 CZK“** v prvním
   odstavci 61 stránek „Měna a ceny“ (55× s hodnotou 1): při vykreslení se nahradí živým
   „1 EUR = 24,31 Kč“ (drobné měny po stovkách či tisících: „100 JPY = …“), a když kurz
-  chybí nebo kód neodpovídá měně země, celý dovětek se vypustí. Vzhled: `.amount-czk`
-  v `globals.css` (`text-ink-3`, bez podtržení). Testy: `tests/int/currency-amounts.int.spec.ts`.
+  chybí nebo kód neodpovídá měně země, celý dovětek se vypustí; bublina u kurzu nese zdroj
+  a datum lístku. Vzhled: `.amount`, `.amount::after`, `.amount-czk` v `globals.css`
+  (`text-ink-3`, bez podtržení). Testy: `tests/int/currency-amounts.int.spec.ts`.
 - **Sekce „Příprava do …“** (`src/components/layout/page/preparation-section.tsx`): na
   stránkách kategorie **Místo k navštívení** mezi „Co vidět“ a „Články a cestopisy“ (legacy
   parita s `_affiliate.gsp`). Pět karet: **Cestovní pojištění** (redirect `/go/pojisteni`
