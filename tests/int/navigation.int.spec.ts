@@ -12,7 +12,7 @@ const { breadcrumbsFromSlug } = await import('@/lib/page-ancestors')
 
 // Pravidla navigace jsou popsaná v docs/navigace.md. Testy drží dvě věci, které
 // se snadno rozbijí tichou úpravou:
-//   1. „Zobrazit v URL" (includeInChildUrlPaths) platí jen pro MÍSTA pod stránkou,
+//   1. „Include Place in Child URLs" (includeInChildUrlPaths) platí jen pro MÍSTA pod stránkou,
 //      ne pro její informační podstránky ani turistické cíle.
 //   2. Drobečky jdou po hierarchii CMS: bez nejvyšší úrovně, končí přímým rodičem
 //      (u článku místem, pod kterým visí).
@@ -30,7 +30,7 @@ const amerika = misto('amerika', false)
 const usa = misto('usa')
 const wyoming = misto('wyoming', false)
 
-describe('buildPageUrl: „Zobrazit v URL" platí jen pro místa', () => {
+describe('buildPageUrl: „Include Place in Child URLs" platí jen pro místa', () => {
   it('místo pod skrytým státem stát v adrese nemá', () => {
     expect(buildPageUrl([amerika, usa, wyoming, misto('narodni-park-yellowstone')])).toBe(
       '/usa/narodni-park-yellowstone',
@@ -53,7 +53,7 @@ describe('buildPageUrl: „Zobrazit v URL" platí jen pro místa', () => {
     )
   })
 
-  it('stránka sama je v adrese vždy, i když má „Zobrazit v URL" vypnuté', () => {
+  it('stránka sama je v adrese vždy, i když má „Include Place in Child URLs" vypnuté', () => {
     expect(buildPageUrl([amerika, usa, wyoming])).toBe('/usa/wyoming')
     expect(buildPageUrl([amerika])).toBe('/amerika')
   })

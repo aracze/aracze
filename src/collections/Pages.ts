@@ -420,7 +420,7 @@ export const Pages: CollectionConfig = {
         // by zaškrtávátko jen matlo — ukazuje se tedy jen tam, kde něco dělá.
         condition: (data) => data?.category === 'Místo k navštívení',
         description:
-          'Vypnuté = toto místo se vynechá z adres všech míst pod ním (Kalifornie vypnutá → /usa/san-francisco, ne /usa/kalifornie/san-francisco). Vlastní podstránky (Počasí, Doprava…) a turistické cíle si ho v adrese nechají. Po změně se adresy potomků přepočítají při jejich uložení, hromadně skriptem pnpm fix:page-urls.',
+          'Vypnuté = toto místo se vynechá z adres všech míst pod ním (Kalifornie vypnutá → /usa/san-francisco, ne /usa/kalifornie/san-francisco). Vlastní podstránky (Počasí, Doprava…) a turistické cíle si ho v adrese nechají. Po publikování se adresy všech stránek pod ním přepočítají samy (uložení konceptu je nepřepočítá; u velkého podstromu, např. USA, to trvá i minuty).',
       },
     },
     {

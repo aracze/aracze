@@ -18,8 +18,8 @@ type UrlAncestor = {
 
 /**
  * Složí adresu stránky z řetězce předků (od nejvyšší úrovně po stránku samotnou).
- * Používá ji plugin nested-docs při každém uložení (`generateURL`) i opravný
- * skript `pnpm fix:page-urls`.
+ * Používá ji plugin nested-docs při každém uložení (`generateURL`); po PUBLIKOVÁNÍ
+ * předka přeukládá i potomky, takže se jejich adresy přepočítají zároveň.
  *
  * Pravidlo pro „Include Place in Child URLs" (`includeInChildUrlPaths`): vypnuté
  * na stránce znamená, že se vynechá z adres MÍST pod ní — a tím i ze všeho, co je pod těmi

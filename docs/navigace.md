@@ -36,18 +36,15 @@ Příklad — Wyoming má „Include Place in Child URLs" vypnuté:
 | Národní Park Yellowstone (pod Wyomingem) | Místo k navštívení | `/usa/narodni-park-yellowstone` — Wyoming vypadne  |
 | Jezero Yellowstone (pod Yellowstonem)    | Turistický cíl     | `/usa/narodni-park-yellowstone/jezero-yellowstone` |
 
-Pravidlo je v `buildPageUrl` (`src/lib/page-url.ts`) a používá ho jak CMS při ukládání
-(`generateURL` v `src/payload.config.ts`), tak opravný skript.
+Pravidlo je v `buildPageUrl` (`src/lib/page-url.ts`) a používá ho CMS při ukládání
+(`generateURL` v `src/payload.config.ts`).
 
-> **Po změně pravidla spusť přepočet.** Payload adresy přepočítává jen při uložení
-> dokumentu, takže staré stránky si drží staré adresy:
->
-> ```bash
-> pnpm fix:page-urls -- --dry-run   # jen vypíše, co by se změnilo
-> pnpm fix:page-urls               # ostrý běh
-> ```
->
-> Skript je idempotentní. Na produkci se musí spustit zvlášť (má vlastní databázi).
+> **Kdy se adresy přepočítají.** Payload adresu počítá jen při uložení dokumentu.
+> Po přepnutí zaškrtávátka stačí stránku **publikovat** (uložení konceptu potomky nemění)
+> — plugin nested-docs pak přeuloží celý podstrom (u velkých zemí, např. USA, to trvá i minuty). Po změně **pravidla**
+> v kódu je potřeba hromadný přepočet všech stránek; jednorázový skript
+> `fix:page-urls`, který to dělal, je hotový a odstraněný (najdeš ho v git historii,
+> viz README). Na produkci se takový doběh musí spustit zvlášť (má vlastní databázi).
 
 ## 2. Drobečková navigace
 
