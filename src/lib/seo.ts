@@ -8,8 +8,9 @@
  * `openGraph` tudy.
  */
 import type { Metadata } from 'next'
-import { cloudinaryVariant } from '@/lib/cloudinary-loader'
+import { cloudinaryVariant, isCloudinary } from '@/lib/cloudinary-loader'
 import { absoluteMediaUrl, getSiteURL, richTextToPlainText, truncateAtWord } from '@/lib/utils'
+import type { StrapiMedia } from '@/types/payload'
 
 export const SITE_NAME = 'Ara.cz'
 /**
@@ -29,9 +30,11 @@ export const DEFAULT_DESCRIPTION =
 /** Horní mez popisku pro výsledky hledání (Google zobrazuje ~155–160 znaků). */
 export const DESCRIPTION_MAX = 160
 
+/** Šířka náhledu pro sdílení (Facebook doporučuje 1200 px; je ve whitelistu media proxy). */
+export const OG_IMAGE_WIDTH = 1200
 /** Cloudinary transformace náhledu pro sdílení — stejný tvar, jaký generuje
- *  `cloudinaryLoader` (šířka 1200 je ve whitelistu media proxy). */
-export const OG_IMAGE_TRANSFORM = 'f_auto,q_auto,c_limit,w_1200'
+ *  `cloudinaryLoader`. `c_limit` jen zmenšuje: menší originál zůstane, jak je. */
+export const OG_IMAGE_TRANSFORM = `f_auto,q_auto,c_limit,w_${OG_IMAGE_WIDTH}`
 
 /** RSS kanál nových článků (src/app/(frontend)/feed.xml/route.ts). */
 export const RSS_PATH = '/feed.xml'
@@ -41,12 +44,19 @@ export const RSS_ALTERNATE = { 'application/rss+xml': [{ url: RSS_PATH, title: R
 
 /** Logo pro strukturovaná data (Organization/publisher) — čtvercové PNG 512 px. */
 export const SITE_LOGO_PATH = '/icon-512.png'
-/** Výchozí náhled ke sdílení (1200×630, logo na modré) pro stránky bez fotky. */
+/** Výchozí náhled ke sdílení (logo na modré) pro stránky bez fotky. */
 export const OG_FALLBACK_IMAGE_PATH = '/og-default.png'
-export const OG_FALLBACK_IMAGE_WIDTH = 1200
-export const OG_FALLBACK_IMAGE_HEIGHT = 630
-/** Popisek výchozího náhledu (`og:image:alt`) — říká, co je na obrázku, ne co je na stránce. */
-export const OG_FALLBACK_IMAGE_ALT = 'Logo Ara.cz – cestovní průvodce po světě'
+/**
+ * Rozměry `public/og-default.png` — test seo-metadata čte hlavičku PNG a hlídá,
+ * že se s ním shodují (Facebook z nich skládá kartu ještě před stažením obrázku).
+ * Popisek říká, co je NA obrázku (logo), ne co je na stránce.
+ */
+export const OG_FALLBACK_IMAGE = {
+  path: OG_FALLBACK_IMAGE_PATH,
+  width: 1200,
+  height: 630,
+  alt: 'Logo Ara.cz – cestovní průvodce po světě',
+} as const
 
 /** SEO záložka z CMS (plugin-seo) — stránky i články mají stejný tvar. */
 export type SeoMeta = { title?: string | null; description?: string | null } | null | undefined
@@ -134,15 +144,48 @@ export function ogImageUrl(url: string | null | undefined): string | null {
   return abs ? cloudinaryVariant(abs, OG_IMAGE_TRANSFORM) : null
 }
 
+/**
+ * Fotka pro sdílení tak, jak ji zná CMS: adresa (i relativní), popisek
+ * z pole alt média a rozměry originálu. Vše kromě adresy je nepovinné.
+ */
+export type ShareImage = {
+  url: string
+  alt?: string | null
+  width?: number | null
+  height?: number | null
+}
+
+/** `ShareImage` z populovaného média stránky/článku; bez adresy `null`. */
+export function shareImageFromMedia(media: StrapiMedia | null | undefined): ShareImage | null {
+  if (!media?.url) return null
+  return { url: media.url, alt: media.alternativeText, width: media.width, height: media.height }
+}
+
+/**
+ * Rozměry náhledu po Cloudinary transformaci: originál širší než
+ * `OG_IMAGE_WIDTH` se zmenší se zachováním poměru stran (`c_limit`), menší
+ * zůstane. Jiné zdroje transformaci nedostávají, rozměry tedy platí, jak jsou.
+ * Bez známého originálu (nebo s nesmyslnými hodnotami) nic — lepší vynechat
+ * než poslat Facebooku špatný poměr stran.
+ */
+export function ogImageDimensions(
+  url: string,
+  width: number | null | undefined,
+  height: number | null | undefined,
+): { width: number; height: number } | null {
+  if (!width || !height || width <= 0 || height <= 0) return null
+  if (!isCloudinary(url) || width <= OG_IMAGE_WIDTH) return { width, height }
+  return { width: OG_IMAGE_WIDTH, height: Math.round((height * OG_IMAGE_WIDTH) / width) }
+}
+
 export type PageMetadataInput = {
   /** Titulek bez přípony (šablonu doplní layout), nebo `{ absolute }` pro homepage. */
-  title: NonNullable<Metadata['title']>
+  title: string | { absolute: string }
   description?: string
   /** Kanonická cesta na webu (s úvodním lomítkem). */
   path: string
-  imageUrl?: string | null
-  /** Popisek fotky pro `og:image:alt`; bez něj se použije titulek stránky. */
-  imageAlt?: string | null
+  /** Hero fotka (viz `shareImageFromMedia`); bez ní jde ven `OG_FALLBACK_IMAGE`. */
+  image?: ShareImage | null
   type?: 'website' | 'article'
   publishedTime?: string | null
   modifiedTime?: string | null
@@ -157,22 +200,10 @@ export type PageMetadataInput = {
  */
 export function buildPageMetadata(input: PageMetadataInput): Metadata {
   const url = absoluteUrl(input.path)
+  const type = input.type ?? 'website'
   // Bez fotky (homepage, statické stránky, cíl bez obrázku) jde ven výchozí
   // obrázek se značkou — sdílený odkaz bez náhledu má výrazně nižší proklik.
-  const photo = ogImageUrl(input.imageUrl)
-  // `og:image:alt` (Facebook debugger ho jinak hlásí prázdný): u fotky popisek,
-  // jinak titulek stránky — fotka je vždy hero k danému titulku. U výchozího
-  // obrázku známe i rozměry; Facebook pak při prvním sdílení ukáže velký náhled
-  // rovnou, bez čekání na stažení obrázku.
-  const image = photo
-    ? { url: photo, alt: input.imageAlt?.trim() || metadataTitleText(input.title) }
-    : {
-        url: absoluteUrl(OG_FALLBACK_IMAGE_PATH),
-        width: OG_FALLBACK_IMAGE_WIDTH,
-        height: OG_FALLBACK_IMAGE_HEIGHT,
-        alt: OG_FALLBACK_IMAGE_ALT,
-      }
-  const type = input.type ?? 'website'
+  const image = ogImage(input.image, input.title)
 
   return {
     title: input.title,
@@ -198,12 +229,29 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
   }
 }
 
-/** Titulek metadat jako prostý text (`{ absolute }`/`{ default }` homepage i řetězec stránek). */
-function metadataTitleText(title: NonNullable<Metadata['title']>): string {
-  if (typeof title === 'string') return title
-  if ('absolute' in title && title.absolute) return title.absolute
-  if ('default' in title && title.default) return title.default
-  return SITE_NAME
+/**
+ * `openGraph.images[0]`: adresa se zmenšující transformací, `og:image:alt`
+ * (Facebook debugger ho jinak hlásí prázdný) a rozměry, když jsou známé —
+ * Facebook z nich složí velký náhled hned při prvním sdílení, bez čekání na
+ * stažení obrázku. Popisek: alt média z CMS, jinak titulek stránky (fotka je
+ * vždy hero k danému titulku; z `{ absolute }` titulku bez přípony webu).
+ */
+function ogImage(image: ShareImage | null | undefined, title: PageMetadataInput['title']) {
+  const url = image ? ogImageUrl(image.url) : null
+  if (!url) {
+    return {
+      url: absoluteUrl(OG_FALLBACK_IMAGE.path),
+      width: OG_FALLBACK_IMAGE.width,
+      height: OG_FALLBACK_IMAGE.height,
+      alt: OG_FALLBACK_IMAGE.alt,
+    }
+  }
+  const titleText = typeof title === 'string' ? title : stripSiteSuffix(title.absolute)
+  return {
+    url,
+    alt: image?.alt?.trim() || titleText || SITE_NAME,
+    ...(ogImageDimensions(url, image?.width, image?.height) ?? {}),
+  }
 }
 
 export type ArticleJsonLdInput = {

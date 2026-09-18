@@ -603,8 +603,15 @@ průvodce Ara.cz`, `- Cestovní inspirace Ara.cz`, překlep `•vAra.cz`) i už 
 - **Open Graph / Twitter**: `og:type` (website/article), `siteName`, `locale cs_CZ`, náhled
   z hero fotky přes Cloudinary transformaci `f_auto,q_auto,c_limit,w_1200` (šířka 1200 je ve
   whitelistu media proxy); bez fotky (homepage, statické stránky) výchozí `public/og-default.png`
-  (1200×630, logo na modré, generované ze SVG loga v CMS). Next vnořená pole `openGraph` mezi layoutem a stránkou NESLUČUJE —
-  proto každá stránka skládá celý objekt přes helper, ne po částech.
+  (logo na modré, generované ze SVG loga v CMS; jeho rozměry a popisek drží `OG_FALLBACK_IMAGE`
+  a test čte hlavičku PNG, aby se s ním shodovaly). K fotce jde vždy `og:image:alt` — alt média
+  z CMS, bez něj titulek stránky (u fotky článku/místa je to vždy hero k tomu titulku) — a
+  `og:image:width/height`, když CMS zná rozměry originálu (širší než 1200 se přepočítají na
+  poměr stran po `c_limit`); Facebook z nich složí velký náhled hned při prvním sdílení. Fotku,
+  popisek i rozměry vybírá ze STEJNÉHO média `resolvePageSeo` (stránky) a
+  `resolveArticleHeroImage` v `src/lib/article-hero.ts` (články — totéž pravidlo jako viditelné
+  hero). Next vnořená pole `openGraph` mezi layoutem a stránkou NESLUČUJE — proto každá stránka
+  skládá celý objekt přes helper, ne po částech.
 - **JSON-LD**: články vydávají `Article` (autor `Person` s odkazem na profil, `datePublished`
   z `publishedAt`, `dateModified` z `updatedAt`, fotka, vydavatel) — `articleJsonLd` v
   `src/lib/seo.ts`; datum vydání je i viditelně u autora (`formatPublishDate`). Stránky mají

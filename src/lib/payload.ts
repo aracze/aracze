@@ -389,7 +389,12 @@ async function enrichFeaturedImages<T extends { featuredImage?: { image?: unknow
         ...d,
         featuredImage: {
           ...d.featuredImage,
-          image: { url: media.url, alternativeText: media.alt },
+          image: {
+            url: media.url,
+            alternativeText: media.alt,
+            width: media.width,
+            height: media.height,
+          },
         },
       }
     }
@@ -2829,11 +2834,18 @@ export const fetchFooter = cache(async (): Promise<GlobalFooter | null> => {
  * Returns a Map of mediaId → URL string.
  * (Bez cache — lokální dotaz je ~ms a Map není serializovatelná.)
  */
-export type MediaBasics = { url: string; alt: string | null }
+export type MediaBasics = {
+  url: string
+  alt: string | null
+  width: number | null
+  height: number | null
+}
 
 /**
- * URL + alt text médií podle id jedním dotazem. Alt jde do `alternativeText`
- * populovaných obrázků (hero fotka ho čte pro `alt`), URL do karet a náhledů.
+ * URL, alt text a rozměry médií podle id jedním dotazem. Alt jde do
+ * `alternativeText` populovaných obrázků (hero fotka ho čte pro `alt`,
+ * Open Graph pro `og:image:alt`), rozměry do `og:image:width/height`, URL do
+ * karet a náhledů.
  */
 export async function fetchMediaBasicsByIds(ids: number[]): Promise<Map<number, MediaBasics>> {
   if (ids.length === 0) return new Map()
@@ -2850,8 +2862,21 @@ export async function fetchMediaBasicsByIds(ids: number[]): Promise<Map<number, 
       // polí — s výběrem sloupců by se ztratilo (ověřeno: zmizely hero fotky).
     })
     for (const doc of res.docs || []) {
-      const d = doc as unknown as { id: number; url?: string | null; alt?: string | null }
-      if (d.url) map.set(d.id, { url: d.url, alt: d.alt?.trim() || null })
+      const d = doc as unknown as {
+        id: number
+        url?: string | null
+        alt?: string | null
+        width?: number | null
+        height?: number | null
+      }
+      if (d.url) {
+        map.set(d.id, {
+          url: d.url,
+          alt: d.alt?.trim() || null,
+          width: d.width ?? null,
+          height: d.height ?? null,
+        })
+      }
     }
   } catch {
     // bez URL — karty zobrazí placeholder

@@ -11,7 +11,12 @@
 import { cache } from 'react'
 import { fetchAncestorChain } from '@/lib/page-ancestors'
 import { buildPageTitle, rootPageCategories } from '@/lib/page-title'
-import { resolveSeoDescription, resolveSeoTitle } from '@/lib/seo'
+import {
+  resolveSeoDescription,
+  resolveSeoTitle,
+  shareImageFromMedia,
+  type ShareImage,
+} from '@/lib/seo'
 import { leadSentence, seoDescriptionTemplate, seoTitleTemplate } from '@/lib/seo-templates'
 import { richTextToPlainText } from '@/lib/utils'
 import { PageCategory, type Page } from '@/types/payload'
@@ -22,6 +27,8 @@ export type PageSeo = {
   description: string | undefined
   /** Hero fotka podle stejného pravidla jako viditelné hero (viz níže). */
   imageUrl: string | null
+  /** Tatáž fotka s popiskem (alt z CMS) a rozměry pro Open Graph. */
+  image: ShareImage | null
   /** Místo, ke kterému stránka patří (samo místo, nebo nejbližší nadřazené). */
   place: Page
   /** Kořen z URL (země, rubrika…), nebo stránka sama. */
@@ -59,10 +66,12 @@ export const resolvePageSeo = cache(async (page: Page): Promise<PageSeo> => {
   // Fotka podle stejného pravidla jako getHeroImage v komponentě Page: kořenové
   // kategorie (místo, cíl, rubrika, statická) jen vlastní fotku (bez ní hero
   // fotku nemá, tak ani náhled), podstránky dědí fotku nejbližšího místa, jinak
-  // kořene.
-  const imageUrl = rootPageCategories.includes(page.category)
-    ? (page.featuredImage?.image?.url ?? null)
-    : (place.featuredImage?.image?.url ?? rootPage.featuredImage?.image?.url ?? null)
+  // kořene. Popisek i rozměry musí být ze STEJNÉ fotky jako adresa — zděděná
+  // fotka fjordu nesmí dostat popisek podstránky.
+  const image = rootPageCategories.includes(page.category)
+    ? shareImageFromMedia(page.featuredImage?.image)
+    : (shareImageFromMedia(place.featuredImage?.image) ??
+      shareImageFromMedia(rootPage.featuredImage?.image))
 
-  return { title, description, imageUrl, place, rootPage }
+  return { title, description, imageUrl: image?.url ?? null, image, place, rootPage }
 })

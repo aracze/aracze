@@ -4,6 +4,7 @@ import { LeaderboardAd } from '@/components/features/article-ad'
 import { fetchPageLightByFullSlug, pageHasArticlesBySlug } from '@/lib/payload'
 import { PageCategory } from '@/types/payload'
 import { articlePath, getArticleImageUrl } from '@/lib/utils'
+import { resolveArticleHeroImage } from '@/lib/article-hero'
 import { resolveSlugRoute } from '@/lib/resolve-route'
 import { resolvePageSeo } from '@/lib/page-seo'
 import { absoluteUrl, buildPageMetadata, resolveSeoDescription, resolveSeoTitle } from '@/lib/seo'
@@ -35,8 +36,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (resolution.kind === 'page') {
     // Titulek, popisek i fotka sdílené s komponentou Page (src/lib/page-seo.ts),
     // aby meta description a JSON-LD říkaly totéž.
-    const { title, description, imageUrl } = await resolvePageSeo(resolution.page)
-    return buildPageMetadata({ title, description, path: resolution.page.fullSlug, imageUrl })
+    const { title, description, image } = await resolvePageSeo(resolution.page)
+    return buildPageMetadata({ title, description, path: resolution.page.fullSlug, image })
   }
 
   if (resolution.kind === 'article') {
@@ -49,20 +50,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const author = article.createdByPublic
     const title = resolveSeoTitle(article.meta, article.title)
 
-    // Náhled ke sdílení jako viditelné hero (resolveHeroImage v Article): vlastní
-    // fotka článku, jinak fotka hlavní stránky (lehký fetch, React-cache
-    // sdílená s renderem článku).
-    let imageUrl = getArticleImageUrl(article)
-    if (!imageUrl && article.mainPage?.fullSlug) {
+    // Náhled ke sdílení stejným pravidlem jako viditelné hero (resolveArticleHeroImage):
+    // vlastní fotka článku, jinak fotka hlavní stránky (lehký fetch jen bez vlastní
+    // fotky, React-cache sdílená s renderem článku). Popisek i rozměry jdou
+    // ze stejné fotky.
+    let contextPage = null
+    if (!getArticleImageUrl(article) && article.mainPage?.fullSlug) {
       const { data } = await fetchPageLightByFullSlug(article.mainPage.fullSlug.replace(/^\//, ''))
-      imageUrl = data?.pages[0]?.featuredImage?.image?.url ?? null
+      contextPage = data?.pages[0] ?? null
     }
+    const image = resolveArticleHeroImage(contextPage, article).share
 
     return buildPageMetadata({
       title,
       description: resolveSeoDescription(article.meta, article.text),
       path: canonicalPath,
-      imageUrl,
+      image,
       type: 'article',
       publishedTime: article.publishedAt ?? article.createdAt ?? null,
       modifiedTime: article.updatedAt ?? null,

@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 // SEO metadata (src/lib/seo.ts): titulek a popisek z CMS pole `meta` s
 // fallbacky, absolutní canonical, Open Graph a JSON-LD článku. Hlídá hlavně
@@ -8,10 +10,14 @@ import {
   buildPageMetadata,
   DEFAULT_DESCRIPTION,
   DESCRIPTION_MAX,
+  OG_FALLBACK_IMAGE,
+  OG_IMAGE_WIDTH,
+  ogImageDimensions,
   resolveSeoDescription,
   resolveSeoTitle,
   SITE_NAME,
   SITE_TITLE_SUFFIX,
+  shareImageFromMedia,
   stripSiteSuffix,
   truncateDescription,
 } from '@/lib/seo'
@@ -117,8 +123,14 @@ describe('resolveSeoDescription — CMS popisek, jinak začátek textu', () => {
   })
 })
 
+type OgImage = { url: string; alt?: string; width?: number; height?: number }
+const ogImages = (m: ReturnType<typeof buildPageMetadata>) =>
+  (m.openGraph as { images: OgImage[] }).images
+
+const CLOUDINARY = 'https://res.cloudinary.com/ara/image/upload/v1/foto.jpg'
+
 describe('buildPageMetadata — canonical + Open Graph', () => {
-  it('stránka: absolutní canonical, OG website se siteName/locale, bez fotky výchozí obrázek', () => {
+  it('stránka: absolutní canonical, OG website se siteName/locale, bez fotky výchozí obrázek s rozměry a popiskem', () => {
     const m = buildPageMetadata({ title: 'Norsko', description: 'Popis', path: '/norsko' })
     expect(m.alternates?.canonical).toBe(`${getSiteURL()}/norsko`)
     expect(m.openGraph).toMatchObject({
@@ -126,16 +138,32 @@ describe('buildPageMetadata — canonical + Open Graph', () => {
       url: `${getSiteURL()}/norsko`,
       siteName: SITE_NAME,
       locale: 'cs_CZ',
-      images: [{ url: `${getSiteURL()}/og-default.png` }],
     })
+    expect(ogImages(m)).toEqual([
+      {
+        url: `${getSiteURL()}/og-default.png`,
+        width: OG_FALLBACK_IMAGE.width,
+        height: OG_FALLBACK_IMAGE.height,
+        alt: OG_FALLBACK_IMAGE.alt,
+      },
+    ])
     expect(m.twitter).toEqual({ card: 'summary_large_image' })
   })
 
-  it('článek: OG article s časy a autorem, Cloudinary fotka dostane zmenšení', () => {
+  it('výchozí obrázek: konstanty odpovídají skutečnému public/og-default.png (IHDR)', () => {
+    const png = readFileSync(join(process.cwd(), 'public', OG_FALLBACK_IMAGE.path))
+    // PNG: 8 B signatura, 4 B délka + 4 B „IHDR", pak šířka a výška (big-endian).
+    expect(png.subarray(0, 8)).toEqual(Buffer.from('89504e470d0a1a0a', 'hex'))
+    expect(png.subarray(12, 16).toString('ascii')).toBe('IHDR')
+    expect(png.readUInt32BE(16)).toBe(OG_FALLBACK_IMAGE.width)
+    expect(png.readUInt32BE(20)).toBe(OG_FALLBACK_IMAGE.height)
+  })
+
+  it('článek: OG article s časy a autorem, Cloudinary fotka dostane zmenšení, alt z titulku bez přípony', () => {
     const m = buildPageMetadata({
       title: { absolute: 'Dva týdny v Myanmaru • Ara.cz' },
       path: '/myanmar/dva-tydny-v-myanmaru',
-      imageUrl: 'https://res.cloudinary.com/ara/image/upload/v1/foto.jpg',
+      image: { url: CLOUDINARY },
       type: 'article',
       publishedTime: '2019-03-12T22:00:00.000Z',
       modifiedTime: '2026-08-01T10:00:00.000Z',
@@ -147,15 +175,73 @@ describe('buildPageMetadata — canonical + Open Graph', () => {
       modifiedTime: '2026-08-01T10:00:00.000Z',
       authors: [`${getSiteURL()}/profil/panda`],
     })
-    const og = m.openGraph as { images: { url: string }[] }
-    expect(og.images[0].url).toMatch(/\/upload\/f_auto,q_auto,c_limit,w_1200\/v1\/foto\.jpg$/)
+    const [img] = ogImages(m)
+    expect(img.url).toMatch(/\/upload\/f_auto,q_auto,c_limit,w_1200\/v1\/foto\.jpg$/)
+    expect(img.alt).toBe('Dva týdny v Myanmaru')
+    // Bez známého originálu se rozměry neposílají (lepší nic než špatný poměr).
+    expect(img).not.toHaveProperty('width')
+    expect(img).not.toHaveProperty('height')
     expect(m.twitter).toEqual({ card: 'summary_large_image' })
   })
 
-  it('relativní Payload upload se stane absolutním', () => {
-    const m = buildPageMetadata({ title: 'X', path: '/x', imageUrl: '/api/media/file/a.jpg' })
-    const og = m.openGraph as { images: { url: string }[] }
-    expect(og.images[0].url).toMatch(/^https?:\/\/.+\/api\/media\/file\/a\.jpg$/)
+  it('og:image:alt: alt média z CMS má přednost, prázdný/bílý alt → titulek stránky', () => {
+    const withAlt = buildPageMetadata({
+      title: 'Počasí v Norsku',
+      path: '/norsko/pocasi',
+      image: { url: CLOUDINARY, alt: 'Fjord Geiranger za úsvitu' },
+    })
+    expect(ogImages(withAlt)[0].alt).toBe('Fjord Geiranger za úsvitu')
+
+    const blankAlt = buildPageMetadata({
+      title: 'Počasí v Norsku',
+      path: '/norsko/pocasi',
+      image: { url: CLOUDINARY, alt: '   ' },
+    })
+    expect(ogImages(blankAlt)[0].alt).toBe('Počasí v Norsku')
+  })
+
+  it('rozměry originálu z CMS: širší než 1200 se zmenší se zachováním poměru, menší zůstanou', () => {
+    const big = buildPageMetadata({
+      title: 'Norsko',
+      path: '/norsko',
+      image: { url: CLOUDINARY, width: 2400, height: 1350 },
+    })
+    expect(ogImages(big)[0]).toMatchObject({ width: 1200, height: 675 })
+
+    const small = buildPageMetadata({
+      title: 'Norsko',
+      path: '/norsko',
+      image: { url: CLOUDINARY, width: 800, height: 600 },
+    })
+    expect(ogImages(small)[0]).toMatchObject({ width: 800, height: 600 })
+  })
+
+  it('relativní Payload upload se stane absolutním a rozměry platí beze změny (bez transformace)', () => {
+    const m = buildPageMetadata({
+      title: 'X',
+      path: '/x',
+      image: { url: '/api/media/file/a.jpg', width: 3000, height: 2000 },
+    })
+    const [img] = ogImages(m)
+    expect(img.url).toMatch(/^https?:\/\/.+\/api\/media\/file\/a\.jpg$/)
+    expect(img).toMatchObject({ width: 3000, height: 2000, alt: 'X' })
+  })
+})
+
+describe('ogImageDimensions + shareImageFromMedia', () => {
+  it('neúplné či nesmyslné rozměry → null; poměr stran se zaokrouhluje', () => {
+    expect(ogImageDimensions(CLOUDINARY, null, 100)).toBeNull()
+    expect(ogImageDimensions(CLOUDINARY, 0, 100)).toBeNull()
+    expect(ogImageDimensions(CLOUDINARY, 1201, 800)).toEqual({ width: OG_IMAGE_WIDTH, height: 799 })
+    expect(ogImageDimensions(CLOUDINARY, OG_IMAGE_WIDTH, 630)).toEqual({ width: 1200, height: 630 })
+  })
+
+  it('shareImageFromMedia: bez URL null, jinak url + alt + rozměry média', () => {
+    expect(shareImageFromMedia(null)).toBeNull()
+    expect(shareImageFromMedia({ url: '', alternativeText: 'x' })).toBeNull()
+    expect(
+      shareImageFromMedia({ url: CLOUDINARY, alternativeText: 'Fjord', width: 4000, height: 3000 }),
+    ).toEqual({ url: CLOUDINARY, alt: 'Fjord', width: 4000, height: 3000 })
   })
 })
 

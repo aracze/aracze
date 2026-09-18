@@ -1,6 +1,7 @@
 import React from 'react'
 import { Article as ArticleType, type Page as PayloadPage } from '@/types/payload'
-import { articlePath, getPayloadURL, getSiteURL } from '@/lib/utils'
+import { articlePath, getSiteURL } from '@/lib/utils'
+import { resolveArticleHeroImage } from '@/lib/article-hero'
 import { richTextToHtml } from '@/lib/rich-text-html'
 import { articleJsonLd, resolveSeoDescription } from '@/lib/seo'
 import { formatPublishDate } from '@/lib/relative-time'
@@ -58,7 +59,7 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
 
   // Hero fotka ze STEJNÉHO místa jako menu a drobečky (legacy: obrázek článku,
   // jinak fotka nejbližšího místa).
-  const heroImage = resolveHeroImage(placePage || contextPage, article)
+  const heroImage = resolveArticleHeroImage(placePage || contextPage, article)
 
   // Author (safe public subset from the backend virtual field)
   const author = article.createdByPublic ?? null
@@ -324,33 +325,4 @@ async function resolveContextPages(contextPageSlug: string | null) {
 
   const rootPage = rootRes.data?.pages[0] ?? contextPage
   return { contextPage, rootPage }
-}
-
-function resolveHeroImage(
-  page: {
-    featuredImage?: {
-      image?: { url?: string; alternativeText?: string | null } | null
-      featureImageStyleCss?: string | null
-    } | null
-  } | null,
-  article: ArticleType,
-) {
-  // Prefer article's own featured image (a populated media object), fall back to context page.
-  const articleImage = article.featuredImage?.image
-  const articleUrl = articleImage && typeof articleImage === 'object' ? articleImage.url : null
-  const url = articleUrl ?? page?.featuredImage?.image?.url ?? null
-  // Popisek ze STEJNÉ fotky jako URL (alt média z CMS), bez něj null → název článku.
-  const alt = articleUrl
-    ? (articleImage && typeof articleImage === 'object' && articleImage.alternativeText) || null
-    : page?.featuredImage?.image?.alternativeText || null
-
-  return {
-    url: url ? (url.startsWith('/') ? `${getPayloadURL()}${url}` : url) : null,
-    alt,
-    // styleCss (ohnisko/pozice) musí pocházet ze STEJNÉHO obrázku jako `url` —
-    // u fallbacku na obrázek stránky tedy z featuredImage stránky, ne z článku.
-    styleCss: articleUrl
-      ? article.featuredImage?.featureImageStyleCss || undefined
-      : page?.featuredImage?.featureImageStyleCss || undefined,
-  }
 }
