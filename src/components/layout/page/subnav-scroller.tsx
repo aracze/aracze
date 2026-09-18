@@ -44,61 +44,25 @@ export function SubnavScroller({
     const scroller = ref.current
     if (!scroller) return
 
-    const centerActive = () => {
-      if (scroller.scrollWidth <= scroller.clientWidth) return
-      const active = scroller.querySelector('[aria-current]')
-      if (!active) return
-      const item = active.getBoundingClientRect()
-      const box = scroller.getBoundingClientRect()
-      // Vlastní výpočet místo scrollIntoView — ten by mohl hnout i svislým
-      // scrollem stránky (např. po návratu zpět s obnovenou pozicí).
-      scroller.scrollLeft += item.left - box.left - (box.width - item.width) / 2
-    }
-
-    // Položka, kterou protíná kraj, musí být vidět aspoň PEEK px a aspoň
-    // PEEK px z ní musí chybět. Když kraj sedí přesně na hranici položek,
-    // posune se pruh tak, aby další položka vykoukla.
-    const ensurePeek = () => {
-      const max = scroller.scrollWidth - scroller.clientWidth
-      if (max <= 0) return
-      const links = Array.from(scroller.querySelectorAll('a'))
-      const activeIndex = links.findIndex((a) => a.hasAttribute('aria-current'))
-      // Na začátku s aktivní první položkou (a na konci s poslední) se pruh
-      // nehýbe — posun by lhal o tom, kde menu začíná. Tam nese nápovědu
-      // přechod a šipka.
-      if (activeIndex === 0 && scroller.scrollLeft <= 1) return
-      if (activeIndex === links.length - 1 && scroller.scrollLeft >= max - 1) return
-
-      const box = scroller.getBoundingClientRect()
-      const fix = (edgeX: number, dir: 1 | -1) => {
-        for (const link of links) {
-          const r = link.getBoundingClientRect()
-          if (r.left < edgeX && r.right > edgeX) {
-            const visible = dir > 0 ? edgeX - r.left : r.right - edgeX
-            const hidden = r.width - visible
-            if (visible < PEEK) scroller.scrollLeft += dir * (PEEK - visible + 4)
-            else if (hidden < PEEK) scroller.scrollLeft -= dir * (PEEK - hidden + 4)
-            return
-          }
-          if (Math.abs((dir > 0 ? r.right : r.left) - edgeX) < 2) {
-            scroller.scrollLeft -= dir * PEEK
-            return
-          }
-        }
-      }
-      if (scroller.scrollLeft < max - 1) fix(box.right, 1)
-      if (scroller.scrollLeft > 1) fix(box.left, -1)
-    }
-
     const place = () => {
-      centerActive()
-      ensurePeek()
+      const active = scroller.querySelector('[aria-current]')
+      if (active && scroller.scrollWidth > scroller.clientWidth) {
+        const item = active.getBoundingClientRect()
+        const box = scroller.getBoundingClientRect()
+        // Vlastní výpočet místo scrollIntoView — ten by mohl hnout i svislým
+        // scrollem stránky (např. po návratu zpět s obnovenou pozicí).
+        const centered = scroller.scrollLeft + item.left - box.left - (box.width - item.width) / 2
+        scroller.scrollLeft = adjustForPeek(scroller, centered)
+      }
       updateEdges()
     }
 
     place()
     // Otočení telefonu mění šířku, a tím i to, které položky se vejdou.
     window.addEventListener('resize', place)
+    // Po posunu prstem či kolečkem se poloha neopravuje — pruh, který se po
+    // švihnutí sám pohne, působí jako chyba (Material ani štítky Googlu
+    // nepřiskakují). Nápovědu tam nesou přechod a šipka.
     scroller.addEventListener('scroll', updateEdges, { passive: true })
     return () => {
       window.removeEventListener('resize', place)
@@ -110,10 +74,9 @@ export function SubnavScroller({
     const scroller = ref.current
     if (!scroller) return
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    scroller.scrollBy({
-      left: dir * scroller.clientWidth * 0.66,
-      behavior: reduceMotion ? 'auto' : 'smooth',
-    })
+    // Cíl posunu se dopočítá tak, aby i po něm byla položka na kraji nakousnutá.
+    const target = adjustForPeek(scroller, scroller.scrollLeft + dir * scroller.clientWidth * 0.66)
+    scroller.scrollTo({ left: target, behavior: reduceMotion ? 'auto' : 'smooth' })
   }
 
   return (
@@ -125,6 +88,55 @@ export function SubnavScroller({
       <SubnavEdge side="right" hidden={atEnd} onClick={() => scrollBy(1)} />
     </div>
   )
+}
+
+/**
+ * Upraví zamýšlenou polohu posunu `left` tak, aby položka, kterou protíná kraj,
+ * byla vidět aspoň PEEK px a aspoň PEEK px z ní chybělo. Když kraj sedí přesně
+ * na hranici položek, posune se tak, aby další položka vykoukla. Počítá se
+ * v souřadnicích obsahu pruhu, takže funguje i pro polohu, kde pruh ještě není.
+ */
+function adjustForPeek(scroller: HTMLElement, left: number): number {
+  const max = scroller.scrollWidth - scroller.clientWidth
+  if (max <= 0) return 0
+  const clamp = (x: number) => Math.max(0, Math.min(max, x))
+  let next = clamp(left)
+  const links = Array.from(scroller.querySelectorAll('a'))
+  const activeIndex = links.findIndex((a) => a.hasAttribute('aria-current'))
+  // Na začátku s aktivní první položkou (a na konci s poslední) se pruh nehýbe —
+  // posun by lhal o tom, kde menu začíná. Tam nese nápovědu přechod a šipka.
+  if (activeIndex === 0 && next <= 1) return next
+  if (activeIndex === links.length - 1 && next >= max - 1) return next
+
+  const box = scroller.getBoundingClientRect()
+  const offset = scroller.scrollLeft - box.left
+  const fix = (edgeX: number, dir: 1 | -1) => {
+    for (const link of links) {
+      const r = link.getBoundingClientRect()
+      const l = r.left + offset
+      const rr = r.right + offset
+      if (l < edgeX && rr > edgeX) {
+        const visible = dir > 0 ? edgeX - l : rr - edgeX
+        const hidden = r.width - visible
+        if (visible < PEEK) next += dir * (PEEK - visible)
+        else if (hidden < PEEK) next -= dir * (PEEK - hidden)
+        return
+      }
+      if (Math.abs((dir > 0 ? rr : l) - edgeX) < 2) {
+        next -= dir * PEEK
+        return
+      }
+    }
+  }
+  // Oprava jednoho kraje může druhý kraj o pár px rozhodit — proto se oba
+  // kraje projdou znovu, dokud se poloha mění (nejvýš třikrát, ať nekmitá).
+  for (let pass = 0; pass < 3; pass++) {
+    const before = next
+    if (next < max - 1) fix(next + scroller.clientWidth, 1)
+    if (next > 1) fix(next, -1)
+    if (next === before) break
+  }
+  return clamp(next)
 }
 
 /** Přechod do bílé + šipka na jednom kraji pruhu. `hidden` = pruh je na tom

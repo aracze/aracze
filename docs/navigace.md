@@ -178,8 +178,10 @@ Vodorovný pruh záložek je pro přepínání sekcí standard (Google, YouTube,
 Proto:
 
 - **Aktivní položka se po načtení vycentruje** (i po klientském přechodu mezi podstránkami).
-- **Položka na kraji je vždy nakousnutá** aspoň o 24 px (a aspoň 24 px z ní chybí) — useknuté
-  slovo je podle NN/g nejsilnější nápověda. Dřív rozhodovala náhoda: u Itálie chybělo
+- **Položka na kraji je nakousnutá** aspoň o 24 px (a aspoň 24 px z ní chybí) při umístění
+  po načtení, po otočení telefonu a jako cíl posunu šipkou — useknuté slovo je podle NN/g
+  nejsilnější nápověda. Po posunu prstem či kolečkem se poloha neopravuje: pruh, který se po
+  švihnutí sám pohne, působí jako chyba; nápovědu tam nesou přechod a šipka. Dřív rozhodovala náhoda: u Itálie chybělo
   z „Měna“ na iPhonu 8 px a slovo vypadalo celé. Výjimka: na úplném začátku s aktivní první
   položkou (a na konci s poslední) se pruh nehýbe — posun by lhal o tom, kde menu začíná.
 - **Na krajích je 72 px přechod do bílé se šipkou v kroužku** (`.subnav-edge`); šipka posune
