@@ -4,6 +4,7 @@ import { sql } from '@payloadcms/db-postgres'
 import { timingSafeEqual } from 'node:crypto'
 import { safeRevalidate } from '@/hooks/revalidation'
 import { PageCategory, type ClimateNormalMonth, type ClimateNormals } from '@/types/payload'
+import { climateWindow, requestRanges } from '@/lib/climate-window'
 
 /**
  * Sync dlouhodobých měsíčních průměrů počasí: pro publikované stránky kategorie
@@ -57,7 +58,8 @@ const METEOSTAT_DELAY_MS = 1200 // slušný rozestup pod rate limitem RapidAPI
 const FETCH_TIMEOUT_MS = 30_000
 /**
  * Kolik míst zvládne jeden běh. Jedno místo = 2 dotazy (okno 20 let se nevejde
- * do limitu 3 650 dní na dotaz), kvóta RapidAPI je 500 dotazů/měsíc — 200 míst
+ * do limitu 3 650 dní na dotaz; že jsou to opravdu dva a ne tři, hlídá
+ * `lib/climate-window.ts`), kvóta RapidAPI je 500 dotazů/měsíc — 200 míst
  * = 400 dotazů nechává rezervu na ruční doběhy. Až destinací přibude, práce se
  * rozloží do víc běhů (viz `deferred` v odpovědi); přebít lze `?maxPlaces=`.
  */
@@ -73,10 +75,6 @@ type MeteostatDailyRow = {
   prcp?: number | null
 }
 
-/** Délka klouzavého okna v letech — viz WINDOW_YEARS v hlavičce souboru. */
-const WINDOW_YEARS = 20
-/** Meteostat pouští nejvýš 3 650 dní na jeden dotaz → okno se dělí na části. */
-const MAX_DAYS_PER_REQUEST = 3650
 /** Měsíc se počítá jen z roku, kde má aspoň 90 % dní (jinak by chyběl týden srážek). */
 const MIN_DAYS_RATIO = 0.9
 /** Míň let než tohle = hodnota by byla jednoletý výkyv, ne průměr. */
@@ -85,21 +83,6 @@ const MIN_YEARS = 5
 /** Skutečný počet dní v měsíci (i přestupný únor). */
 function daysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate()
-}
-
-const ymd = (d: Date): string => d.toISOString().slice(0, 10)
-
-/** Rozsahy dní pokrývající okno, každý pod limitem API. */
-function requestRanges(from: Date, to: Date): { start: string; end: string }[] {
-  const ranges: { start: string; end: string }[] = []
-  const cursor = new Date(from)
-  while (cursor <= to) {
-    const chunkEnd = new Date(cursor)
-    chunkEnd.setUTCDate(chunkEnd.getUTCDate() + MAX_DAYS_PER_REQUEST - 1)
-    ranges.push({ start: ymd(cursor), end: ymd(chunkEnd < to ? chunkEnd : to) })
-    cursor.setUTCDate(cursor.getUTCDate() + MAX_DAYS_PER_REQUEST)
-  }
-  return ranges
 }
 
 async function fetchDailyRange(
@@ -134,12 +117,9 @@ async function fetchRollingAverages(lat: number, lon: number, now: Date): Promis
   const apiKey = process.env.METEOSTAT_RAPIDAPI_KEY
   if (!apiKey) throw new Error('METEOSTAT_RAPIDAPI_KEY není nastaveno')
 
-  // Okno končí POSLEDNÍM UKONČENÝM rokem — probíhající rok by měl jen část
-  // měsíců a zkreslil by průměry (v srpnu chybí celá zima).
-  const lastYear = now.getUTCFullYear() - 1
-  const firstYear = lastYear - WINDOW_YEARS + 1
-  const from = new Date(Date.UTC(firstYear, 0, 1))
-  const to = new Date(Date.UTC(lastYear, 11, 31))
+  // Okno (poslední ukončený rok a 20 let zpět) i jeho dělení na dotazy řeší
+  // `lib/climate-window.ts` — počet dotazů na místo rozhoduje o kvótě.
+  const { from, to, firstYear, lastYear } = climateWindow(now)
 
   const rows: MeteostatDailyRow[] = []
   const ranges = requestRanges(from, to)

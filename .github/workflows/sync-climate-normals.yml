@@ -5,9 +5,9 @@ name: Sync climate normals
 # z denních dat Meteostatu pro rodičovská místa stránek kategorie „Počasí"
 # (endpoint /api/sync-climate-normals, viz src/endpoints/syncClimateNormals.ts).
 # Okno se posouvá jednou ročně, takže běh je PŘÍRŮSTKOVÝ — obnovuje jen data
-# starší než 330 dní a nové stránky bez dat, nejvýš 200 míst za běh. Měsíční
-# cron proto většinou nemá co dělat a nové destinace doplní do měsíce. Stejný
-# vzor jako sync-affiliate-deals — autentizovaný HTTP požadavek na produkci.
+# starší než 330 dní a nové stránky bez dat. Měsíční cron proto většinou nemá
+# co dělat a nové destinace doplní do měsíce. Stejný vzor jako
+# sync-affiliate-deals — autentizovaný HTTP požadavek na produkci.
 on:
   schedule:
     # 20. den v měsíci ve 4:17 UTC. Datum NENÍ libovolné: kvóta RapidAPI se
@@ -28,25 +28,53 @@ jobs:
     permissions: {}
     timeout-minutes: 45
     steps:
-      - name: Zavolat /api/sync-climate-normals
+      - name: Zavolat /api/sync-climate-normals po dávkách
         # Sync počítá průměry z DENNÍCH dat: 2 dotazy na místo a rozestupy kvůli
-        # rate limitu RapidAPI, takže jedno místo trvá ~5 s (naměřeno). Plný běh
-        # ~174 míst je tedy ~15 min — proto max-time 2400 a timeout 45 min.
-        # Běžný běh je ale krátký: přírůstkově se obnovují jen chybějící a stará
-        # data. Secrets jdou přes env, ne přímo do příkazu (neobjeví se
-        # v command line procesu a zvláštní znaky nerozbijí quoting).
+        # rate limitu RapidAPI, takže jedno místo trvá ~5 s (naměřeno) a plný
+        # běh ~174 míst ~15 min. Web je za Cloudflare, který požadavek bez
+        # odpovědi po 100 s utne (HTTP 524) — jeden dlouhý požadavek tak
+        # skončil chybou, i když server dál počítal (18. 9. 2026). Proto se
+        # endpoint volá PO DÁVKÁCH `maxPlaces=10` (~50 s): každá dávka zapíše
+        # svoje výsledky hned a smyčka pokračuje, dokud endpoint hlásí odložené
+        # stránky (`deferred`) a dávka něco zapsala. Dávka bez zápisu
+        # (`updated: 0`) = samá trvale selhávající místa (vyčerpaná kvóta 429,
+        # chybějící souřadnice) → konec, ať se kvóta nepálí opakováním.
+        #
+        # Endpoint vrací 200 i s chybami u jednotlivých míst (pole `errors`),
+        # takže samotné `curl -f` nestačí: 20. 8. 2026 byl běh „zelený", přitom
+        # všech 174 míst skončilo na 429. Chyby proto job vypíše a SELŽE.
         #
         # ŽÁDNÉ `--retry`: plný běh spotřebuje ~348 z 500 dotazů měsíční kvóty
-        # RapidAPI, takže opakované pokusy po timeoutu by ji přetáhly a zbytek
-        # měsíce by končil chybou. Když běh selže, spustí se ručně přes
-        # „Run workflow" — zbytek fronty stejně dopočítá příští běh.
+        # RapidAPI. Když běh selže, spustí se ručně přes „Run workflow" —
+        # dávky, které stihly zapsat, jsou uložené a nepočítají se znovu.
+        # Secrets jdou přes env, ne přímo do příkazu (neobjeví se v command
+        # line procesu a zvláštní znaky nerozbijí quoting).
         env:
           SYNC_URL: ${{ secrets.SYNC_ANALYTICS_URL }}
           SYNC_SECRET: ${{ secrets.ANALYTICS_SYNC_SECRET }}
         run: |
-          # Hlavička jde do curlu STDINEM (`-H @-`), ne argumentem: argumenty
-          # procesu jsou na stroji čitelné (ps/proc), takže by tajemství šlo
-          # přečíst. Tohle je jediné místo, kde secret opouští proměnnou.
-          curl -fsS -X POST "$SYNC_URL/api/sync-climate-normals" \
-            -H @- <<< "X-Sync-Secret: $SYNC_SECRET" \
-            --connect-timeout 10 --max-time 2400
+          total_updated=0
+          failed=0
+          # Strop 40 dávek × 10 míst = 400 — víc než stránek počasí i než kvóta
+          # dovolí; smyčka stejně skončí dřív na `deferred: 0`.
+          for i in $(seq 1 40); do
+            # Hlavička jde do curlu STDINEM (`-H @-`), ne argumentem: argumenty
+            # procesu jsou na stroji čitelné (ps/proc), takže by tajemství šlo
+            # přečíst. Tohle je jediné místo, kde secret opouští proměnnou.
+            resp=$(curl -fsS -X POST "$SYNC_URL/api/sync-climate-normals?maxPlaces=10" \
+              -H @- <<< "X-Sync-Secret: $SYNC_SECRET" \
+              --connect-timeout 10 --max-time 95)
+            echo "Dávka $i: $(jq -c '{pages, updated, upToDate, deferred, skipped, errors: (.errors | length)}' <<< "$resp")"
+            jq -r '.errors[]?' <<< "$resp" | sed 's/^/  ! /'
+            updated=$(jq -r '.updated // 0' <<< "$resp")
+            deferred=$(jq -r '.deferred // 0' <<< "$resp")
+            errors=$(jq -r '.errors | length' <<< "$resp")
+            total_updated=$((total_updated + updated))
+            if [ "$errors" -gt 0 ]; then failed=1; fi
+            if [ "$deferred" -eq 0 ] || [ "$updated" -eq 0 ]; then break; fi
+          done
+          echo "Celkem zapsáno míst: $total_updated"
+          if [ "$failed" -eq 1 ]; then
+            echo "::error::Některá místa se nepodařilo obnovit — viz řádky „!“ výše"
+            exit 1
+          fi
