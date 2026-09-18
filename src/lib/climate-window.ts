@@ -12,11 +12,11 @@ export const WINDOW_YEARS = 20
 export const MAX_DAYS_PER_REQUEST = 3650
 /**
  * Kolik dotazů smí jedno místo stát. Dvacet let je 7 305 dní (přestupné roky),
- * tedy o pár dní víc než dva plné dotazy — třetí dotaz by kvůli 5 dnům
- * zdvojnásobil… resp. o polovinu zvedl spotřebu kvóty (18. 9. 2026: 174 míst
- * × 3 = 522 > 500, posledních 15 míst skončilo na 429). Začátek okna se proto
- * o ty dny posune; leden prvního roku pak nemá 90 % dní a do průměru se
- * nepočítá — ten měsíc je z 19 let místo 20, což je v šumu dat.
+ * tedy o pár dní víc než dva plné dotazy — třetí dotaz kvůli 5 dnům zvedl
+ * spotřebu kvóty o polovinu (18. 9. 2026: 174 míst × 3 = 522 > 500, posledních
+ * 15 míst skončilo na 429). Začátek okna se proto o ty dny posune; leden
+ * prvního roku pak nemá 90 % dní a do průměru se nepočítá — ten měsíc je
+ * z 19 let místo 20, což je v šumu dat.
  */
 export const MAX_REQUESTS_PER_PLACE = 2
 

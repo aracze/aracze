@@ -85,6 +85,20 @@ function daysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate()
 }
 
+/**
+ * Souřadnice bez použitelné stanice (API odpoví, ale bez dat nebo bez
+ * kompletních teplot). Na rozdíl od HTTP chyb (429, výpadek) se to za měsíc
+ * nezmění, a hlavně: taková stránka zůstane BEZ dat, takže se řadí na začátek
+ * fronty a každý další požadavek by ji zkoušel znovu. Workflow volá endpoint
+ * po dávkách (Cloudflare utne požadavek po 100 s), takže by dvě takové stránky
+ * stály 4 dotazy z kvóty v KAŽDÉ dávce — u plného běhu ~70 dotazů z 500.
+ */
+class NoStationDataError extends Error {}
+
+/** Souřadnice, u kterých v nedávné době stanice nebyla — přeskakují se bez dotazu. */
+const noStationUntil = new Map<string, number>()
+const NO_STATION_MEMO_MS = 12 * 3_600_000
+
 async function fetchDailyRange(
   lat: number,
   lon: number,
@@ -129,7 +143,7 @@ async function fetchRollingAverages(lat: number, lon: number, now: Date): Promis
     // (~174 míst) přidalo přes tři minuty úplně zbytečně.
     if (index < ranges.length - 1) await sleep(METEOSTAT_DELAY_MS)
   }
-  if (rows.length === 0) throw new Error('Meteostat nevrátil žádná denní data')
+  if (rows.length === 0) throw new NoStationDataError('Meteostat nevrátil žádná denní data')
 
   // (rok, měsíc) → hodnoty daného měsíce
   type Bucket = { tmax: number[]; tmin: number[]; prcp: number[] }
@@ -180,7 +194,7 @@ async function fetchRollingAverages(lat: number, lon: number, now: Date): Promis
   }
 
   if (months.some((m) => m.tmin === null || m.tmax === null)) {
-    throw new Error('Meteostat nemá pro tyto souřadnice kompletní teploty (12 měsíců)')
+    throw new NoStationDataError('Meteostat nemá pro tyto souřadnice kompletní teploty (12 měsíců)')
   }
 
   return {
@@ -377,10 +391,24 @@ async function runSync(
 
       const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`
       if (!normalsCache.has(cacheKey)) {
-        try {
-          normalsCache.set(cacheKey, await fetchRollingAverages(lat, lon, now))
-        } catch (err) {
-          normalsCache.set(cacheKey, err instanceof Error ? err : new Error(String(err)))
+        const memo = noStationUntil.get(cacheKey)
+        if (memo !== undefined && memo > now.getTime()) {
+          // Nedávno bez stanice — nepálit kvótu, ale hlásit dál jako chybu,
+          // aby stránka nezmizela z přehledu selhání (viz NoStationDataError).
+          normalsCache.set(
+            cacheKey,
+            new Error('bez stanice (přeskočeno, dřívější selhání v tomto běhu)'),
+          )
+        } else {
+          try {
+            normalsCache.set(cacheKey, await fetchRollingAverages(lat, lon, now))
+            noStationUntil.delete(cacheKey)
+          } catch (err) {
+            if (err instanceof NoStationDataError) {
+              noStationUntil.set(cacheKey, now.getTime() + NO_STATION_MEMO_MS)
+            }
+            normalsCache.set(cacheKey, err instanceof Error ? err : new Error(String(err)))
+          }
         }
       }
       const cached = normalsCache.get(cacheKey)

@@ -225,8 +225,9 @@ function PillChart({ months }: { months: ClimateNormalMonth[] }) {
               {/* Srážky ještě jako tenký proužek pod číslem — porovnání mezi
                   měsíci na jeden pohled, v modré kapky 💧 (token `rain`), aby
                   byla souvislost s číslem zřejmá; šedý proužek vypadal jako
-                  ozdoba a nikoho nenapadlo, že patří k dešti. Vlastní měřítko (nejvyšší měsíc = plný
-                  proužek), proto zůstává POD grafem a nemíchá se s teplotou. */}
+                  ozdoba a nikoho nenapadlo, že patří k dešti. Vlastní měřítko
+                  (nejvyšší měsíc = plný proužek), proto zůstává POD grafem
+                  a nemíchá se s teplotou. */}
               {m.prcp !== null && (
                 <div
                   aria-hidden="true"
