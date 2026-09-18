@@ -498,20 +498,18 @@
   }
 
   /* Sekundární navigace (záložky pod hero fotkou): posuvný pruh bez viditelného
-     scrollbaru + „scrolling shadows" — jemný stín na straně, kde pokračuje obsah.
-     Trik s background-attachment: bílé krycí gradienty (local) se posouvají
-     s obsahem a na krajích stín překryjí; stínové gradienty (scroll) stojí.
-     Když se záložky vejdou, žádný stín není vidět. Čistě CSS, bez JS. */
+     scrollbaru. Nápovědu, že pokračuje, kreslí SubnavScroller: na kraji přechod
+     do bílé (.subnav-edge) se šipkou — oba zmizí, když je pruh na tom kraji
+     u konce. Dřívější 16 px stín při 20 % krytí na displeji prakticky nebyl vidět. */
   .subnav-scroll {
     scrollbar-width: none;
-    background:
-      linear-gradient(to right, #fff 40%, rgba(255, 255, 255, 0)) 0 0 / 44px 100%,
-      linear-gradient(to left, #fff 40%, rgba(255, 255, 255, 0)) 100% 0 / 44px 100%,
-      radial-gradient(farthest-side at 0 50%, rgba(26, 63, 108, 0.2), transparent) 0 0 / 16px 100%,
-      radial-gradient(farthest-side at 100% 50%, rgba(26, 63, 108, 0.2), transparent) 100% 0 / 16px
-        100%;
-    background-repeat: no-repeat;
-    background-attachment: local, local, scroll, scroll;
+  }
+  .subnav-edge {
+    width: 72px;
+    background: linear-gradient(to left, transparent, var(--color-paper) 62%);
+  }
+  .subnav-edge-right {
+    background: linear-gradient(to right, transparent, var(--color-paper) 62%);
   }
   .subnav-scroll::-webkit-scrollbar {
     display: none;

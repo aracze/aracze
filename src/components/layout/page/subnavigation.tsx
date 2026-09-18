@@ -91,7 +91,7 @@ export const Subnavigation = ({
       <nav aria-label="Sekundární navigace" className="bg-white">
         {/* Oddělovací linka jen do šířky obsahu (parita se starým webem), ne přes
           celý viewport — proto border na vnitřním kontejneru, ne na <nav>. */}
-        <SubnavScroller className="max-w-7xl mx-auto border-b border-line overflow-x-auto whitespace-nowrap subnav-scroll">
+        <SubnavScroller className="border-b border-line overflow-x-auto whitespace-nowrap subnav-scroll">
           {/* w-max + mx-auto místo justify-center: vycentruje, jen když se záložky
             vejdou. justify-center + overflow by levý kraj ořízl NEDOSAŽITELNĚ
             (scroll začíná na nule) — na mobilu tak mizely první položky. */}

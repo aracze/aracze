@@ -170,6 +170,24 @@ se titulky podstránek skládají z názvu v prvním pádě („Ubytování Koda
 - Odkazy „Místa"/„Články" míří na kotvu (`#mista`, `#clanky`) na stránce kontextového
   místa — z podstránky tedy nejdřív přejdou na místo a pak sjedou na sekci.
 
+### Posouvání do strany (mobil)
+
+Na mobilu se záložky nevejdou a pruh se posouvá do strany (`src/components/layout/page/subnav-scroller.tsx`).
+Vodorovný pruh záložek je pro přepínání sekcí standard (Google, YouTube, Material
+„scrollable tabs“, Guardian) — NN/g varuje jen před slabými signály, že pruh pokračuje.
+Proto:
+
+- **Aktivní položka se po načtení vycentruje** (i po klientském přechodu mezi podstránkami).
+- **Položka na kraji je vždy nakousnutá** aspoň o 24 px (a aspoň 24 px z ní chybí) — useknuté
+  slovo je podle NN/g nejsilnější nápověda. Dřív rozhodovala náhoda: u Itálie chybělo
+  z „Měna“ na iPhonu 8 px a slovo vypadalo celé. Výjimka: na úplném začátku s aktivní první
+  položkou (a na konci s poslední) se pruh nehýbe — posun by lhal o tom, kde menu začíná.
+- **Na krajích je 72 px přechod do bílé se šipkou v kroužku** (`.subnav-edge`); šipka posune
+  o dvě třetiny šířky, na začátku/konci pruhu obojí zmizí a tlačítko je `disabled`, takže
+  vypadne z tabulátoru. Když se záložky vejdou (desktop), není vidět nic.
+- Původní řešení (16 px stín při 20 % krytí přes `background-attachment: local`) bylo na
+  displeji prakticky neviditelné; nevracet.
+
 ### Chování při scrollu (lišta „ukáže se při scrollu nahoru")
 
 Menu se lepí k hornímu okraji okna (`src/components/layout/page/subnav-reveal.tsx`):
