@@ -45,27 +45,37 @@ export function SubnavScroller({
     if (!scroller) return
 
     const place = () => {
+      let target = scroller.scrollLeft
       const active = scroller.querySelector('[aria-current]')
-      if (active && scroller.scrollWidth > scroller.clientWidth) {
+      if (active) {
         const item = active.getBoundingClientRect()
         const box = scroller.getBoundingClientRect()
         // Vlastní výpočet místo scrollIntoView — ten by mohl hnout i svislým
         // scrollem stránky (např. po návratu zpět s obnovenou pozicí).
-        const centered = scroller.scrollLeft + item.left - box.left - (box.width - item.width) / 2
-        scroller.scrollLeft = adjustForPeek(scroller, centered)
+        target += item.left - box.left - (box.width - item.width) / 2
       }
+      scroller.scrollLeft = adjustForPeek(scroller, target)
       updateEdges()
     }
 
     place()
-    // Otočení telefonu mění šířku, a tím i to, které položky se vejdou.
-    window.addEventListener('resize', place)
+    // Otočení telefonu mění šířku, a tím i to, které položky se vejdou. Jen
+    // šířku: iOS Safari hlásí resize i při sbalení adresního řádku během
+    // svislého scrollu a lišta by se tím vracela do středu, ač ji čtenář
+    // právě posunul.
+    let lastWidth = scroller.clientWidth
+    const onResize = () => {
+      if (scroller.clientWidth === lastWidth) return
+      lastWidth = scroller.clientWidth
+      place()
+    }
+    window.addEventListener('resize', onResize)
     // Po posunu prstem či kolečkem se poloha neopravuje — pruh, který se po
     // švihnutí sám pohne, působí jako chyba (Material ani štítky Googlu
     // nepřiskakují). Nápovědu tam nesou přechod a šipka.
     scroller.addEventListener('scroll', updateEdges, { passive: true })
     return () => {
-      window.removeEventListener('resize', place)
+      window.removeEventListener('resize', onResize)
       scroller.removeEventListener('scroll', updateEdges)
     }
   }, [pathname, updateEdges])
@@ -105,8 +115,9 @@ function adjustForPeek(scroller: HTMLElement, left: number): number {
   const activeIndex = links.findIndex((a) => a.hasAttribute('aria-current'))
   // Na začátku s aktivní první položkou (a na konci s poslední) se pruh nehýbe —
   // posun by lhal o tom, kde menu začíná. Tam nese nápovědu přechod a šipka.
-  if (activeIndex === 0 && next <= 1) return next
-  if (activeIndex === links.length - 1 && next >= max - 1) return next
+  // Bez zvýrazněné položky (stránka turistického cíle) platí totéž pro oba kraje.
+  if (activeIndex <= 0 && next <= 1) return next
+  if ((activeIndex === -1 || activeIndex === links.length - 1) && next >= max - 1) return next
 
   const box = scroller.getBoundingClientRect()
   const offset = scroller.scrollLeft - box.left
