@@ -610,7 +610,8 @@ průvodce Ara.cz`, `- Cestovní inspirace Ara.cz`, překlep `•vAra.cz`) i už 
   poměr stran po `c_limit`); Facebook z nich složí velký náhled hned při prvním sdílení. Fotku,
   popisek i rozměry vybírá ze STEJNÉHO média `resolvePageSeo` (stránky) a
   `resolveArticleHeroImage` v `src/lib/article-hero.ts` (články — totéž pravidlo jako viditelné
-  hero). Next vnořená pole `openGraph` mezi layoutem a stránkou NESLUČUJE — proto každá stránka
+  hero; kontextovou stránku z URL a místo nad ní dává oběma stranám `resolveArticleContext`
+  v `src/lib/article-context.ts`, React-cache). Next vnořená pole `openGraph` mezi layoutem a stránkou NESLUČUJE — proto každá stránka
   skládá celý objekt přes helper, ne po částech.
 - **JSON-LD**: články vydávají `Article` (autor `Person` s odkazem na profil, `datePublished`
   z `publishedAt`, `dateModified` z `updatedAt`, fotka, vydavatel) — `articleJsonLd` v

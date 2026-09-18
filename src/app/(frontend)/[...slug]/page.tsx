@@ -3,8 +3,9 @@ import { Article } from '@/components/layout/article/article'
 import { LeaderboardAd } from '@/components/features/article-ad'
 import { fetchPageLightByFullSlug, pageHasArticlesBySlug } from '@/lib/payload'
 import { PageCategory } from '@/types/payload'
-import { articlePath, getArticleImageUrl } from '@/lib/utils'
+import { articlePath } from '@/lib/utils'
 import { resolveArticleHeroImage } from '@/lib/article-hero'
+import { resolveArticleContext } from '@/lib/article-context'
 import { resolveSlugRoute } from '@/lib/resolve-route'
 import { resolvePageSeo } from '@/lib/page-seo'
 import { absoluteUrl, buildPageMetadata, resolveSeoDescription, resolveSeoTitle } from '@/lib/seo'
@@ -50,16 +51,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const author = article.createdByPublic
     const title = resolveSeoTitle(article.meta, article.title)
 
-    // Náhled ke sdílení stejným pravidlem jako viditelné hero (resolveArticleHeroImage):
-    // vlastní fotka článku, jinak fotka hlavní stránky (lehký fetch jen bez vlastní
-    // fotky, React-cache sdílená s renderem článku). Popisek i rozměry jdou
-    // ze stejné fotky.
-    let contextPage = null
-    if (!getArticleImageUrl(article) && article.mainPage?.fullSlug) {
-      const { data } = await fetchPageLightByFullSlug(article.mainPage.fullSlug.replace(/^\//, ''))
-      contextPage = data?.pages[0] ?? null
-    }
-    const image = resolveArticleHeroImage(contextPage, article).share
+    // Náhled ke sdílení = viditelné hero: tentýž kontext (stránka z URL, místo
+    // nad ní) jako komponenta Article — resolveArticleContext je React-cache,
+    // render ho už nepočítá znovu. Popisek i rozměry jdou ze stejné fotky.
+    const { heroPage } = await resolveArticleContext(article, resolution.parentSlug)
+    const image = resolveArticleHeroImage(heroPage, article).share
 
     return buildPageMetadata({
       title,
