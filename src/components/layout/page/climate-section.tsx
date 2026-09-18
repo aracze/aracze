@@ -169,6 +169,12 @@ function PillChart({ months }: { months: ClimateNormalMonth[] }) {
           // prázdný a bublina to řekne. Dokreslit ho odhadem by znamenalo
           // tvrdit o měsíci něco, co v datech není.
           const label = level ? SUITABILITY_LABEL[level] : 'Bez dat'
+          // Ikona sama neřekne, PROČ je deštivá (u Londýna svítí slunce i se
+          // 58 mm, u Bangkoku prší i „suchý" listopad se 55 mm) — vysvětlení
+          // patří do bubliny k číslu, ne do dlouhé vysvětlivky pod grafem.
+          const rain = rainLevel(m.prcp, medianR)
+          const rainNote =
+            rain === 'rainy' ? 'deštivý měsíc' : rain === 'showery' ? 'přeháňky' : null
           // Bublina: u krajních sloupců zarovnaná k okraji, ať neuteče z grafu.
           const tipPosition = i <= 1 ? 'left-0' : i >= 10 ? 'right-0' : 'left-1/2 -translate-x-1/2'
           return (
@@ -200,6 +206,7 @@ function PillChart({ months }: { months: ClimateNormalMonth[] }) {
                     den {Math.round(m.tmax ?? 0)} °C · noc {Math.round(m.tmin ?? 0)} °C
                     <br />
                     srážky {m.prcp === null ? '—' : `${Math.round(m.prcp)} mm`}
+                    {rainNote && ` · ${rainNote}`}
                   </div>
                 </div>
               </div>
@@ -216,16 +223,17 @@ function PillChart({ months }: { months: ClimateNormalMonth[] }) {
                 {m.prcp === null ? ' ' : `💧 ${Math.round(m.prcp)} mm`}
               </div>
               {/* Srážky ještě jako tenký proužek pod číslem — porovnání mezi
-                  měsíci na jeden pohled, ve modré kapky, aby byla souvislost
-                  s číslem zřejmá. Vlastní měřítko (nejvyšší měsíc = plný
+                  měsíci na jeden pohled, v modré kapky 💧 (token `rain`), aby
+                  byla souvislost s číslem zřejmá; šedý proužek vypadal jako
+                  ozdoba a nikoho nenapadlo, že patří k dešti. Vlastní měřítko (nejvyšší měsíc = plný
                   proužek), proto zůstává POD grafem a nemíchá se s teplotou. */}
               {m.prcp !== null && (
                 <div
                   aria-hidden="true"
-                  className="mx-auto mt-1 h-1 w-[70%] overflow-hidden rounded-full bg-surface-2"
+                  className="mx-auto mt-1 h-1 w-[70%] overflow-hidden rounded-full bg-rain-track"
                 >
                   <div
-                    className="h-full rounded-full bg-brand/40"
+                    className="h-full rounded-full bg-rain"
                     style={{ width: `${Math.round((m.prcp / maxR) * 100)}%` }}
                   />
                 </div>
@@ -337,16 +345,12 @@ export function ClimateSection({
         </table>
       </div>
 
-      {/* Atribuce vyžadovaná licencí dat (CC BY 4.0). Legenda popisuje i ikonu,
-          protože bez vysvětlení může slunce u londýnského července s 58 mm
-          působit jako chyba — číslo pod sloupcem přitom říká pravdu.
-          Formulace musí pokrýt OBĚ větve `rainLevel`: nejen „víc než tu bývá"
-          (poměr k mediánu), ale i absolutní hranice. Jinak by lhala v Bergenu,
-          kde duben se 110 mm proti mediánu 180 je sušší než obvykle, a přesto
-          deštivou ikonu dostane. */}
+      {/* Atribuce vyžadovaná licencí dat (CC BY 4.0). Vysvětlivka je schválně
+          krátká: dřívější „ikona = deštivost měsíce (hodně srážek, nebo víc než
+          tu bývá)" čtenář nerozklíčoval. Co ikona znamená, říká bublina
+          měsíce („deštivý měsíc" / „přeháňky") přímo u čísla. */}
       <p className="mt-3 text-[12px] text-ink-3">
-        Výška sloupce = denní teplota, proužek pod číslem = srážky, ikona = deštivost měsíce (hodně
-        srážek, nebo víc než tu bývá) · Zdroj:{' '}
+        Sloupec = denní teplota, proužek = srážky · Zdroj:{' '}
         <a
           href="https://meteostat.net/"
           target="_blank"

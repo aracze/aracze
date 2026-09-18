@@ -79,6 +79,15 @@ v `src/lib/climate.ts` na tyto tokeny jen odkazuje (`var(--color-season-…)`), 
 | `season-poor`     | `#c9d3de` | `ink-2`                                            |
 | `season-good-ink` | `#0e3a32` | text na ploše `season-good` (pruh sezóny, legenda) |
 
+Srážky v grafu klimatu mají vlastní dvojici mimo řadu modré značky: proužek pod
+číslem má barvu kapky 💧, aby čtenář poznal, že patří k dešti, a ne k vhodnosti.
+Jen grafika (`aria-hidden`), nikdy text.
+
+| Token        | Hodnota   | Kde                                 |
+| ------------ | --------- | ----------------------------------- |
+| `rain`       | `#62b4e8` | výplň proužku srážek                |
+| `rain-track` | `#e1eff9` | dráha proužku srážek (prázdná část) |
+
 ### Typografie článků (legacy parita)
 
 Barvy nadpisů a odkazů v textu článků jsou převzaté ze starého webu a záměrně

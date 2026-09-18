@@ -56,6 +56,8 @@
   --color-season-good-ink: #0e3a32; /* text na ploše season-good (bílá tam má jen 2,5 : 1) */
   --color-season-mid: #9fb1c4;
   --color-season-poor: #c9d3de;
+  --color-rain: #62b4e8; /* proužek srážek v grafu klimatu — modrá kapky 💧, ať patří k číslu; jen grafika, ne text */
+  --color-rain-track: #e1eff9; /* dráha proužku srážek (světlý stupeň téhož odstínu) */
 
   /* Typografie článků (parita se starým webem — hodnoty záměrně mimo řadu modré) */
   --color-prose-heading: #005580; /* h2/h3 v textu */
