@@ -525,7 +525,10 @@ bez klientského JS, pod grafem tabulka pro čtečky.
 - Klíč `METEOSTAT_RAPIDAPI_KEY`: [rapidapi.com](https://rapidapi.com) →
   vyhledat „Meteostat" → **Subscribe** (plán Basic, zdarma) → zkopírovat
   `X-RapidAPI-Key`. Kvóta 500 dotazů/měsíc, jedno místo stojí **2 dotazy**
-  (API pouští max. 3 650 dní na dotaz).
+  (API pouští max. 3 650 dní na dotaz). Dvacet let je ale 7 305 dní, takže
+  začátek okna je posunutý o pár dní (`src/lib/climate-window.ts`, hlídá to
+  test) — jinak by třetí dotaz kvůli pěti dnům zvedl spotřebu na 522 dotazů
+  a konec fronty by skončil na 429 (stalo se 18. 9. 2026).
 - **Běh je přírůstkový**, takže kvótu nepřeteče ani s přibývajícími
   destinacemi: bere jen stránky bez dat a starší než 330 dní, nejvýš 200 míst
   za běh; zbytek ohlásí jako `deferred` a dopočítá ho příští běh. Cron jede
@@ -533,6 +536,13 @@ bez klientského JS, pod grafem tabulka pro čtečky.
   předplatného, 14. 8., takže běh na začátku měsíce by narazil na vyčerpaný
   limit) a většinou nemá co dělat — nové destinace se
   tak doplní samy do měsíce.
+- **Workflow volá endpoint po dávkách** `?maxPlaces=10` (~50 s), ne jedním
+  požadavkem: web je za Cloudflare, který požadavek bez odpovědi po 100 s
+  utne (HTTP 524), zatímco plný běh trvá ~15 min. Každá dávka zapíše svoje
+  výsledky hned; smyčka končí na `deferred: 0`, nebo když dávka nic nezapsala
+  (samá trvale selhávající místa). Endpoint vrací 200 i s chybami u míst
+  (pole `errors`) — workflow je vypíše a **selže**, takže zelený běh znamená
+  skutečně obnovená data (20. 8. 2026 byl běh „zelený" se 174× 429).
 - Parametry pro ruční běh: `?dryRun=1` (jen vypíše), `?force=1` (přepočítá
   i čerstvá data — nutné po změně metodiky), `?slug=/anglie/londyn/pocasi`
   (jediná stránka), `?maxPlaces=N` (jiný strop na běh).
