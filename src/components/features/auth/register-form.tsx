@@ -48,19 +48,19 @@ function Field({
           aria-invalid={invalid || undefined}
           aria-describedby={hint ? hintId : undefined}
           placeholder=" "
-          className={`peer block w-full rounded-xl bg-surface px-4 pb-1.5 pt-5 text-[14.5px] text-ink outline-none ring-2 transition-shadow focus:ring-brand/35 ${
+          className={`peer block w-full rounded-xl bg-surface px-4 pb-1.5 pt-5 text-body text-ink outline-none ring-2 transition-shadow focus:ring-brand/35 ${
             invalid ? 'ring-err/40' : 'ring-transparent'
           }`}
         />
         <label
           htmlFor={id}
-          className="pointer-events-none absolute left-4 top-1 text-[11px] font-semibold uppercase leading-none tracking-wide text-ink-3 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-[14.5px] peer-placeholder-shown:font-normal peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal peer-placeholder-shown:text-ink-3 peer-focus:top-1 peer-focus:translate-y-0 peer-focus:text-[11px] peer-focus:font-semibold peer-focus:uppercase peer-focus:tracking-wide peer-focus:text-brand"
+          className="pointer-events-none absolute left-4 top-1 text-meta font-semibold uppercase leading-none tracking-wide text-ink-3 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-body peer-placeholder-shown:font-normal peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal peer-placeholder-shown:text-ink-3 peer-focus:top-1 peer-focus:translate-y-0 peer-focus:text-meta peer-focus:font-semibold peer-focus:uppercase peer-focus:tracking-wide peer-focus:text-brand"
         >
           {label}
         </label>
       </div>
       {hint && (
-        <p id={hintId} className="mt-1.5 px-1 text-[12px] leading-snug text-ink-3">
+        <p id={hintId} className="mt-1.5 px-1 text-label leading-snug text-ink-3">
           {hint}
         </p>
       )}
@@ -87,19 +87,17 @@ export function RegisterForm({ turnstileSiteKey }: { turnstileSiteKey: string | 
         <span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-brand to-brand">
           <Image src="/assets/avatar-parrot.png" alt="" width={32} height={32} unoptimized />
         </span>
-        <h2 className="font-heading text-[20px] font-bold text-brand-deep">
-          Podívej se do e-mailu
-        </h2>
-        <p className="mt-2 text-[14.5px] leading-relaxed text-ink-2">
+        <h2 className="font-heading text-title font-bold text-brand-deep">Podívej se do e-mailu</h2>
+        <p className="mt-2 text-body leading-relaxed text-ink-2">
           Na <b className="text-ink">{state.email}</b> jsme poslali odkaz, kterým účet potvrdíš. Bez
           potvrzení se nedá přihlásit.
         </p>
-        <p className="mt-4 text-[13px] leading-relaxed text-ink-3">
+        <p className="mt-4 text-label leading-relaxed text-ink-3">
           E-mail nepřišel? Zkontroluj spam — a jestli tam nebude, zkus registraci znovu.
         </p>
         <Link
           href="/"
-          className="mx-auto mt-6 block w-fit rounded-full border-2 border-line-strong px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
+          className="mx-auto mt-6 block w-fit rounded-full border-2 border-line-strong px-7 py-2.5 font-heading text-label font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
         >
           Zpět na web
         </Link>
@@ -131,7 +129,7 @@ export function RegisterForm({ turnstileSiteKey }: { turnstileSiteKey: string | 
       {state.status === 'error' && (
         <p
           role="alert"
-          className="mb-5 rounded-xl bg-err-bg px-4 py-3 text-center text-[14px] font-medium text-err"
+          className="mb-5 rounded-xl bg-err-bg px-4 py-3 text-center text-small font-medium text-err"
         >
           {state.message}
         </p>
@@ -175,12 +173,12 @@ export function RegisterForm({ turnstileSiteKey }: { turnstileSiteKey: string | 
       <button
         type="submit"
         disabled={pending}
-        className="mx-auto mt-5 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:opacity-60"
+        className="mx-auto mt-5 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-small font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:opacity-60"
       >
         {pending ? 'Zakládám účet…' : 'Založit účet'}
       </button>
 
-      <p className="mt-5 text-center text-[13.5px] text-ink-3">
+      <p className="mt-5 text-center text-small text-ink-3">
         Už účet máš?{' '}
         <Link href="/prihlaseni" className="font-semibold text-brand hover:underline">
           Přihlas se

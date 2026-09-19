@@ -264,7 +264,7 @@ function LoginTrigger({
                 <button
                   type="button"
                   onClick={() => setView('login')}
-                  className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[13px] font-semibold text-ink-3 transition-colors hover:text-brand"
+                  className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-label font-semibold text-ink-3 transition-colors hover:text-brand"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Zpět
@@ -285,10 +285,10 @@ function LoginTrigger({
                     unoptimized
                   />
                 </span>
-                <h2 id={titleId} className="font-heading text-[20px] font-bold text-brand-deep">
+                <h2 id={titleId} className="font-heading text-title font-bold text-brand-deep">
                   {HEADINGS[view].title}
                 </h2>
-                <p className="mt-1.5 text-center text-[14.5px] leading-relaxed text-ink-3">
+                <p className="mt-1.5 text-center text-body leading-relaxed text-ink-3">
                   {HEADINGS[view].subtitle}
                 </p>
               </div>
@@ -347,11 +347,11 @@ function AccountMenu({ user }: { user: CurrentUser }) {
           <div className="flex items-center gap-3 border-b border-line px-4 py-3.5">
             <UserAvatar name={user.displayName} avatarUrl={user.avatarUrl} size={40} />
             <span className="min-w-0">
-              <span className="block truncate font-heading text-[15px] font-bold text-brand-deep">
+              <span className="block truncate font-heading text-body font-bold text-brand-deep">
                 {user.displayName}
               </span>
               {user.username && (
-                <span className="block truncate text-[13px] text-ink-3">@{user.username}</span>
+                <span className="block truncate text-label text-ink-3">@{user.username}</span>
               )}
             </span>
           </div>
@@ -361,7 +361,7 @@ function AccountMenu({ user }: { user: CurrentUser }) {
             <Link
               href={user.profileHref}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-4 py-3 text-[14.5px] text-ink transition-colors hover:bg-surface"
+              className="flex items-center gap-3 px-4 py-3 text-body text-ink transition-colors hover:bg-surface"
             >
               <UserIcon className="h-4 w-4 text-brand" aria-hidden="true" />
               Můj profil
@@ -371,7 +371,7 @@ function AccountMenu({ user }: { user: CurrentUser }) {
           <Link
             href="/nastaveni"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-3 px-4 py-3 text-[14.5px] text-ink transition-colors hover:bg-surface"
+            className="flex items-center gap-3 px-4 py-3 text-body text-ink transition-colors hover:bg-surface"
           >
             <Settings className="h-4 w-4 text-brand" aria-hidden="true" />
             Nastavení účtu
@@ -382,7 +382,7 @@ function AccountMenu({ user }: { user: CurrentUser }) {
           <form action={logoutAction} className="border-t border-line">
             <button
               type="submit"
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[14.5px] text-ink transition-colors hover:bg-surface"
+              className="flex w-full items-center gap-3 px-4 py-3 text-left text-body text-ink transition-colors hover:bg-surface"
             >
               <LogOut className="h-4 w-4 text-brand" aria-hidden="true" />
               Odhlásit se

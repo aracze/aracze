@@ -24,20 +24,20 @@ import type { PlaceWeather } from '@/lib/weather'
 function FactsFooter({ weather }: { weather: PlaceWeather }) {
   const iconClass = 'h-[19px] w-[19px] shrink-0 text-line-strong'
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-2 border-t border-white/20 pt-3.5 text-[13.5px] text-white">
+    <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-2 border-t border-white/20 pt-3.5 text-small text-white">
       <span className="flex items-center gap-2">
         <Sunrise aria-hidden="true" className={iconClass} strokeWidth={2} />
-        <span className="text-[13px] text-white">Svítání</span>
+        <span className="text-label text-white">Svítání</span>
         <span className="font-semibold">{weather.current.sunrise}</span>
       </span>
       <span className="flex items-center gap-2">
         <Sunset aria-hidden="true" className={iconClass} strokeWidth={2} />
-        <span className="text-[13px] text-white">Stmívání</span>
+        <span className="text-label text-white">Stmívání</span>
         <span className="font-semibold">{weather.current.sunset}</span>
       </span>
       <span className="flex items-center gap-2">
         <Wind aria-hidden="true" className={iconClass} strokeWidth={2} />
-        <span className="text-[13px] text-white">Vítr</span>
+        <span className="text-label text-white">Vítr</span>
         <span className="font-semibold">{weather.current.windSpeed} m/s</span>
         <Navigation2
           aria-hidden="true"
@@ -49,7 +49,7 @@ function FactsFooter({ weather }: { weather: PlaceWeather }) {
       </span>
       <span className="flex items-center gap-2">
         <Droplets aria-hidden="true" className={iconClass} strokeWidth={2} />
-        <span className="text-[13px] text-white">Vlhkost</span>
+        <span className="text-label text-white">Vlhkost</span>
         <span className="font-semibold">{weather.current.humidity} %</span>
       </span>
     </div>
@@ -69,7 +69,7 @@ export function WeatherNowSection({
     <section aria-labelledby="aktualni-pocasi" className="mb-10">
       <h2
         id="aktualni-pocasi"
-        className="font-heading text-[22px] font-bold leading-[1.25] text-prose-heading"
+        className="font-heading text-section font-bold leading-[1.25] text-prose-heading"
       >
         Aktuální počasí {locative}
       </h2>
@@ -82,9 +82,9 @@ export function WeatherNowSection({
           <div className="font-heading text-[46px] font-bold leading-none text-white">
             {weather.current.temp}°
           </div>
-          <div className="text-[15px] text-white">
+          <div className="text-body text-white">
             {weather.current.condition}
-            <span className="block text-[13.5px] text-white">
+            <span className="block text-small text-white">
               pocitově {weather.current.feelsLike}°
             </span>
           </div>
@@ -105,8 +105,8 @@ export function WeatherNowSection({
               </div>
               {/* `brand`, ne světlejší modrá — na tónovaném podkladu `surface`
                   drží kontrast 4,7 : 1 (drobné písmo potřebuje 4,5 : 1). */}
-              <div className="text-[12.5px] text-brand">{part.label}</div>
-              <div className="font-heading text-[17px] font-semibold text-brand-deep">
+              <div className="text-label text-brand">{part.label}</div>
+              <div className="font-heading text-lead font-semibold text-brand-deep">
                 {part.temp}°
               </div>
             </div>
@@ -139,7 +139,7 @@ export function WeatherForecastSection({
     <section aria-labelledby="predpoved-pocasi" className="mt-10">
       <h2
         id="predpoved-pocasi"
-        className="font-heading text-[22px] font-bold leading-[1.25] text-prose-heading"
+        className="font-heading text-section font-bold leading-[1.25] text-prose-heading"
       >
         {forecastHeading(weather, locative)}
       </h2>
@@ -151,19 +151,19 @@ export function WeatherForecastSection({
             key={day.label}
             className="rounded-[10px] border border-line bg-surface px-1.5 py-3 text-center"
           >
-            <div className="text-[12.5px] text-brand">{day.label}</div>
+            <div className="text-label text-brand">{day.label}</div>
             <div aria-hidden="true" className="my-0.5 text-[22px]">
               {day.emoji}
             </div>
-            <div className="font-heading text-[17px] font-semibold text-brand-deep">
+            <div className="font-heading text-lead font-semibold text-brand-deep">
               {day.tempMax}°
             </div>
-            <div className="text-[12.5px] text-brand">{day.tempMin}°</div>
-            <div className="mt-1 whitespace-nowrap text-[11.5px] text-brand">💧 {day.pop} %</div>
+            <div className="text-label text-brand">{day.tempMin}°</div>
+            <div className="mt-1 whitespace-nowrap text-meta text-brand">💧 {day.pop} %</div>
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[12px] text-ink-3">
+      <p className="mt-2 text-label text-ink-3">
         Zdroj:{' '}
         <a
           href="https://openweathermap.org/"

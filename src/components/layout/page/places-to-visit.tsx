@@ -120,7 +120,7 @@ export const PlacesToVisit: React.FC<PlacesToVisitProps> = ({
             {sectionTitle}
           </h2>
           <div className="w-[30px] h-[1px] bg-accent rounded-full mb-5"></div>
-          <p className="text-[17px] text-ink-3 max-w-xl leading-relaxed">
+          <p className="text-lead text-ink-3 max-w-xl leading-relaxed">
             {parentLocative
               ? `Objevte nejkrásnější místa. Co vidět a kam ${parentLocative} vyrazit.`
               : 'Objevte nejkrásnější místa. Co vidět a kam vyrazit.'}
@@ -222,7 +222,7 @@ function SuperordinateGrid({
                   avg={rating.avg}
                   count={rating.count}
                   size={13}
-                  className="mt-1.5 flex gap-[7px] text-[12.5px] font-semibold text-white/95 [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]"
+                  className="mt-1.5 flex gap-[7px] text-label font-semibold text-white/95 [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]"
                   countClassName="font-normal text-white/85"
                 />
               ) : undefined

@@ -251,7 +251,7 @@ export function Header({
                     onClick={() => setActiveDropdown(null)}
                     aria-haspopup={hasChildren || undefined}
                     aria-expanded={hasChildren ? activeDropdown === String(pageId) : undefined}
-                    className="px-4 xl:px-5 text-white hover:text-white/90 transition-colors tracking-wide text-[15px] font-semibold font-heading flex items-center gap-1 whitespace-nowrap"
+                    className="px-4 xl:px-5 text-white hover:text-white/90 transition-colors tracking-wide text-body font-semibold font-heading flex items-center gap-1 whitespace-nowrap"
                   >
                     {page.title}
                     {hasChildren && (
@@ -267,7 +267,7 @@ export function Header({
             <Search />
             <Link
               href="/rady-na-cestu"
-              className="hidden lg:block px-5 py-1.5 border-2 border-white/50 rounded-full text-white text-[13px] font-bold hover:bg-white hover:text-brand transition-all uppercase tracking-wider font-heading whitespace-nowrap"
+              className="hidden lg:block px-5 py-1.5 border-2 border-white/50 rounded-full text-white text-label font-bold hover:bg-white hover:text-brand transition-all uppercase tracking-wider font-heading whitespace-nowrap"
             >
               Rady na cestu
             </Link>
@@ -312,7 +312,7 @@ export function Header({
                       key={child.id || `child-${index}`}
                       href={child.fullSlug}
                       onClick={() => setActiveDropdown(null)}
-                      className="text-[14px] text-ink py-1 px-3 -mx-3 transition-all inline-block w-full [text-shadow:1px_2px_3px_rgb(255,255,255)] hover:text-white hover:bg-brand hover:rounded-sm hover:no-underline hover:shadow-none hover:[text-shadow:none]"
+                      className="text-small text-ink py-1 px-3 -mx-3 transition-all inline-block w-full [text-shadow:1px_2px_3px_rgb(255,255,255)] hover:text-white hover:bg-brand hover:rounded-sm hover:no-underline hover:shadow-none hover:[text-shadow:none]"
                     >
                       {child.title}
                     </Link>
@@ -366,7 +366,7 @@ export function Header({
                           href={page.fullSlug}
                           onClick={() => setMobileOpen(false)}
                           aria-current={active ? 'page' : undefined}
-                          className={`flex-1 px-4 py-3.5 font-heading text-[16px] font-semibold [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none focus-visible:ring-inset ${
+                          className={`flex-1 px-4 py-3.5 font-heading text-lead font-semibold [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none focus-visible:ring-inset ${
                             active ? 'text-white' : 'text-white/90'
                           }`}
                         >
@@ -407,7 +407,7 @@ export function Header({
                                     href={child.fullSlug}
                                     onClick={() => setMobileOpen(false)}
                                     aria-current={childActive ? 'page' : undefined}
-                                    className={`block py-2.5 pr-4 pl-4 text-[15px] transition-colors duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-white/5 active:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none focus-visible:ring-inset motion-reduce:transition-none ${
+                                    className={`block py-2.5 pr-4 pl-4 text-body transition-colors duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-white/5 active:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none focus-visible:ring-inset motion-reduce:transition-none ${
                                       childActive
                                         ? 'font-semibold text-white'
                                         : 'text-white/85 hover:text-white'
@@ -428,7 +428,7 @@ export function Header({
                     href="/rady-na-cestu"
                     onClick={() => setMobileOpen(false)}
                     aria-current={isActivePath('/rady-na-cestu') ? 'page' : undefined}
-                    className="block rounded-full border-2 border-white/50 py-2.5 text-center font-heading text-[13px] font-bold tracking-wider text-white uppercase transition-colors duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-white hover:text-brand focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none motion-reduce:transition-none"
+                    className="block rounded-full border-2 border-white/50 py-2.5 text-center font-heading text-label font-bold tracking-wider text-white uppercase transition-colors duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-white hover:text-brand focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none motion-reduce:transition-none"
                   >
                     Rady na cestu
                   </Link>

@@ -83,7 +83,7 @@ export default async function HledaniPage({ searchParams }: { searchParams: Sear
 
           {query && results.length > 0 && (
             <>
-              <p className="text-[13.5px] text-ink-3">
+              <p className="text-small text-ink-3">
                 {/* Limit výpisu poznáme z plného počtu řádků — když jich přišlo
                     přesně LIMIT, hlásíme „nejlepších", protože dalších shody
                     zůstaly za hranou. */}
@@ -99,7 +99,7 @@ export default async function HledaniPage({ searchParams }: { searchParams: Sear
           )}
 
           {query && searchFailed && (
-            <p role="alert" className="pt-4 text-center text-[15px] text-ink-2">
+            <p role="alert" className="pt-4 text-center text-body text-ink-2">
               Hledání teď nefunguje. Zkus to prosím za chvíli znovu.
             </p>
           )}
@@ -117,8 +117,8 @@ export default async function HledaniPage({ searchParams }: { searchParams: Sear
                 unoptimized
                 className="h-auto w-[190px] select-none md:w-[220px]"
               />
-              <p className="text-[17px] font-bold text-ink">Pro „{query}“ jsme nic nenašli</p>
-              <p className="max-w-[46ch] text-[14px] text-ink-2">
+              <p className="text-lead font-bold text-ink">Pro „{query}“ jsme nic nenašli</p>
+              <p className="max-w-[46ch] text-small text-ink-2">
                 Zkontroluj překlepy, nebo zkus obecnější název — třeba zemi místo konkrétního místa.
               </p>
               <div className="pt-4">

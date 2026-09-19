@@ -90,7 +90,7 @@ export function ReviewRatingBox({
     >
       {/* Hlavička lišty — nadpis, hvězdičkový vstup, tlačítko vpravo */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
-        <h2 className="text-[16px] font-bold text-brand">Byl jsi zde? Ohodnoť to!</h2>
+        <h2 className="text-lead font-bold text-brand">Byl jsi zde? Ohodnoť to!</h2>
 
         <StarInput
           value={rating}
@@ -104,7 +104,7 @@ export function ReviewRatingBox({
         <button
           type="button"
           onClick={openForm}
-          className="ml-auto whitespace-nowrap rounded-full border-[1.5px] border-brand px-5 py-1.5 text-[13px] font-bold text-brand transition-colors btn-halo"
+          className="ml-auto whitespace-nowrap rounded-full border-[1.5px] border-brand px-5 py-1.5 text-label font-bold text-brand transition-colors btn-halo"
         >
           Napsat recenzi
         </button>
@@ -144,7 +144,7 @@ export function ReviewRatingBox({
                   required
                   maxLength={80}
                   placeholder="Tvé jméno"
-                  className="w-full rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-[15px] text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
+                  className="w-full rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-body text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
                 />
               </div>
               {loginHint}
@@ -162,7 +162,7 @@ export function ReviewRatingBox({
               maxLength={5000}
               rows={8}
               placeholder="Poděl se o své zkušenosti a zážitky a buď inspirací pro ostatní cestovatele. Odkazy či jiné html prvky nelze vkládat pro snížení spamu bez přidané hodnoty. Nekvalitní či bez hodnotné recenze budou automaticky mazané."
-              className="min-h-[110px] w-full resize-y rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-[15px] leading-relaxed text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
+              className="min-h-[110px] w-full resize-y rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-body leading-relaxed text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
             />
           </div>
 
@@ -189,12 +189,12 @@ export function ReviewRatingBox({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-label font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isPending ? 'Odesílám…' : 'Vložit recenzi'}
             </button>
             {!turnstileSiteKey && !isSignedIn && (
-              <span className="text-[12.5px] text-ink-3">
+              <span className="text-label text-ink-3">
                 Chráněno proti spamu · bez opisování captchy
               </span>
             )}

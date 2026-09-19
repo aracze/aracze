@@ -17,20 +17,20 @@ export function ConfirmErrorView() {
         strokeWidth={1.8}
         aria-hidden="true"
       />
-      <p className="text-[15px] leading-relaxed text-ink-2">
+      <p className="text-body leading-relaxed text-ink-2">
         Odkaz je pravděpodobně už použitý nebo prošlý. Jestli se nemůžeš přihlásit, zkus registraci
         znovu — na už potvrzený účet se prostě přihlas.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Link
           href="/prihlaseni"
-          className="rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo"
+          className="rounded-full bg-brand px-8 py-2.5 font-heading text-label font-bold uppercase tracking-wider text-white transition-colors btn-halo"
         >
           Přihlásit se
         </Link>
         <Link
           href="/registrace"
-          className="rounded-full border-2 border-line-strong px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
+          className="rounded-full border-2 border-line-strong px-8 py-2.5 font-heading text-label font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
         >
           Registrovat znovu
         </Link>
@@ -57,12 +57,12 @@ export function ConfirmAccountForm({ token }: { token: string }) {
           strokeWidth={1.8}
           aria-hidden="true"
         />
-        <p className="text-[15px] leading-relaxed text-ink-2">
+        <p className="text-body leading-relaxed text-ink-2">
           Hotovo — teď se můžeš přihlásit a tvůj obsah bude pod tvým jménem.
         </p>
         <Link
           href="/prihlaseni"
-          className="mx-auto mt-6 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors btn-halo"
+          className="mx-auto mt-6 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-small font-bold uppercase tracking-wider text-white transition-colors btn-halo"
         >
           Přihlásit se
         </Link>
@@ -79,7 +79,7 @@ export function ConfirmAccountForm({ token }: { token: string }) {
         strokeWidth={1.8}
         aria-hidden="true"
       />
-      <p className="text-[15px] leading-relaxed text-ink-2">
+      <p className="text-body leading-relaxed text-ink-2">
         Zbývá poslední krok — potvrď svůj účet tlačítkem níž.
       </p>
       <form action={formAction}>
@@ -87,7 +87,7 @@ export function ConfirmAccountForm({ token }: { token: string }) {
         <button
           type="submit"
           disabled={isPending}
-          className="mx-auto mt-6 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-[14px] font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-default disabled:opacity-60"
+          className="mx-auto mt-6 block w-fit rounded-full bg-brand px-9 py-3 font-heading text-small font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-default disabled:opacity-60"
         >
           {isPending ? 'Potvrzuji…' : 'Potvrdit účet'}
         </button>

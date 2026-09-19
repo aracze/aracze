@@ -79,14 +79,14 @@ export const HeroSection = ({
                   <li key={bc.href} className="flex shrink-0 items-center gap-1.5">
                     <Link
                       href={bc.href}
-                      className={`text-[14px] tracking-wide transition-colors duration-200 hover:text-brand-deep ${
+                      className={`text-small tracking-wide transition-colors duration-200 hover:text-brand-deep ${
                         isLast ? 'font-bold text-ink-2' : 'font-medium text-ink-3'
                       }`}
                     >
                       {bc.title}
                     </Link>
                     {!isLast && (
-                      <span className="text-ink-3 text-[12px] px-0.5" aria-hidden="true">
+                      <span className="text-ink-3 text-label px-0.5" aria-hidden="true">
                         /
                       </span>
                     )}
@@ -108,14 +108,14 @@ export const HeroSection = ({
               písmo a mírně těsnější řádkování; plných 40px až od lg.
               `text-balance` rozdělí slova do řádků rovnoměrně (žádné osamocené
               slovo na konci) — schválená varianta B z porovnání 2.9.2026. */}
-          <h1 className="w-full text-balance text-[26px] leading-[1.35] sm:text-[32px] font-semibold text-white text-center tracking-normal [text-shadow:1px_1px_1px_rgba(0,0,0,0.5)] lg:w-auto lg:text-[40px] lg:leading-normal">
+          <h1 className="w-full text-balance text-heading leading-[1.35] sm:text-display font-semibold text-white text-center tracking-normal [text-shadow:1px_1px_1px_rgba(0,0,0,0.5)] lg:w-auto lg:text-display-lg lg:leading-normal">
             {title}
           </h1>
           <div className="hidden flex-1 justify-center lg:flex">
             {rating && rating.count > 0 && (
               <a
                 href={ratingHref}
-                className="inline-flex items-center gap-2.5 text-[15px] font-semibold text-white/95 [text-shadow:1px_1px_1px_rgba(0,0,0,0.5)] transition-colors hover:text-white"
+                className="inline-flex items-center gap-2.5 text-body font-semibold text-white/95 [text-shadow:1px_1px_1px_rgba(0,0,0,0.5)] transition-colors hover:text-white"
               >
                 <RatingSummary
                   avg={rating.avg}
@@ -133,7 +133,7 @@ export const HeroSection = ({
         {rating && rating.count > 0 && (
           <a
             href={ratingHref}
-            className="lg:hidden -translate-y-[4px] inline-flex items-center gap-2 text-[13.5px] font-semibold text-white/95 [text-shadow:1px_1px_1px_rgba(0,0,0,0.5)] transition-colors hover:text-white"
+            className="lg:hidden -translate-y-[4px] inline-flex items-center gap-2 text-small font-semibold text-white/95 [text-shadow:1px_1px_1px_rgba(0,0,0,0.5)] transition-colors hover:text-white"
           >
             <RatingSummary
               avg={rating.avg}

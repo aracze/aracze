@@ -51,7 +51,7 @@ export function DealsOfDaySection({
           Dnešní akční nabídky
         </h2>
         <div className="mb-5 h-[1px] w-[30px] rounded-full bg-accent"></div>
-        <p className="max-w-xl text-[17px] leading-relaxed text-ink-3">
+        <p className="max-w-xl text-lead leading-relaxed text-ink-3">
           Akční letenky a zájezdy z Česka pro {todayLabel()}.
         </p>
       </div>
@@ -156,7 +156,7 @@ function DealTile({
         {/* Sleva z Invia feedu — hlavní lákadlo kurátorovaných zájezdů, proto
             výrazně na fotce (vzor úvodky invia.cz); bez slevy se štítek nekreslí. */}
         {typeof deal.discount === 'number' && deal.discount > 0 && (
-          <span className="absolute top-2 right-2 z-10 rounded-full bg-accent px-2.5 py-0.5 text-[11.5px] font-bold text-white">
+          <span className="absolute top-2 right-2 z-10 rounded-full bg-accent px-2.5 py-0.5 text-meta font-bold text-white">
             −{deal.discount}&nbsp;%
           </span>
         )}
@@ -169,11 +169,11 @@ function DealTile({
         )}
       </div>
       <div className="px-3 pt-2.5 pb-3">
-        <p className="truncate text-[14.5px] leading-snug font-bold text-ink">{tileTitle(deal)}</p>
-        <p className="text-[16px] leading-snug font-semibold text-brand-deep transition-colors group-hover:text-brand">
+        <p className="truncate text-body leading-snug font-bold text-ink">{tileTitle(deal)}</p>
+        <p className="text-lead leading-snug font-semibold text-brand-deep transition-colors group-hover:text-brand">
           {priceCzk(deal.price)}
         </p>
-        <p className="truncate text-[11.5px] leading-normal text-ink-3">{metaLine}</p>
+        <p className="truncate text-meta leading-normal text-ink-3">{metaLine}</p>
       </div>
     </a>
   )

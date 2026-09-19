@@ -160,7 +160,7 @@ export async function Footer() {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="text-[13px] text-ink-2 no-underline hover:text-prose-heading hover:underline underline-offset-4 transition-colors"
+                    className="text-label text-ink-2 no-underline hover:text-prose-heading hover:underline underline-offset-4 transition-colors"
                   >
                     {item.label}
                   </Link>
@@ -170,7 +170,7 @@ export async function Footer() {
           ) : null}
 
           <div
-            className="text-xs leading-[18px] text-ink-3 [&_a]:text-ink [&_a]:no-underline hover:[&_a]:text-prose-heading [&_p]:m-0"
+            className="text-xs leading-normal text-ink-3 [&_a]:text-ink [&_a]:no-underline hover:[&_a]:text-prose-heading [&_p]:m-0"
             dangerouslySetInnerHTML={{ __html: copyrightHtml }}
           />
         </div>

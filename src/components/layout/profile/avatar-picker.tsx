@@ -110,7 +110,7 @@ export function AvatarPicker({ name, avatarUrl }: { name: string; avatarUrl: str
         </span>
       </label>
 
-      <span className="mt-1.5 flex items-center gap-2 text-[11.5px] font-semibold text-white/85">
+      <span className="mt-1.5 flex items-center gap-2 text-meta font-semibold text-white/85">
         <label htmlFor={inputId} className="cursor-pointer hover:underline">
           Změnit fotku
         </label>
@@ -137,7 +137,7 @@ export function AvatarPicker({ name, avatarUrl }: { name: string; avatarUrl: str
       </span>
       {/* Bez „do 2 MB": odesílá se až výřez (pár desítek kB), velikost původní
           fotky člověka omezovat nemusí. */}
-      <span className="mt-0.5 text-[10.5px] text-white/55">JPEG, PNG nebo WebP</span>
+      <span className="mt-0.5 text-meta text-white/55">JPEG, PNG nebo WebP</span>
     </div>
   )
 }

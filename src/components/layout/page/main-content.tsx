@@ -43,11 +43,11 @@ function PanelWeather({ weather }: { weather: PanelWeatherData }) {
           Celý popisek zůstává v title a stránka počasí ho má vypsaný. */}
       <span
         title={weather.condition}
-        className="block h-[15px] max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-bold uppercase leading-[15px] tracking-[0.1em] text-ink-3"
+        className="block h-[1.5em] max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-caps-sm font-bold uppercase leading-normal tracking-[0.1em] text-ink-3"
       >
         {weather.condition}
       </span>
-      <span className="text-[26px] leading-none tracking-[0.01rem] text-ink">
+      <span className="text-heading leading-none tracking-[0.01rem] text-ink">
         {weather.temp} °C
       </span>
       <WeatherIcon icon={weather.icon} className="h-[15px] w-[15px] text-ink-3" />
@@ -470,7 +470,7 @@ export const MainContent = ({
                     20 px má jen úvodní „lead" odstavec) — postranní informace
                     jsou plnohodnotný obsah, ne popisek. */}
                 {touristPointInfo.address && (
-                  <span className="flex items-start gap-3.5 text-[18px] leading-relaxed text-ink-2">
+                  <span className="flex items-start gap-3.5 text-lead-lg leading-relaxed text-ink-2">
                     <MapPin
                       aria-hidden="true"
                       className="mt-[5px] h-[20px] w-[20px] shrink-0 text-brand"
@@ -484,7 +484,7 @@ export const MainContent = ({
                     href={websiteHref(touristPointInfo.websiteUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-start gap-3.5 text-[18px] font-semibold leading-relaxed text-brand hover:underline"
+                    className="flex items-start gap-3.5 text-lead-lg font-semibold leading-relaxed text-brand hover:underline"
                   >
                     <Globe
                       aria-hidden="true"
@@ -535,7 +535,7 @@ export const MainContent = ({
                       )}
                     </div>
                     <div className="inline-block pt-[3px]">
-                      <div className="block text-[12px] leading-[20.4px] text-ink-2">
+                      <div className="block text-label leading-relaxed text-ink-2">
                         {contributor.profileHref ? (
                           <Link
                             href={contributor.profileHref}
@@ -547,7 +547,7 @@ export const MainContent = ({
                           <span className="font-semibold">{contributor.name}</span>
                         )}
                       </div>
-                      <div className="block text-[12px] leading-[20.4px] text-ink-3">
+                      <div className="block text-label leading-relaxed text-ink-3">
                         Cestovní průvodce
                       </div>
                     </div>
@@ -568,10 +568,10 @@ export const MainContent = ({
                       className="pointer-events-none absolute right-11 top-1/2 z-0 h-[56px] w-[56px] -translate-y-1/2 bg-[url('/assets/information/essentials-gray.gif')] bg-contain bg-no-repeat opacity-[0.18]"
                     />
                     <span className="relative z-10 flex-1">
-                      <span className="block font-heading text-[16px] font-semibold leading-snug text-brand-deep">
+                      <span className="block font-heading text-lead font-semibold leading-snug text-brand-deep">
                         Praktické informace {practicalInfoOwnerPhrase}
                       </span>
-                      <span className="mt-1 block text-[13px] leading-snug text-ink-3">
+                      <span className="mt-1 block text-label leading-snug text-ink-3">
                         Měna, doprava, zdraví a další rady na cestu.
                       </span>
                     </span>
@@ -607,7 +607,7 @@ export const MainContent = ({
                 {/* Section 1: Time, Weather and Exchange Rate */}
                 {(timezone || exchangeRate || panelWeather) && (
                   <div className="mb-6">
-                    <h2 className="text-[20px] font-semibold text-brand-deep mb-4">
+                    <h2 className="text-title font-semibold text-brand-deep mb-4">
                       {panelHeading}
                     </h2>
                     {(timezone || panelWeather) && (
@@ -644,7 +644,7 @@ export const MainContent = ({
                       </>
                     )}
                     {exchangeRate && currencyCode && (
-                      <div className="block text-[26px] tracking-[0.01rem] text-ink mt-4">
+                      <div className="block text-heading tracking-[0.01rem] text-ink mt-4">
                         {practicalInfo ? (
                           <Link
                             href={`${practicalInfo.fullSlug}#mena-a-ceny`}
@@ -678,13 +678,13 @@ export const MainContent = ({
                     href={practicalInfo.fullSlug}
                     className="block hover:no-underline group relative mt-6 pt-4"
                   >
-                    <h2 className="text-[22px] font-semibold text-brand-deep mb-6 group-hover:underline leading-tight">
+                    <h2 className="text-section font-semibold text-brand-deep mb-6 group-hover:underline leading-tight">
                       Praktické informace <br />
                       {practicalInfoOwnerPhrase}
                     </h2>
                     <div className="relative inline-block w-full">
                       <div className="absolute top-1/2 -translate-y-1/2 left-[calc(50%+70px)] w-[55px] h-[55px] bg-[url('/assets/information/essentials-gray.gif')] bg-no-repeat bg-contain opacity-20 z-0" />
-                      <div className="relative z-10 text-[18px] text-ink-3 leading-[1.5]">
+                      <div className="relative z-10 text-lead-lg text-ink-3 leading-[1.5]">
                         <p className="m-0">
                           Praktické cestovní informace <br />
                           při cestě {practicalInfoOwnerPhrase}

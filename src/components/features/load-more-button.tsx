@@ -29,7 +29,7 @@ const VARIANT: Record<Variant, { button: string; icon: string }> = {
   text: {
     // py-2: dotyková plocha ≥ 24 px (WCAG 2.5.8) i u holého textu.
     button:
-      'inline-flex items-center gap-1.5 py-2 text-[13px] font-semibold text-brand-deep transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded',
+      'inline-flex items-center gap-1.5 py-2 text-label font-semibold text-brand-deep transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded',
     icon: 'h-3.5 w-3.5',
   },
 }

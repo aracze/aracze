@@ -220,10 +220,10 @@ export function AvatarCropDialog({
             <X className="h-5 w-5" />
           </button>
 
-          <h2 id={titleId} className="font-heading text-[18px] font-bold text-brand-deep">
+          <h2 id={titleId} className="font-heading text-lead-lg font-bold text-brand-deep">
             Umísti se do kruhu
           </h2>
-          <p className="mb-4 mt-0.5 text-[13px] text-ink-3">
+          <p className="mb-4 mt-0.5 text-label text-ink-3">
             Fotku posuň tažením, přibliž posuvníkem. Co je v kruhu, bude tvoje profilovka.
           </p>
 
@@ -231,7 +231,7 @@ export function AvatarCropDialog({
             {chyba ? (
               <p
                 role="alert"
-                className="absolute inset-0 grid place-items-center px-8 text-center text-[14px] leading-snug text-white/85"
+                className="absolute inset-0 grid place-items-center px-8 text-center text-small leading-snug text-white/85"
               >
                 Tuhle fotku prohlížeč neumí zobrazit. Zkus JPEG, PNG nebo WebP — fotky HEIC z iPhonu
                 je potřeba nejdřív převést.
@@ -271,7 +271,7 @@ export function AvatarCropDialog({
             />
             <ZoomIn className="h-5 w-5 shrink-0 text-ink-3" aria-hidden="true" />
           </div>
-          <p className="mt-2 text-center text-[12px] text-ink-3">
+          <p className="mt-2 text-center text-label text-ink-3">
             Fotka jde posouvat tam, kde přesahuje kruh — po přibližení všemi směry.
           </p>
 
@@ -279,7 +279,7 @@ export function AvatarCropDialog({
             <button
               type="button"
               onClick={zrusit}
-              className="px-1.5 py-2 text-[13.5px] font-semibold text-ink-3 hover:text-ink hover:underline"
+              className="px-1.5 py-2 text-small font-semibold text-ink-3 hover:text-ink hover:underline"
             >
               Zrušit
             </button>
@@ -287,7 +287,7 @@ export function AvatarCropDialog({
               type="button"
               onClick={potvrdit}
               disabled={ukladam || !nacteno || chyba}
-              className="whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-not-allowed disabled:opacity-60"
+              className="whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-label font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-not-allowed disabled:opacity-60"
             >
               {ukladam ? 'Ořezávám…' : 'Použít fotku'}
             </button>

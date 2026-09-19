@@ -59,7 +59,7 @@ export function CommentItem({
             <span className="font-bold text-brand">{comment.authorName}</span>
           )}
           {comment.isAuthor && (
-            <span className="rounded-full bg-brand-tint px-2 py-px text-[11px] font-bold uppercase tracking-wide text-brand">
+            <span className="rounded-full bg-brand-tint px-2 py-px text-meta font-bold uppercase tracking-wide text-brand">
               autor
             </span>
           )}
@@ -67,7 +67,7 @@ export function CommentItem({
             <time
               dateTime={comment.commentedAt ?? undefined}
               title={absolute}
-              className="text-[13.5px] text-ink-3"
+              className="text-small text-ink-3"
             >
               · {relative}
             </time>

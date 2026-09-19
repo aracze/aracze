@@ -89,7 +89,7 @@ export function WhatsNewSection({
                 setFilter(f.key)
                 setVisibleCount(PAGE_SIZE)
               }}
-              className={`px-3.5 py-1 rounded-full text-[12.5px] font-semibold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${
+              className={`px-3.5 py-1 rounded-full text-label font-semibold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${
                 filter === f.key
                   ? 'bg-brand border-brand text-white'
                   : 'bg-white border-line text-ink-2 hover:border-line-strong hover:text-ink'
@@ -164,7 +164,7 @@ function ActivityRow({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block text-[15.5px] leading-snug text-ink-2">
+        <span className="block text-body leading-snug text-ink-2">
           {item.authorName ? (
             <>
               {item.authorUsername ? (
@@ -194,7 +194,7 @@ function ActivityRow({
           </Link>
           {item.kind === 'review' && item.rating != null && (
             <span
-              className="ml-1.5 text-[13px] tracking-[0.08em] text-warn"
+              className="ml-1.5 text-label tracking-[0.08em] text-warn"
               aria-label={`hodnocení ${item.rating} z 5`}
             >
               {'★'.repeat(item.rating)}
@@ -214,7 +214,7 @@ function ActivityRow({
         <time
           dateTime={item.date ?? undefined}
           title={absolute}
-          className="shrink-0 pt-0.5 text-[13px] text-ink-3 whitespace-nowrap"
+          className="shrink-0 pt-0.5 text-label text-ink-3 whitespace-nowrap"
         >
           {relative}
         </time>

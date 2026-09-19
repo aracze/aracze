@@ -74,9 +74,13 @@ export function Thumb({
  * (Zpětná vazba uživatele 29. 8. 2026.)
  */
 function thumbTitleClass(size: ThumbSize = 'md') {
+  // Bez leading-*: řádkování je zděděné 1,5. Dřív tu bylo `leading-snug`,
+  // které ale tailwind-merge kvůli následné velikosti (`text-[14px]`) vždy
+  // zahodil — titulky se tak od začátku kreslily s 1,5 a v této podobě je
+  // uživatel 29. 8. 2026 ladil. Zápis odpovídá tomu, co se vykresluje.
   return cn(
-    'leading-snug text-brand-deep transition-colors group-hover:text-brand',
-    size === 'sm' ? 'font-semibold text-[14px]' : 'font-bold text-[15px]',
+    'text-brand-deep transition-colors group-hover:text-brand',
+    size === 'sm' ? 'font-semibold text-small' : 'font-bold text-body',
   )
 }
 

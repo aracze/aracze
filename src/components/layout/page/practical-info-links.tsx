@@ -98,7 +98,7 @@ export function PracticalInfoLinks({ genitive, items }: PracticalInfoLinksProps)
                 <span className="flex size-[88px] items-center justify-center rounded-full border border-line bg-surface text-brand-deep transition-all duration-300 [--sun-mask:var(--color-surface)] group-hover:-translate-y-0.5 group-hover:text-brand group-hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]">
                   {def.icon}
                 </span>
-                <span className="text-[16px] leading-none font-semibold text-ink transition-colors group-hover:text-brand">
+                <span className="text-lead leading-none font-semibold text-ink transition-colors group-hover:text-brand">
                   {def.label}
                 </span>
               </Link>

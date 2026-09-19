@@ -323,7 +323,7 @@
 
   <!-- 04 TYPOGRAFIE -->
   <section class="page" id="k4" data-folio="04 · typografie">
-    <div class="chap"><div class="no">04</div><h2>Typografie</h2><p>Poppins pro nadpisy, Open Sans pro čtení. Obě z Google Fonts.</p></div>
+    <div class="chap"><div class="no">04</div><h2>Typografie</h2><p>Poppins pro nadpisy, Open Sans pro čtení. Velikosti jen z pojmenované stupnice.</p></div>
     <div class="body">
       <p class="lead"><strong>Poppins</strong> je geometrický, kulatý a přátelský; nese nadpisy, tlačítka a čísla. <strong>Open Sans</strong> je neutrální a snese dlouhé čtení; nese odstavce, popisky a formuláře. Nic třetího se nepřidává.</p>
       <div class="glyphs">Poppins Aa Bb Čč Řř Žž 0123456789</div>
@@ -337,6 +337,53 @@
       <div class="spec"><div class="lbl"><b>Odstavec</b>Open Sans 400 · 18 px · 1,9 · mezera 26 px</div><p class="t-body">V dubnu a květnu je v Seville kolem 25 °C a kvetou pomerančovníky. Na <a href="#k4">Semana Santa</a> se ale ceny ubytování zdvojnásobí, rezervujte s předstihem.</p></div>
       <div class="spec"><div class="lbl"><b>Popisek, meta</b>Open Sans 400 · 13 px · text tlumený</div><p class="t-small">Aktualizováno 4. 9. 2026 · 11 komentářů · Jan Konáš</p></div>
       <div class="spec"><div class="lbl"><b>Návěští</b>Open Sans 600/700 · 11–13 px · verzálky, prostrkání 0,1 em</div><p class="t-label">Praktické informace</p></div>
+      <h3>Stupnice rozhraní</h3>
+      <p>Všechno mimo text článku — karty, formuláře, hlavička, panely — sází z třinácti
+        pojmenovaných stupňů. V kódu se píše role, ne číslo: <span class="mono">text-label</span>,
+        ne <span class="mono">text-[13px]</span>. Do zavedení stupnice (18. 9. 2026) měl web
+        25 různých velikostí, z toho devět půlpixelových.</p>
+      <div style="overflow-x:auto">
+      <table class="tok-table">
+        <thead><tr><th>Token</th><th>Velikost</th><th>Kdy</th></tr></thead>
+        <tbody>
+          <tr><td>caps-sm</td><td class="num">0,625rem · 10 px</td><td>verzálkový mikroštítek: stav počasí, „Bez náhledu“, popisky času</td></tr>
+          <tr><td>meta</td><td class="num">0,6875rem · 11 px</td><td>nejdrobnější údaj: plovoucí popisek pole, atribuce fotky</td></tr>
+          <tr><td>caps</td><td class="num">0,75rem · 12 px</td><td>verzálkový štítek: „Číst více“, nadočko nad titulkem</td></tr>
+          <tr><td>label</td><td class="num">0,8125rem · 13 px</td><td>nejčastější stupeň: tlačítka, nápovědy formulářů, popisky</td></tr>
+          <tr><td>small</td><td class="num">0,875rem · 14 px</td><td>vedlejší text v kartách a seznamech, patička</td></tr>
+          <tr><td>body</td><td class="num">0,9375rem · 15 px</td><td>základní text rozhraní mimo článek</td></tr>
+          <tr><td>lead</td><td class="num">1,0625rem · 17 px</td><td>uvozující odstavec sekce, nadpis dlaždice a karty</td></tr>
+          <tr><td>lead-lg</td><td class="num">1,125rem · 18 px</td><td>výrazný údaj v panelu místa, jméno autora, nadpis dialogu</td></tr>
+          <tr><td>title</td><td class="num">1,25rem · 20 px</td><td>nadpis karty a dialogu</td></tr>
+          <tr><td>section</td><td class="num">1,375rem · 22 px</td><td>nadpis sekce na stránce</td></tr>
+          <tr><td>heading</td><td class="num">1,625rem · 26 px</td><td>hlavní nadpis stránky, titulek hero na mobilu</td></tr>
+          <tr><td>display</td><td class="num">2rem · 32 px</td><td>titulek hero na tabletu</td></tr>
+          <tr><td>display-lg</td><td class="num">2,5rem · 40 px</td><td>titulek hero na širokém displeji</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>Verzálky mají vlastní stupně</h3>
+      <p>Text psaný kapitálkami s prostrkáním opticky narůstá: na stupni běžného textu působí
+        o číslo větší. Proto má stupnice dvojici <span class="mono">caps-sm</span> a
+        <span class="mono">caps</span>, která sedí <em>pod</em> běžnou řadou. Neplatí ale, že
+        každý verzálkový text patří na ně — verzálky na 11 i 13 px jsou na webu taky a je to
+        v pořádku. Stupeň se vybírá podle výsledné velikosti, ne podle toho, že text je
+        verzálkový.</p>
+      <div class="spec"><div class="lbl"><b>Verzálkový štítek</b>caps · 12 px · prostrkání 0,1 em</div><p style="margin:0;font-family:var(--head);font-weight:700;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--brand)">Číst více</p></div>
+      <div class="spec"><div class="lbl"><b>Běžný text téže role</b>label · 13 px</div><p style="margin:0;font-size:13px;color:var(--ink-2)">Číst více</p></div>
+      <p class="small" style="margin-top:14px">Obojí je „stejně velké“ na pohled — proto je štítek o pixel menší.</p>
+
+      <h3>Co stupnice neřídí</h3>
+      <ul class="small">
+        <li><b>Řádkování.</b> Token nese jen velikost; prokládání zůstává na prvku
+          (<span class="mono">leading-*</span>). Spárované řádkování by se propsalo do všech 288 míst naráz.</li>
+        <li><b>Sazbu článku.</b> Text v <span class="mono">.prose</span> má vlastní řadu se
+          staršími hodnotami — parita se starým webem je záměr, stejně jako u modré v textu.</li>
+        <li><b>Kresbu.</b> Linky, rámečky, prstence fokusu, pevné rozměry a ikony kreslené
+          písmem (emoji počasí) zůstávají v pixelech. Ikona není text.</li>
+      </ul>
+
       <p class="small" style="margin-top:20px">Nadpisy v textu článků drží modrou <span class="mono">#005580</span> a odkazy <span class="mono">#115194</span> ze starého webu; je to záměrná parita, ne chyba. Tučné písmo v textu je 600, ne 700. Čísla v tabulkách se sází se stejnou šířkou číslic.</p>
     </div>
   </section>
@@ -416,10 +463,12 @@
   <span class="k">--color-surface</span>: <span class="v">#f4f6f9</span>;   <span class="c">/* podklad karet */</span>
   <span class="k">--color-ink-3</span>:   <span class="v">#5f6b79</span>;   <span class="c">/* tlumený text */</span>
   <span class="k">--color-brand</span>:   <span class="v">#224386</span>;   <span class="c">/* odkazy, tlačítka */</span>
+  <span class="k">--text-label</span>:    <span class="v">0.8125rem</span>; <span class="c">/* 13 px — nejčastější stupeň */</span>
+  <span class="k">--text-lead</span>:     <span class="v">1.0625rem</span>; <span class="c">/* 17 px — nadpis karty */</span>
 }
 
 <span class="c">/* komponenta */</span>
-&lt;div className="<span class="v">bg-surface text-ink-3 border-line</span>"&gt;
+&lt;div className="<span class="v">bg-surface text-ink-3 text-label border-line</span>"&gt;
 
 <span class="c">/* ruční CSS */</span>
 color: <span class="v">var(--color-ink-3)</span>;</pre>
@@ -442,9 +491,20 @@ color: <span class="v">var(--color-ink-3)</span>;</pre>
           <tr><td>star</td><td class="num">#e9a11b</td><td>hvězdičky</td></tr>
           <tr><td>season-ideal / good / mid / poor</td><td class="num">#1b7a68 / #5eb49f / #9fb1c4 / #c9d3de</td><td>sezóna a klima</td></tr>
           <tr><td>prose-heading / section / link / quote</td><td class="num">#005580 / #004d94 / #115194 / #1f518e</td><td>typografie článků (legacy)</td></tr>
+          <tr><td>text-caps-sm … text-display-lg</td><td class="num">0,625–2,5rem</td><td>velikosti písma rozhraní (13 stupňů, kapitola 04)</td></tr>
         </tbody>
       </table>
       </div>
+      <h3>Nový stupeň písma</h3>
+      <p class="small">Zapisuje se na <b>dvě</b> místa: do <span class="mono">@theme</span>
+        v globals.css a do seznamu v <span class="mono">extendTailwindMerge</span>
+        (<span class="mono">src/lib/utils.ts</span>). Bez druhého zápisu považuje slučovač tříd
+        <span class="mono">text-neco</span> za barvu textu a při kombinaci s barvou ho tiše
+        zahodí — velikost pak spadne na zděděných 16 px, nebo naopak zmizí barva. Ani
+        TypeScript, ani lint to nechytí; hlídá to test
+        <span class="mono">tests/int/font-size-tokens.int.spec.ts</span>, který v CI porovná oba
+        seznamy a ověří chování <span class="mono">cn()</span>.</p>
+
       <h3>Mimo tokeny</h3>
       <ul class="small">
         <li>E-mailové šablony: klienti neumí CSS proměnné, hexy se opisují z tabulky.</li>

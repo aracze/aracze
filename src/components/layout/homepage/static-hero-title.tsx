@@ -37,12 +37,12 @@ export const StaticHeroTitle = ({
         </div>
 
         <div className="relative mt-4 flex flex-wrap items-center justify-center gap-2">
-          <span className="text-[13px] font-medium text-white/85">Oblíbené:</span>
+          <span className="text-label font-medium text-white/85">Oblíbené:</span>
           {popularDestinations.map((destination) => (
             <Link
               key={destination.href}
               href={destination.href}
-              className="px-4 py-1 rounded-full text-[13px] font-semibold text-white bg-white/15 border border-white/40 backdrop-blur-sm hover:bg-white/25 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+              className="px-4 py-1 rounded-full text-label font-semibold text-white bg-white/15 border border-white/40 backdrop-blur-sm hover:bg-white/25 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             >
               {destination.title}
             </Link>

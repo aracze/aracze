@@ -67,7 +67,7 @@ const DocIcon = ({ className }: { className: string }) => (
 /** Datum na spodní hraně karty — společný podpis („Recenzováno: …"). */
 function CardDate({ label, iso, display }: { label: string; iso: string; display: string }) {
   return (
-    <p className="pt-3 text-[13px] text-ink-3">
+    <p className="pt-3 text-label text-ink-3">
       <span className="font-semibold text-ink-2">{label}: </span>
       <time dateTime={iso}>{display}</time>
     </p>
@@ -88,7 +88,7 @@ function CardDate({ label, iso, display }: { label: string; iso: string; display
  */
 function CardText({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-2 min-h-0 flex-1 overflow-hidden text-[14.5px] leading-relaxed text-ink-2 [-webkit-mask-image:linear-gradient(to_bottom,black_calc(100%-2.4em),transparent)] [mask-image:linear-gradient(to_bottom,black_calc(100%-2.4em),transparent)]">
+    <p className="mt-2 min-h-0 flex-1 overflow-hidden text-body leading-relaxed text-ink-2 [-webkit-mask-image:linear-gradient(to_bottom,black_calc(100%-2.4em),transparent)] [mask-image:linear-gradient(to_bottom,black_calc(100%-2.4em),transparent)]">
       {children}
     </p>
   )
@@ -146,7 +146,7 @@ function PhotoCard({
         <h3 className="line-clamp-4 text-lg font-bold leading-tight text-brand-deep transition-colors group-hover:text-brand">
           {title}
         </h3>
-        {subtitle && <p className="mt-1 text-[13px] text-ink-3">{subtitle}</p>}
+        {subtitle && <p className="mt-1 text-label text-ink-3">{subtitle}</p>}
       </div>
     </Link>
   )

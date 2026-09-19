@@ -51,7 +51,7 @@ export function AuthPageShell({
         />
         {/* `pt-10`: odsazení od hlavičky webu (ta je vysoká 65 px a leží NAD fotkou). */}
         <div className="relative z-[101] flex h-full flex-col items-center justify-center px-4 pb-6 pt-10">
-          <h1 className="text-center font-heading text-[30px] font-semibold text-white md:text-[36px]">
+          <h1 className="text-center font-heading text-display font-semibold text-white md:text-display-lg">
             {title}
           </h1>
           <div className="mt-3 h-px w-[30px] rounded-full bg-brand-tint" />
@@ -64,7 +64,7 @@ export function AuthPageShell({
           <div className="mx-auto mb-6 max-w-[430px]">
             <Link
               href={backHref}
-              className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-ink-3 transition-colors hover:text-brand"
+              className="inline-flex items-center gap-2 text-small font-semibold text-ink-3 transition-colors hover:text-brand"
             >
               <ArrowLeft className="h-4 w-4" />
               {backLabel ?? 'Zpět'}
@@ -80,7 +80,7 @@ export function AuthPageShell({
               <span className="mb-3.5 grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-brand to-brand">
                 <Image src="/assets/avatar-parrot.png" alt="" width={32} height={32} unoptimized />
               </span>
-              <p className="max-w-[300px] text-center text-[14.5px] leading-relaxed text-ink-3">
+              <p className="max-w-[300px] text-center text-body leading-relaxed text-ink-3">
                 {subtitle}
               </p>
             </div>

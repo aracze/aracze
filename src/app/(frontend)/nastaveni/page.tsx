@@ -41,24 +41,24 @@ export default async function AccountSettingsPage() {
     <AuthPageShell title="Nastavení účtu">
       <div className="space-y-10">
         <section>
-          <h2 className="mb-1 font-heading text-[19px] font-bold text-brand-deep">
+          <h2 className="mb-1 font-heading text-title font-bold text-brand-deep">
             Přihlašovací e-mail
           </h2>
-          <p className="mb-3 text-[14.5px] leading-relaxed text-ink-2">
+          <p className="mb-3 text-body leading-relaxed text-ink-2">
             Slouží k přihlášení a k obnově hesla. Veřejně ho nikde neukazujeme.
           </p>
-          <p className="max-w-[420px] rounded-xl bg-surface px-4 py-3 text-[15px] text-ink">
+          <p className="max-w-[420px] rounded-xl bg-surface px-4 py-3 text-body text-ink">
             {email}
           </p>
-          <p className="mt-2 text-[13px] leading-snug text-ink-3">
+          <p className="mt-2 text-label leading-snug text-ink-3">
             Změnu e-mailu zatím neděláme — potřebuje potvrzení z nové adresy, jinak by stačil
             překlep a přišel bys o možnost obnovit heslo. Napiš nám a přepíšeme ho.
           </p>
         </section>
 
         <section className="border-t border-line pt-8">
-          <h2 className="mb-1 font-heading text-[19px] font-bold text-brand-deep">Změna hesla</h2>
-          <p className="mb-4 text-[14.5px] leading-relaxed text-ink-2">
+          <h2 className="mb-1 font-heading text-title font-bold text-brand-deep">Změna hesla</h2>
+          <p className="mb-4 text-body leading-relaxed text-ink-2">
             Zapomenuté heslo řeší{' '}
             <Link href="/zapomenute-heslo" className="font-semibold text-brand hover:underline">
               obnova přes e-mail
@@ -69,14 +69,14 @@ export default async function AccountSettingsPage() {
         </section>
 
         <section className="border-t border-line pt-8">
-          <h2 className="mb-1 font-heading text-[19px] font-bold text-err">Smazání účtu</h2>
+          <h2 className="mb-1 font-heading text-title font-bold text-err">Smazání účtu</h2>
           <div className="mt-3">
             <DeleteAccountForm publicName={me.publicName} />
           </div>
         </section>
 
         {me.profileHref && (
-          <p className="border-t border-line pt-6 text-[14px] text-ink-3">
+          <p className="border-t border-line pt-6 text-small text-ink-3">
             Fotku, jméno, medailonek a web najdeš{' '}
             <Link href={me.profileHref} className="font-semibold text-brand hover:underline">
               na svém profilu

@@ -72,7 +72,7 @@ export function InspirationSection({ data }: { data: HomepageInspiration | null 
           <Link
             href={radyHref}
             // -mt-3: na mobilu má mřížka gap-6, odkaz ale patří těsně k dlaždicím (12 px).
-            className="-mt-3 justify-self-start text-[13px] font-bold text-brand hover:text-brand-deep transition-colors md:mt-0 md:col-start-1 md:row-start-2"
+            className="-mt-3 justify-self-start text-label font-bold text-brand hover:text-brand-deep transition-colors md:mt-0 md:col-start-1 md:row-start-2"
           >
             Všechny rady na cestu →
           </Link>
@@ -80,7 +80,7 @@ export function InspirationSection({ data }: { data: HomepageInspiration | null 
 
         {hasArticles && (
           <div className={`flex flex-col ${hasRady ? '' : 'md:col-span-3'}`}>
-            <h3 className="font-heading text-[16px] font-bold text-brand-deep mb-3">
+            <h3 className="font-heading text-lead font-bold text-brand-deep mb-3">
               Nejnovější články
             </h3>
             {/* Rozprostřou se samotné ŘÁDKY (justify-between), ne stejně vysoké

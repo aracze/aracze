@@ -54,8 +54,8 @@ export function ArticleRowCard({
         <h3 className="text-2xl font-bold text-brand-deep mb-3 leading-[1.2] transition-colors group-hover:text-brand">
           {title}
         </h3>
-        <p className="text-ink-3 line-clamp-3 text-[15px] leading-relaxed font-light">{excerpt}</p>
-        <div className="mt-[20px] flex items-center text-brand font-bold text-[12px] tracking-[0.1em] uppercase font-heading">
+        <p className="text-ink-3 line-clamp-3 text-body leading-relaxed font-light">{excerpt}</p>
+        <div className="mt-[20px] flex items-center text-brand font-bold text-caps tracking-[0.1em] uppercase font-heading">
           <span>Číst více</span>
           <div className="ml-3 w-8 h-[1px] bg-brand/30 transition-all duration-300 group-hover:w-12 group-hover:bg-brand"></div>
         </div>

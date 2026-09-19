@@ -377,6 +377,9 @@ export interface Page {
   createdBy?: (number | null) | User;
   parent?: (number | null) | Page;
   fullSlug?: string | null;
+  /**
+   * Vypnuté = toto místo se vynechá z adres všech míst pod ním (Kalifornie vypnutá → /usa/san-francisco, ne /usa/kalifornie/san-francisco). Vlastní podstránky (Počasí, Doprava…) a turistické cíle si ho v adrese nechají. Po publikování se adresy všech stránek pod ním přepočítají samy (uložení konceptu je nepřepočítá; u velkého podstromu, např. USA, to trvá i minuty).
+   */
   includeInChildUrlPaths?: boolean | null;
   /**
    * Pro zobrazení vyššího rodiče, než je ten nejmenší. Například ostrov Zakynthos se zobrazí pro Řecko, ačkoliv existují ještě na ostrově další místa a cíle.

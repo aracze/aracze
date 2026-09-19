@@ -32,7 +32,7 @@ export const ArticlesListClassicClient = ({
             Články a cestopisy
           </h2>
           <div className="w-[30px] h-[1px] bg-brand rounded-full mb-5"></div>
-          <p className="text-[17px] text-ink-3 max-w-xl leading-relaxed">{subtitle}</p>
+          <p className="text-lead text-ink-3 max-w-xl leading-relaxed">{subtitle}</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-16">

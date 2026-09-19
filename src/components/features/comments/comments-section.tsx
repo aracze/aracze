@@ -34,7 +34,7 @@ export async function CommentsSection({
         <h2 className="flex items-center gap-2.5 text-xl font-bold text-ink">
           <MessageCircle className="h-5 w-5 text-brand" strokeWidth={1.8} />
           Komentáře k článku
-          <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-[13px] font-bold text-brand">
+          <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-label font-bold text-brand">
             {count}
           </span>
         </h2>
@@ -44,7 +44,7 @@ export async function CommentsSection({
             u samotného odeslání ve formuláři. */}
         <a
           href="#napsat-komentar"
-          className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-brand px-6 py-2.5 text-[13px] font-bold tracking-wide text-brand transition-colors btn-halo"
+          className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-brand px-6 py-2.5 text-label font-bold tracking-wide text-brand transition-colors btn-halo"
         >
           <Pencil className="h-[14px] w-[14px]" strokeWidth={2} />
           Vložit komentář
@@ -67,7 +67,7 @@ export async function CommentsSection({
           ))}
         </div>
       ) : (
-        <p className="py-6 text-[15px] text-ink-3">
+        <p className="py-6 text-body text-ink-3">
           Zatím tu není žádný komentář. Buď první, kdo přidá svůj názor!
         </p>
       )}

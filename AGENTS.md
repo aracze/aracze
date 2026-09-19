@@ -92,6 +92,13 @@ specifická pro tento web:
    přidej token a zapiš ho do dokumentu. Tlumený text = `text-ink-3` (drží 4,5 : 1 i na
    `bg-surface-2`); světlejší šedou pro text nepoužívej.
 
+10. **Velikosti písma jen přes tokeny**: stupnice je ve vlastním bloku `@theme` hned pod
+    barvami (`text-label`, `text-body`, `text-lead`…), role a pravidla popisuje
+    `docs/design-system.md` → „Velikosti písma“. V komponentách NIKDY nepiš `text-[13px]`.
+    **Nový stupeň se zapisuje na dvě místa** — do `@theme` a do `extendTailwindMerge`
+    v `src/lib/utils.ts`; jinak ho `cn()` bere jako barvu a tiše zahodí (hlídá test
+    `tests/int/font-size-tokens.int.spec.ts`).
+
 ## Core Principles (projektový checklist)
 
 1. **TypeScript-First**: Always use TypeScript with proper types from Payload.
