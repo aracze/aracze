@@ -8,8 +8,10 @@
 -- Řeší se stejně jako rozbité titulky cílů 4. 9. 2026 (scripts/seo-legacy-titles-targets.sql):
 -- hodnota se VYNULUJE a web použije šablonu ze `src/lib/seo-templates.ts`
 -- („Katedrála sv. Anastázie v Zadaru", „Jazyk a kultura v Turecku – zvyky, svátky
--- a památky"). Ve skupině se maže jen tam, kde titulek NEOBSAHUJE první slovo názvu
--- stránky — stránka, které titulek patří, si ho nechá (Jídlo, Národní park Tongariro).
+-- a památky"). Ve skupině se maže jen tam, kde titulek NEOBSAHUJE žádné celé slovo názvu
+-- stránky — stránka, které titulek patří, si ho nechá (Jídlo, Národní park Tongariro,
+-- Ledovec Fox glacier). Kdyby ve skupině zůstali dva „vlastníci", výstup je vypíše —
+-- takový případ se řeší ručně v adminu.
 --
 -- Idempotentní; původní hodnoty ukládá do zaloha.pages_meta_dupl_2026_09_19.
 -- Běží proti živému CMS: dotčené řádky drží FOR UPDATE po celou transakci a maže se jen
@@ -27,13 +29,20 @@ SELECT meta_title FROM pages
 WHERE meta_title IS NOT NULL AND meta_title <> ''
 GROUP BY meta_title HAVING count(*) > 1;
 
--- `ma_nazev` = titulek obsahuje první slovo názvu stránky → titulek patří JÍ a zůstává.
--- První slovo (ne celý název) kvůli skloňování: „Cestovní průvodce Národním parkem
--- Tongariro" patří stránce „Národní park Tongariro", ne cíli „Ruapehu" pod ní.
+-- `ma_nazev` = titulek obsahuje některé CELÉ slovo názvu stránky (aspoň 4 znaky) →
+-- titulek patří JÍ a zůstává. Celé slovo (ne podřetězec) a délka kvůli falešným
+-- shodám: „La Rambla" by přes „la" vlastnila cokoli, „Národní park Egmont" přes
+-- „národní" i titulek Tongarira. Jedno slovo (ne celý název) kvůli skloňování:
+-- „Cestovní průvodce Národním parkem Tongariro" patří stránce „Národní park
+-- Tongariro" (slovo „tongariro"), ne cíli „Ruapehu" pod ní.
 CREATE TEMP TABLE l AS
 SELECT s.* FROM (
   SELECT p.id, p.title, p.meta_title, p.meta_description,
-    position(lower(split_part(p.title, ' ', 1)) IN lower(p.meta_title)) > 0 AS ma_nazev
+    EXISTS (
+      SELECT 1 FROM regexp_split_to_table(lower(coalesce(p.title, '')), '[^[:alnum:]]+') w
+      WHERE length(w) >= 4
+        AND position((' ' || w || ' ') IN (' ' || regexp_replace(lower(p.meta_title), '[^[:alnum:]]+', ' ', 'g') || ' ')) > 0
+    ) AS ma_nazev
   FROM pages p JOIN d ON d.meta_title = p.meta_title
   FOR UPDATE OF p
 ) s;
@@ -71,4 +80,7 @@ SELECT count(*) FILTER (WHERE NOT ma_nazev) AS vynulovanych_titulku,
        (SELECT count(*) FROM dd) AS vynulovanych_popisku,
        count(*) FILTER (WHERE ma_nazev) AS ponechanych
 FROM l;
+-- Skupiny, kde si titulek nechalo víc stránek → duplicita zůstává, rozhodnout ručně.
+SELECT meta_title, string_agg(title, ' | ') AS zbyvajici_duplicita
+FROM l WHERE ma_nazev GROUP BY meta_title HAVING count(*) > 1;
 COMMIT;

@@ -1,4 +1,5 @@
 import { withPayload } from '@payloadcms/next/withPayload'
+import slugyDiakritika from './redirects/slugy-diakritika.mjs'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -178,7 +179,12 @@ const nextConfig = {
       // MUSÍ být až za pravidlem pro články výše: tohle chytá jen adresu, která
       // segmentem končí, takže `{rodic}/clanky/{slug}` propadne správně tam.
       {
-        source: '/:path+/:section(mista|clanky|clanky-cestopisy|clanky-a-cestopisy)',
+        source: '/:path+/mista',
+        destination: '/:path+#mista',
+        permanent: true,
+      },
+      {
+        source: '/:path+/:section(clanky|clanky-cestopisy|clanky-a-cestopisy)',
         destination: '/:path+#clanky',
         permanent: true,
       },
@@ -199,25 +205,23 @@ const nextConfig = {
       // /usa/kalifornie/pocasi). Prefixové pravidlo je proto jen tam, kde se
       // celá větev opravdu přestěhovala.
       //
+      // `/:rest*` bere i holou adresu bez dalšího segmentu (path-to-regexp: nula
+      // a víc segmentů, prázdný zbytek se do cíle složí bez lomítka), takže jedno
+      // pravidlo pokryje stránku i vše pod ní. Výjimkou jsou cíle v kořeni
+      // (`/inspirace` → `/`): tam by prázdný zbytek dal prázdný cíl, proto mají
+      // holou adresu zvlášť.
       // Keflavík je dnes pod poloostrovem Reykjanes.
-      {
-        source: '/island/keflavik',
-        destination: '/island/poloostrov-reykjanes/keflavik',
-        permanent: true,
-      },
       {
         source: '/island/keflavik/:rest*',
         destination: '/island/poloostrov-reykjanes/keflavik/:rest*',
         permanent: true,
       },
       // Grand Canyon dostal vlastní stránku, oba jeho okraje se pod ni přesunuly.
-      { source: '/usa/north-rim', destination: '/usa/grand-canyon/north-rim', permanent: true },
       {
         source: '/usa/north-rim/:rest*',
         destination: '/usa/grand-canyon/north-rim/:rest*',
         permanent: true,
       },
-      { source: '/usa/south-rim', destination: '/usa/grand-canyon/south-rim', permanent: true },
       {
         source: '/usa/south-rim/:rest*',
         destination: '/usa/grand-canyon/south-rim/:rest*',
@@ -231,11 +235,6 @@ const nextConfig = {
         destination: '/novy-zeland/:mesto/:rest*',
         permanent: true,
       },
-      {
-        source: '/novy-zeland/jizni-ostrov/:mesto(hokitika|queenstown|fox-glacier|arthurs-pass)',
-        destination: '/novy-zeland/:mesto',
-        permanent: true,
-      },
       // Kalifornie zmizela z adres měst (viz pravidla výš) i z jejich podstránek.
       // Až ZA pravidly pro `clanky`, aby si je nevzalo tohle obecnější.
       {
@@ -245,9 +244,7 @@ const nextConfig = {
       },
       // Kontinenty: „Austrálie a Oceánie" se zkrátila, „Jižní Amerika" se
       // sloučila do Ameriky.
-      { source: '/australie-oceanie', destination: '/australie', permanent: true },
       { source: '/australie-oceanie/:rest*', destination: '/australie/:rest*', permanent: true },
-      { source: '/jizni-amerika', destination: '/amerika', permanent: true },
       { source: '/jizni-amerika/:rest*', destination: '/amerika/:rest*', permanent: true },
       // Rubriky vylezly ze společného rozcestníku /inspirace přímo pod kořen.
       { source: '/inspirace', destination: '/', permanent: true },
@@ -263,7 +260,6 @@ const nextConfig = {
         destination: '/recko/kreta/agios-nikolaos/:rest*',
         permanent: true,
       },
-      { source: '/agios-nikolaos', destination: '/recko/kreta/agios-nikolaos', permanent: true },
       {
         source: '/klaster-moni-arkadiou',
         destination: '/recko/kreta/klaster-moni-arkadiou',
@@ -460,6 +456,11 @@ const nextConfig = {
         destination: '/skotsko/perthshire',
         permanent: true,
       },
+      // Slugy ošizené o písmena bez NFD rozkladu (Malmö → malm) dostaly 19. 9. 2026
+      // tvar podle názvu; 301 ze starých adres generuje scripts/seo-slugy-diakritika.ts
+      // do redirects/slugy-diakritika.mjs (prefixová pravidla od nejhlubší adresy,
+      // každé pokrývá stránku i vše pod ní).
+      ...slugyDiakritika,
     ]
   },
 }
