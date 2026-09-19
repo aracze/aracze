@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { getPayload } from 'payload'
+import { getPayload, type PayloadRequest } from 'payload'
 import configPromise from '../src/payload.config'
 import { buildPageUrl } from '../src/lib/page-url'
 import { slugify } from '../src/utilities/formatSlug'
@@ -34,11 +34,15 @@ import { slugify } from '../src/utilities/formatSlug'
  *     změnou musí předběhnout pravidlo svého předka. Nová pravidla se SLUČUJÍ
  *     s těmi, která v souboru už jsou (podle zdrojové adresy), takže další běh
  *     dřívější přesměrování nezahodí. Soubor se přeformátuje prettierem.
- *  4. S `--apply` zapíše nové slugy přes Local API, od kořene ke listům a
- *     SEKVENČNĚ (plugin při uložení sahá i na předky/potomky — souběh = deadlock,
- *     viz README „čtyři pasti"). Stránku s rozpracovaným konceptem přeskočí:
- *     `update` bez `draft: true` staví z POSLEDNÍ verze, takže by koncept
- *     publikoval. Nakonec porovná adresy v DB s předpočítanými.
+ *  4. Stránku s rozpracovaným konceptem vyřadí ještě PŘED tím vším (`update`
+ *     bez `draft: true` staví z POSLEDNÍ verze, takže by koncept publikoval) —
+ *     dry-run i apply tak pracují s toutéž sadou a soubor redirectů nikdy nenese
+ *     pravidlo pro stránku, která se nepřejmenuje.
+ *  5. S `--apply` zapíše nové slugy přes Local API v JEDNÉ transakci, od kořene
+ *     ke listům a SEKVENČNĚ (plugin při uložení sahá i na předky/potomky —
+ *     souběh = deadlock, viz README „čtyři pasti"); při chybě se vše vrátí.
+ *     Soubor redirectů se zapisuje až PO potvrzení transakce; nakonec porovná
+ *     adresy v DB s předpočítanými.
  *
  *   pnpm seo:slugy-diakritika            # dry-run + přegeneruje soubor redirectů
  *   pnpm seo:slugy-diakritika -- --apply # zapíše do CMS
@@ -213,7 +217,20 @@ async function main() {
     const collisions = [...byUrl.entries()].filter(([, ids]) => ids.length > 1)
     if (collisions.length === 0) break
     for (const [url, ids] of collisions) {
-      const culprits = ids.filter((id) => newSlug.has(id))
+      // Viník = kolidující stránka, které se mění vlastní slug; když se jí mění
+      // jen adresa kvůli PŘEDKOVI, viníkem je ten předek (vrátí se mu původní slug).
+      const culprits = [
+        ...new Set(
+          ids.flatMap((id) => {
+            const row = byId.get(id)
+            return row
+              ? chainOf(row)
+                  .filter((a) => newSlug.has(a.id))
+                  .map((a) => a.id)
+              : []
+          }),
+        ),
+      ]
       if (culprits.length === 0) {
         console.error(`KOLIZE už v DB (bez mé změny): ${url} ← #${ids.join(', #')}`)
         process.exit(1)
@@ -237,6 +254,32 @@ async function main() {
     console.warn('')
   }
 
+  // Rozpracovaný koncept publikované stránky: poslední verze je draft. `update`
+  // bez `draft: true` by ho vzal za základ a publikoval — vyřadit ještě před
+  // výpisem i generováním redirectů, ať dry-run, soubor a zápis sedí na stejné sadě.
+  const pendingDrafts: Row[] = []
+  for (const r of rows.filter((x) => newSlug.has(x.id))) {
+    const latest = await payload.findVersions({
+      collection: 'pages',
+      where: { and: [{ parent: { equals: r.id } }, { latest: { equals: true } }] },
+      limit: 1,
+      depth: 0,
+    })
+    const latestStatus = (latest.docs[0] as { version?: { _status?: string } } | undefined)?.version
+      ?._status
+    if (latestStatus === 'draft') {
+      pendingDrafts.push(r)
+      newSlug.delete(r.id)
+    }
+  }
+  if (pendingDrafts.length > 0) {
+    expected.clear()
+    for (const r of rows) expected.set(r.id, expectedUrl(r))
+    console.warn('VYNECHÁNO — rozpracovaný koncept (přejmenovat v adminu při publikaci):')
+    for (const r of pendingDrafts) console.warn(`  #${r.id} „${r.title}" ${r.fullSlug}`)
+    console.warn('')
+  }
+
   const moved = rows.filter((r) => expected.get(r.id) !== r.fullSlug)
   const renamed = rows.filter((r) => newSlug.has(r.id)).sort((a, b) => depthOf(a) - depthOf(b))
 
@@ -253,13 +296,17 @@ async function main() {
   }
 
   // ── 3. Soubor redirectů (sloučit s existujícím) ────────────────────────────
+  // V dry-runu se zapíše hned (ať je vidět výsledek), při --apply až po potvrzení
+  // transakce níž — pravidlo pro stránku, která se nakonec nepřejmenovala, by
+  // v dalším buildu posílalo starou adresu na 404.
   const fresh: Rule[] = renamed.map((r) => ({
     source: `${r.fullSlug}${PREFIX}`,
     destination: `${expected.get(r.id)}${PREFIX}`,
     permanent: true,
   }))
-  const existing = await loadExistingRules()
-  if (existing.length > 0 || fresh.length > 0) {
+  const writeRedirects = async () => {
+    const existing = await loadExistingRules()
+    if (existing.length === 0 && fresh.length === 0) return
     const merged = normalizeRules([...existing, ...fresh])
     writeRules(merged)
     console.log(
@@ -269,46 +316,34 @@ async function main() {
   }
 
   if (!APPLY) {
+    await writeRedirects()
     console.log('\nDry-run hotov (nic nezapsáno).')
     process.exit(0)
   }
 
-  // ── 4. Zápis: od kořene k listům, po jednom ────────────────────────────────
+  // ── 4. Zápis: jedna transakce, od kořene k listům, po jednom ───────────────
+  const transactionID = await payload.db.beginTransaction()
+  const req = (transactionID ? { transactionID } : {}) as PayloadRequest
   let written = 0
-  const pendingDrafts: Row[] = []
-  for (const r of renamed) {
-    // Rozpracovaný koncept publikované stránky: poslední verze je draft. `update`
-    // bez `draft: true` by ho vzal za základ a publikoval — radši přeskočit.
-    const latest = await payload.findVersions({
-      collection: 'pages',
-      where: { and: [{ parent: { equals: r.id } }, { latest: { equals: true } }] },
-      limit: 1,
-      depth: 0,
-    })
-    const latestStatus = (latest.docs[0] as { version?: { _status?: string } } | undefined)?.version
-      ?._status
-    if (latestStatus === 'draft') {
-      pendingDrafts.push(r)
-      continue
+  try {
+    for (const r of renamed) {
+      await payload.update({
+        collection: 'pages',
+        id: r.id,
+        depth: 0,
+        overrideAccess: true,
+        req,
+        data: { slug: newSlug.get(r.id) },
+      })
+      written++
     }
-    await payload.update({
-      collection: 'pages',
-      id: r.id,
-      depth: 0,
-      overrideAccess: true,
-      data: { slug: newSlug.get(r.id) },
-    })
-    written++
+    if (transactionID) await payload.db.commitTransaction(transactionID)
+  } catch (err) {
+    if (transactionID) await payload.db.rollbackTransaction(transactionID)
+    console.error(`Chyba po ${written} stránkách — transakce vrácena, nic se nezměnilo.`)
+    throw err
   }
-  if (pendingDrafts.length > 0) {
-    console.warn('\nPŘESKOČENO — rozpracovaný koncept (přejmenovat v adminu při publikaci):')
-    for (const r of pendingDrafts) console.warn(`  #${r.id} „${r.title}" ${r.fullSlug}`)
-    // Přesměrování na ně už v souboru je; než se publikují, míří na 404 — neškodí,
-    // stará adresa dál funguje (slug se nezměnil) a pravidlo se uplatní až po změně.
-    for (const r of pendingDrafts) newSlug.delete(r.id)
-    expected.clear()
-    for (const r of rows) expected.set(r.id, expectedUrl(r))
-  }
+  await writeRedirects()
   console.log(`\nZapsáno ${written} stránek. Kontrola adres v DB…`)
 
   const check = await payload.find({

@@ -741,7 +741,8 @@ subdoménách typu `bokom.ara.cz`, ty řešit nejde ani netřeba).
   (Malmö → `malmo`, Þjóðmenningarhúsið → `thjodmenningarhusid`) a apostrofy vypouští místo
   pomlčky (`fishermans-wharf`); hlídá to `tests/int/slugify.int.spec.ts`. Existující stránky
   přepočítal `pnpm seo:slugy-diakritika -- --apply` (`scripts/seo-slugy-diakritika.ts`, 19. 9. 2026: 98 slugů, 120 změněných adres i s podstránkami; zapisuje přes Local API
-  sekvenčně od kořene, nakonec porovná adresy v DB s předpočtem přes `buildPageUrl`).
+  sekvenčně od kořene v jedné transakci, nakonec porovná adresy v DB s předpočtem přes
+  `buildPageUrl`; soubor redirectů se při `--apply` zapisuje až po potvrzení transakce).
   **Kritérium je „slug ≠ slugify(název)"**, ne jen diakritika — ručně nastavený slug by
   další běh přepsal (a přesměroval), proto se pouští vědomě po přečtení dry-runu, ne jako
   údržba. Koncepty přeskakuje (plugin u nich nepřepočítá potomky) a stejně tak publikovanou

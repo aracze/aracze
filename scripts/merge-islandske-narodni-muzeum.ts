@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { getPayload } from 'payload'
+import { getPayload, type PayloadRequest } from 'payload'
 import configPromise from '../src/payload.config'
 
 /**
@@ -11,7 +11,9 @@ import configPromise from '../src/payload.config'
  *
  * Zůstává novější text (legacy id 3305, „živější", 615 znaků); starší stránka
  * (legacy id 906) se maže. Její fotka se před smazáním připojí na konec textu
- * zůstávající stránky jako blok contentImage, ať se neztratí. Na stránku 906
+ * zůstávající stránky jako blok contentImage, ať se neztratí — když ji připojit
+ * nejde (text bez kořene), skript skončí a nic nesmaže. Obě operace běží
+ * v jedné transakci: buď se fotka připojí A stránka smaže, nebo nic. Na stránku 906
  * neodkazují články ani komentáře (ověřeno FK), jen dvě položky historie bodů
  * autorky (transactions_rels) — ty FK smaže kaskádou, záznamy transakcí zůstávají.
  *
@@ -37,7 +39,8 @@ type LexicalBlock = {
   format: string
   version: number
 }
-type LexicalRoot = { root: { children: unknown[]; [k: string]: unknown } }
+type LexicalNode = { [k: string]: unknown; type?: string; version?: number }
+type LexicalRoot = { root: { children: LexicalNode[]; [k: string]: unknown } }
 
 const relationId = (v: unknown): number | null =>
   typeof v === 'number' ? v : v && typeof v === 'object' && 'id' in v ? Number(v.id) : null
@@ -52,6 +55,7 @@ async function main() {
       where: { legacyPageId: { equals: legacyPageId } },
       depth: 0,
       limit: 2,
+      select: { title: true, slug: true, fullSlug: true, text: true, featuredImage: true },
       joins: false,
     })
     if (res.docs.length > 1)
@@ -81,7 +85,7 @@ async function main() {
   const keepText = keep.text
   const alreadyThere =
     dropImage != null && JSON.stringify(keepText ?? {}).includes(`"image":${dropImage}`)
-  const willAddImage = dropImage != null && keepText?.root && !alreadyThere
+  const willAddImage = dropImage != null && !!keepText?.root && !alreadyThere
   console.log(
     dropImage == null
       ? 'fotka: mazaná stránka žádnou nemá'
@@ -89,35 +93,53 @@ async function main() {
         ? `fotka ${dropImage}: v textu zůstávající už je`
         : `fotka ${dropImage}: ${willAddImage ? 'přidá se na konec textu' : 'NELZE přidat (text bez root)'}`,
   )
+  if (dropImage != null && !alreadyThere && !willAddImage) {
+    console.error(
+      'Fotku není kam připojit — mazat se nebude. Doplň text zůstávající stránky v adminu.',
+    )
+    process.exit(1)
+  }
 
   if (!APPLY) {
     console.log('\nDry-run hotov (nic nezapsáno).')
     process.exit(0)
   }
 
-  if (willAddImage && keepText) {
-    const block: LexicalBlock = {
-      type: 'block',
-      fields: {
-        id: `merge${LEGACY_DROP}${dropImage}`,
-        image: dropImage,
-        caption: drop.title,
-        blockType: 'contentImage',
-      },
-      format: '',
-      version: 2,
+  // Jedna transakce: připojení fotky a smazání duplikátu buď obojí, nebo nic
+  // (jinak by po pádu mezi kroky zůstaly obě stránky a kolize adres dál).
+  const transactionID = await payload.db.beginTransaction()
+  const req = (transactionID ? { transactionID } : {}) as PayloadRequest
+  try {
+    if (willAddImage && keepText) {
+      const block: LexicalBlock = {
+        type: 'block',
+        fields: {
+          id: `merge${LEGACY_DROP}${dropImage}`,
+          image: dropImage,
+          caption: drop.title,
+          blockType: 'contentImage',
+        },
+        format: '',
+        version: 2,
+      }
+      await payload.update({
+        collection: 'pages',
+        id: keep.id,
+        depth: 0,
+        overrideAccess: true,
+        req,
+        data: {
+          text: { root: { ...keepText.root, children: [...keepText.root.children, block] } },
+        },
+      })
+      console.log('fotka přidána')
     }
-    await payload.update({
-      collection: 'pages',
-      id: keep.id,
-      depth: 0,
-      overrideAccess: true,
-      data: { text: { root: { ...keepText.root, children: [...keepText.root.children, block] } } },
-    })
-    console.log('fotka přidána')
+    await payload.delete({ collection: 'pages', id: drop.id, overrideAccess: true, req })
+    if (transactionID) await payload.db.commitTransaction(transactionID)
+  } catch (err) {
+    if (transactionID) await payload.db.rollbackTransaction(transactionID)
+    throw err
   }
-
-  await payload.delete({ collection: 'pages', id: drop.id, overrideAccess: true })
   console.log(
     `smazána #${drop.id}. Teď: pnpm seo:slugy-diakritika (dry-run → --apply) přejmenuje #${keep.id}.`,
   )

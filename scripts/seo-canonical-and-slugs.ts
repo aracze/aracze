@@ -159,20 +159,20 @@ async function main() {
   for (const [fullSlug, newSlug] of Object.entries(TARGET_SLUGS)) {
     const page = targetBySlug.get(fullSlug)
     if (!page) {
-      // Buď už přejmenováno (idempotence), nebo stránka chybí — rozlišíme dotazem.
+      // Buď už přejmenováno (idempotence), nebo stránka chybí — rozlišíme dotazem na
+      // CÍLOVOU celou adresu (slug sám unikátní není, stejný může mít cíl jinde).
+      const expectedFullSlug = `${fullSlug.slice(0, fullSlug.lastIndexOf('/'))}/${newSlug}`
       const already = await payload.find({
         collection: 'pages',
         overrideAccess: true,
-        where: { slug: { equals: newSlug } },
+        where: { fullSlug: { equals: expectedFullSlug } },
         depth: 0,
         limit: 1,
         select: { fullSlug: true },
         joins: false,
       })
       if (already.docs.length > 0) {
-        console.log(
-          `beze změny  ${fullSlug} → už je ${(already.docs[0] as { fullSlug?: string }).fullSlug}`,
-        )
+        console.log(`beze změny  ${fullSlug} → už je ${expectedFullSlug}`)
       } else {
         console.warn(`CHYBÍ stránka ${fullSlug} — přeskočeno`)
       }
