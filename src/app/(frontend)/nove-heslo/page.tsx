@@ -35,13 +35,13 @@ export default async function NewPasswordPage({ searchParams }: Props) {
             strokeWidth={1.8}
             aria-hidden="true"
           />
-          <p className="text-[15px] leading-relaxed text-ink-2">
+          <p className="text-body leading-relaxed text-ink-2">
             V adrese chybí odkaz z e-mailu. Otevři prosím odkaz, který jsme ti poslali, nebo si nech
             poslat nový.
           </p>
           <Link
             href="/zapomenute-heslo"
-            className="mx-auto mt-6 block w-fit rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo"
+            className="mx-auto mt-6 block w-fit rounded-full bg-brand px-8 py-2.5 font-heading text-label font-bold uppercase tracking-wider text-white transition-colors btn-halo"
           >
             Poslat nový odkaz
           </Link>

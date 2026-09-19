@@ -114,7 +114,7 @@ export function WeatherOverviewSection({
     <section aria-labelledby="aktualni-pocasi" className="mb-10">
       <h2
         id="aktualni-pocasi"
-        className="font-heading text-[22px] font-bold leading-[1.25] text-prose-heading"
+        className="font-heading text-section font-bold leading-[1.25] text-prose-heading"
       >
         Aktuální počasí {locative}
       </h2>
@@ -149,7 +149,7 @@ export function WeatherOverviewSection({
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[rgba(10,28,50,0.03)] via-[rgba(10,28,50,0.2)] to-[rgba(10,28,50,0.68)]"
                 />
-                <span className="absolute right-3 top-2.5 z-10 flex items-center gap-1.5 font-heading text-[24px] font-bold text-white [text-shadow:0_1px_5px_rgba(0,0,0,0.45)]">
+                <span className="absolute right-3 top-2.5 z-10 flex items-center gap-1.5 font-heading text-heading font-bold text-white [text-shadow:0_1px_5px_rgba(0,0,0,0.45)]">
                   {Icon && (
                     <Icon
                       aria-hidden="true"
@@ -158,11 +158,11 @@ export function WeatherOverviewSection({
                   )}
                   {item.weather.current.temp}°
                 </span>
-                <span className="relative z-10 font-heading text-[17px] font-semibold text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.4)] group-hover:underline">
+                <span className="relative z-10 font-heading text-lead font-semibold text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.4)] group-hover:underline">
                   {item.title}
                 </span>
               </div>
-              <div className="flex items-center gap-3.5 px-3.5 py-2.5 text-[13px] text-ink-2">
+              <div className="flex items-center gap-3.5 px-3.5 py-2.5 text-label text-ink-2">
                 <span className="flex items-center gap-1.5">
                   <Droplets
                     aria-hidden="true"
@@ -187,7 +187,7 @@ export function WeatherOverviewSection({
           )
         })}
       </div>
-      <p className="mt-2 text-[12px] text-ink-3">
+      <p className="mt-2 text-label text-ink-3">
         Zdroj:{' '}
         <a
           href="https://openweathermap.org/"

@@ -76,7 +76,7 @@ export const Homepage = async ({ homepage }: { homepage?: HomepageType | null })
             Title); prázdné pole = žádný text a první sekce sedí rovnou pod
             herem (mezeru pod textem proto nese text sám, ne sekce). */}
         {homepage?.title?.trim() && (
-          <p className="mx-auto mb-12 max-w-[720px] whitespace-pre-line text-[17px] leading-relaxed text-ink-2">
+          <p className="mx-auto mb-12 max-w-[720px] whitespace-pre-line text-lead leading-relaxed text-ink-2">
             {homepage.title.trim()}
           </p>
         )}

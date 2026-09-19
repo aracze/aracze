@@ -63,7 +63,7 @@ export function ProfileEditFrame({
           <div className="sticky top-0 z-[120] bg-err-bg">
             <p
               role="alert"
-              className="mx-auto max-w-[720px] px-4 py-3 text-center text-[14px] font-medium text-err"
+              className="mx-auto max-w-[720px] px-4 py-3 text-center text-small font-medium text-err"
             >
               {state.message}
             </p>
@@ -89,20 +89,20 @@ export function ProfileSaveRow() {
     <div className="mx-auto mt-7 max-w-[560px] border-t border-line pt-5">
       {/* Hláška NAD tlačítky: nejdřív se člověk dozví, co má udělat, teprve
           pak na to sáhne. Pod tlačítkem ji přečte, až když je po všem. */}
-      <p aria-live="polite" className="mb-3 text-center text-[12.5px] text-ink-3">
+      <p aria-live="polite" className="mb-3 text-center text-label text-ink-3">
         {zmeneno ? 'Máš neuložené změny' : 'Uprav si, co potřebuješ — pak ulož.'}
       </p>
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
         <button
           type="submit"
           disabled={pending}
-          className="whitespace-nowrap rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-not-allowed disabled:opacity-60"
+          className="whitespace-nowrap rounded-full bg-brand px-8 py-2.5 font-heading text-label font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? 'Ukládám…' : 'Uložit změny'}
         </button>
         <Link
           href={profileHref}
-          className="text-[14px] text-ink-3 underline decoration-line-strong hover:text-brand"
+          className="text-small text-ink-3 underline decoration-line-strong hover:text-brand"
         >
           {zmeneno ? 'Zahodit změny' : 'Zavřít úpravy'}
         </Link>

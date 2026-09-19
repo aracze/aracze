@@ -176,7 +176,7 @@ export function PreparationSection({
             Příprava {genitive}
           </h2>
           <div className="mb-5 h-[1px] w-[30px] rounded-full bg-accent"></div>
-          <p className="max-w-xl text-[17px] leading-relaxed text-ink-3">
+          <p className="max-w-xl text-lead leading-relaxed text-ink-3">
             Zařiď si vše potřebné na cestu z jednoho místa.
           </p>
         </div>
@@ -264,10 +264,10 @@ export function PreparationCards({
           className="group block rounded-lg border border-line bg-white px-4 pt-[30px] pb-6 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]"
         >
           <span className="flex h-12 items-center justify-center text-brand-deep">{item.icon}</span>
-          <h3 className="mt-[18px] mb-2 text-[16px] font-bold text-brand-deep transition-colors group-hover:text-brand">
+          <h3 className="mt-[18px] mb-2 text-lead font-bold text-brand-deep transition-colors group-hover:text-brand">
             {item.title}
           </h3>
-          <p className="text-[13.5px] leading-normal text-ink-3">{item.description}</p>
+          <p className="text-small leading-normal text-ink-3">{item.description}</p>
         </a>
       ))}
       {practicalInfo && (
@@ -281,10 +281,10 @@ export function PreparationCards({
           <span className="flex h-12 items-center justify-center text-brand-deep">
             <GuideIcon height={44} />
           </span>
-          <h3 className="mt-[18px] mb-2 text-[16px] font-bold text-brand-deep transition-colors group-hover:text-brand">
+          <h3 className="mt-[18px] mb-2 text-lead font-bold text-brand-deep transition-colors group-hover:text-brand">
             Praktické informace
           </h3>
-          <p className="text-[13.5px] leading-normal text-ink-3">
+          <p className="text-small leading-normal text-ink-3">
             Praktické cestovní informace
             <br />
             při cestě {ownerGenitive}

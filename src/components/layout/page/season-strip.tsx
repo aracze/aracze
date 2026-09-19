@@ -63,7 +63,7 @@ export function SeasonStrip({
             <span
               key={i}
               title={`${MONTH_FULL[i]} — ${STATUS_TEXT[status]}`}
-              className="flex h-[26px] min-w-0 flex-1 items-center justify-center border-l border-white/45 text-[11px] first:rounded-l-[4px] first:border-l-0 last:rounded-r-[4px]"
+              className="flex h-[26px] min-w-0 flex-1 items-center justify-center border-l border-white/45 text-meta first:rounded-l-[4px] first:border-l-0 last:rounded-r-[4px]"
               style={{
                 backgroundColor: SUITABILITY_COLOR[level],
                 color: SUITABILITY_INK[level],
@@ -75,7 +75,7 @@ export function SeasonStrip({
         })}
       </div>
       {season.idealText && (
-        <div className="mt-3.5 inline-block rounded-[3px] bg-surface px-5 py-[5px] text-[10px] font-bold uppercase tracking-[0.05em] text-ink-3">
+        <div className="mt-3.5 inline-block rounded-[3px] bg-surface px-5 py-[5px] text-caps-sm font-bold uppercase tracking-[0.05em] text-ink-3">
           {season.idealText}
         </div>
       )}
@@ -90,16 +90,14 @@ export function SeasonStrip({
     <div className="mb-6">
       {href ? (
         <Link href={href} className="block hover:no-underline">
-          <h2 className="mb-0 text-[20px] font-semibold leading-tight text-brand-deep hover:underline">
+          <h2 className="mb-0 text-title font-semibold leading-tight text-brand-deep hover:underline">
             {heading}
           </h2>
           {strip}
         </Link>
       ) : (
         <>
-          <h2 className="mb-0 text-[20px] font-semibold leading-tight text-brand-deep">
-            {heading}
-          </h2>
+          <h2 className="mb-0 text-title font-semibold leading-tight text-brand-deep">{heading}</h2>
           {strip}
         </>
       )}

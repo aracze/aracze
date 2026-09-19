@@ -72,11 +72,11 @@ export function ErrorHero({
           titulek rovnou, stejně jako kresbu výš. */}
       <div className="relative z-[102] flex h-full flex-col items-center justify-center px-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-1000">
         {kicker && (
-          <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.18em] text-white/85 [text-shadow:0_1px_2px_rgba(6,17,32,0.75),0_3px_14px_rgba(6,17,32,0.55)]">
+          <p className="mb-2 text-caps font-bold uppercase tracking-[0.18em] text-white/85 [text-shadow:0_1px_2px_rgba(6,17,32,0.75),0_3px_14px_rgba(6,17,32,0.55)]">
             {kicker}
           </p>
         )}
-        <h1 className="text-center text-[30px] font-semibold tracking-normal text-white [text-shadow:0_1px_2px_rgba(6,17,32,0.75),0_3px_14px_rgba(6,17,32,0.55)] md:text-[40px]">
+        <h1 className="text-center text-display font-semibold tracking-normal text-white [text-shadow:0_1px_2px_rgba(6,17,32,0.75),0_3px_14px_rgba(6,17,32,0.55)] md:text-display-lg">
           {title}
         </h1>
         <div className="mx-auto mt-3 h-px w-[30px] rounded-full bg-brand-tint" />

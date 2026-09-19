@@ -1,10 +1,40 @@
 import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { extendTailwindMerge } from 'tailwind-merge'
 import type { Article } from '@/types/payload'
 
 // Čisté (klientsky bezpečné) utility. Rendering rich-textu do HTML (s těžkou
 // závislostí DOMPurify) je záměrně v samostatném `rich-text-html.ts`, aby se
 // DOMPurify nedostal do klientského bundlu přes tento sdílený modul.
+
+// Vlastní stupně velikosti písma z bloku `@theme` (globals.css) tailwind-merge
+// nezná: `text-label` vypadá jako barva (`text-brand`), takže je při slučování
+// zahodil jako duplicitní barvu a velikost tiše spadla na zděděných 16 px.
+// Seznam je proto nutné držet v souladu s tokeny `--text-*` v globals.css.
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      'font-size': [
+        {
+          text: [
+            'caps-sm',
+            'caps',
+            'meta',
+            'label',
+            'small',
+            'body',
+            'lead',
+            'lead-lg',
+            'title',
+            'section',
+            'heading',
+            'display',
+            'display-lg',
+          ],
+        },
+      ],
+    },
+  },
+})
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

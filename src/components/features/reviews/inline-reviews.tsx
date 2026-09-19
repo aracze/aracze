@@ -175,7 +175,7 @@ export function InlineReviews({
           je stejné jako u komentářů pod články. */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white px-4 py-2.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h3 className="text-[15px] font-bold text-brand">
+          <h3 className="text-body font-bold text-brand">
             Byl jsi zde? Ohodnoť to!
             {reviews && reviews.length > 0 && (
               <span className="ml-2 font-normal text-ink-3">
@@ -192,7 +192,7 @@ export function InlineReviews({
         <button
           type="button"
           onClick={openForm}
-          className="whitespace-nowrap rounded-full border-[1.5px] border-brand px-5 py-1.5 text-[13px] font-bold text-brand transition-colors btn-halo"
+          className="whitespace-nowrap rounded-full border-[1.5px] border-brand px-5 py-1.5 text-label font-bold text-brand transition-colors btn-halo"
         >
           Napsat recenzi
         </button>
@@ -220,7 +220,7 @@ export function InlineReviews({
           {signedAs ? (
             <div className="mb-4 flex items-center gap-3">
               <UserAvatar name={signedAs.displayName} avatarUrl={signedAs.avatarUrl} size={34} />
-              <p className="text-[14px] text-ink">
+              <p className="text-small text-ink">
                 Píšeš jako <b>{signedAs.displayName}</b>
               </p>
             </div>
@@ -239,7 +239,7 @@ export function InlineReviews({
                 required
                 maxLength={80}
                 placeholder="Tvé jméno"
-                className="w-full rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-[15px] text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
+                className="w-full rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-body text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
               />
               <LoginHint backTo={`${pathname}#recenze`} noun="recenze" />
             </div>
@@ -265,7 +265,7 @@ export function InlineReviews({
               maxLength={5000}
               rows={5}
               placeholder="Poděl se o své zkušenosti a zážitky a buď inspirací pro ostatní cestovatele. Odkazy či jiné html prvky nelze vkládat pro snížení spamu bez přidané hodnoty."
-              className="min-h-[100px] w-full resize-y rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-[15px] leading-relaxed text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
+              className="min-h-[100px] w-full resize-y rounded-xl border-[1.5px] border-line bg-white px-3.5 py-3 text-body leading-relaxed text-ink outline-none transition focus:border-brand focus:ring-[3px] focus:ring-brand-tint"
             />
           </div>
 
@@ -292,12 +292,12 @@ export function InlineReviews({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-7 py-2.5 font-heading text-label font-bold uppercase tracking-wider text-white transition-colors btn-halo disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isPending ? 'Odesílám…' : 'Vložit recenzi'}
             </button>
             {!turnstileSiteKey && authResolved && !signedAs && (
-              <span className="text-[12.5px] text-ink-3">
+              <span className="text-label text-ink-3">
                 Chráněno proti spamu · bez opisování captchy
               </span>
             )}
@@ -307,15 +307,15 @@ export function InlineReviews({
 
       <div className="mt-2">
         {reviews === null && !loadError && (
-          <p className="py-4 text-[14px] text-ink-3">Načítám recenze…</p>
+          <p className="py-4 text-small text-ink-3">Načítám recenze…</p>
         )}
         {loadError && (
-          <p className="py-4 text-[14px] text-ink-3">
+          <p className="py-4 text-small text-ink-3">
             Recenze se nepodařilo načíst. Zkus to prosím později.
           </p>
         )}
         {reviews && reviews.length === 0 && (
-          <p className="py-4 text-[14px] text-ink-3">
+          <p className="py-4 text-small text-ink-3">
             Zatím tu není žádná recenze. Buď první, kdo se podělí o zážitek!
           </p>
         )}

@@ -28,23 +28,23 @@ export default function AccountDeletedPage() {
           strokeWidth={1.8}
           aria-hidden="true"
         />
-        <p className="text-[15px] leading-relaxed text-ink-2">
+        <p className="text-body leading-relaxed text-ink-2">
           Hotovo — účet i profil jsou pryč a jsi odhlášený. Tvoje komentáře a recenze v diskusích
           zůstaly, ale už nejsou propojené s žádným účtem.
         </p>
-        <p className="mt-4 text-[13.5px] leading-relaxed text-ink-3">
+        <p className="mt-4 text-small leading-relaxed text-ink-3">
           Kdyby ses chtěl někdy vrátit, stačí se zaregistrovat znovu.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link
             href="/"
-            className="rounded-full bg-brand px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-white transition-colors btn-halo"
+            className="rounded-full bg-brand px-8 py-2.5 font-heading text-label font-bold uppercase tracking-wider text-white transition-colors btn-halo"
           >
             Zpět na web
           </Link>
           <Link
             href="/registrace"
-            className="rounded-full border-2 border-line-strong px-8 py-2.5 font-heading text-[13px] font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
+            className="rounded-full border-2 border-line-strong px-8 py-2.5 font-heading text-label font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
           >
             Založit nový účet
           </Link>

@@ -34,7 +34,7 @@ export const PHOTO_TILE_FRAME =
 export function NoPreview() {
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-brand-deep/5 to-brand-deep/10">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-deep/20">
+      <span className="text-caps-sm font-bold uppercase tracking-[0.2em] text-brand-deep/20">
         Bez náhledu
       </span>
     </div>
@@ -53,8 +53,8 @@ const SIZE_CLASS: Record<PhotoTileSize, string> = {
 // a velké (Témata ke čtení, Co dalšího vidět, Co vidět, profil) zůstávají tučné
 // (700) jako dosud na webu. Zpětná vazba uživatele 29. 8. 2026.
 const TITLE_CLASS: Record<PhotoTileSize, string> = {
-  sm: 'text-[14px] md:text-[15.5px] leading-snug font-semibold',
-  md: 'text-[15.5px] md:text-[17px] leading-tight font-bold',
+  sm: 'text-small md:text-body leading-snug font-semibold',
+  md: 'text-body md:text-lead leading-tight font-bold',
   lg: 'text-lg leading-tight font-bold',
 }
 
@@ -159,7 +159,7 @@ export function PhotoTile({
           {title}
         </h3>
         {sub && (
-          <p className="mt-0.5 line-clamp-1 text-[12.5px] font-medium text-white/80 [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+          <p className="mt-0.5 line-clamp-1 text-label font-medium text-white/80 [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
             {sub}
           </p>
         )}

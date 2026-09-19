@@ -160,7 +160,7 @@ export async function Footer() {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="text-[13px] text-ink-2 no-underline hover:text-prose-heading hover:underline underline-offset-4 transition-colors"
+                    className="text-label text-ink-2 no-underline hover:text-prose-heading hover:underline underline-offset-4 transition-colors"
                   >
                     {item.label}
                   </Link>

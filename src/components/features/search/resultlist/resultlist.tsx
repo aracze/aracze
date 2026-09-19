@@ -41,7 +41,7 @@ export function ResultList({
             titleLines={1}
             titleExtra={
               showCategory && (
-                <span className="hidden md:inline-block shrink-0 text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-brand/10 text-brand">
+                <span className="hidden md:inline-block shrink-0 text-meta font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-brand/10 text-brand">
                   {item.category}
                 </span>
               )
@@ -56,7 +56,7 @@ export function ResultList({
             }
           >
             {(item.path || item.text) && (
-              <p className="text-[13.5px] text-ink-3 truncate mt-0.5">
+              <p className="text-small text-ink-3 truncate mt-0.5">
                 {item.path && <span className="text-ink-3 font-medium">{item.path}</span>}
                 {item.path && item.text && <span className="hidden md:inline"> — </span>}
                 {item.text && <span className="hidden md:inline">{item.text}</span>}

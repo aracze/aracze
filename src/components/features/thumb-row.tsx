@@ -76,7 +76,7 @@ export function Thumb({
 function thumbTitleClass(size: ThumbSize = 'md') {
   return cn(
     'leading-snug text-brand-deep transition-colors group-hover:text-brand',
-    size === 'sm' ? 'font-semibold text-[14px]' : 'font-bold text-[15px]',
+    size === 'sm' ? 'font-semibold text-small' : 'font-bold text-body',
   )
 }
 

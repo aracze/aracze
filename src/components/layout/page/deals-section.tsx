@@ -146,7 +146,7 @@ export function DealsSection({ genitive, placeTitle, placeImageUrl, deals }: Dea
             Akční nabídky {genitive}
           </h2>
           <div className="mb-5 h-[1px] w-[30px] rounded-full bg-accent"></div>
-          <p className="max-w-xl text-[17px] leading-relaxed text-ink-3">
+          <p className="max-w-xl text-lead leading-relaxed text-ink-3">
             Ceny se obnovují každý den, tak ať ti nabídka neuteče.
           </p>
         </div>
@@ -191,7 +191,7 @@ export function Badge({ kind, onPhoto = false }: { kind: 'flight' | 'tour'; onPh
       : 'bg-accent-bg text-accent-ink'
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10.5px] font-bold tracking-[0.09em] uppercase ${palette}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-meta font-bold tracking-[0.09em] uppercase ${palette}`}
     >
       {kind === 'flight' ? (
         <PlaneIcon className="h-[11px] w-[11px]" />
@@ -212,7 +212,7 @@ export function Badge({ kind, onPhoto = false }: { kind: 'flight' | 'tour'; onPh
 export function UsualPriceBadge({ percent }: { percent: number }) {
   return (
     <span
-      className="inline-flex items-center rounded-full bg-brand-deep px-2.5 py-0.5 text-[10.5px] font-bold tracking-[0.02em] text-white"
+      className="inline-flex items-center rounded-full bg-brand-deep px-2.5 py-0.5 text-meta font-bold tracking-[0.02em] text-white"
       title={`O ${percent} % levnější než obvyklá cena za posledních 90 dní`}
     >
       −{percent}&nbsp;% než&nbsp;obvykle
@@ -281,11 +281,11 @@ function DealRowCard({
           <Badge kind={badge} />
           {belowUsual != null && <UsualPriceBadge percent={belowUsual} />}
         </span>
-        <Route placeTitle={placeTitle} departure={departure} className="text-[15px]" />
-        <p className="text-[17px] leading-snug font-semibold text-brand-deep transition-colors group-hover:text-brand">
+        <Route placeTitle={placeTitle} departure={departure} className="text-body" />
+        <p className="text-lead leading-snug font-semibold text-brand-deep transition-colors group-hover:text-brand">
           {priceLine}
         </p>
-        <p className="truncate text-[12px] leading-normal text-ink-3">{metaLine}</p>
+        <p className="truncate text-label leading-normal text-ink-3">{metaLine}</p>
       </div>
     </a>
   )

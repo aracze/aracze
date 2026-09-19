@@ -50,12 +50,12 @@ export function AccommodationMapSection({
       </span>
       {/* Není to nadpis sekce (blok nemá položku v obsahu vpravo a jediný obsah
           je tlačítko) — jen popisek tlačítka, proto <p>, ne <h3>. */}
-      <p className="font-heading text-[15px] font-bold leading-tight text-brand-deep">{title}</p>
+      <p className="font-heading text-body font-bold leading-tight text-brand-deep">{title}</p>
       <a
         href={href}
         target="_blank"
         rel="nofollow sponsored noopener"
-        className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-[13.5px] font-semibold text-white no-underline transition-colors btn-halo hover:no-underline"
+        className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-small font-semibold text-white no-underline transition-colors btn-halo hover:no-underline"
       >
         Hledat
         <ArrowRight className="h-4 w-4" aria-hidden="true" />

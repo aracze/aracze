@@ -43,7 +43,7 @@ export function ReviewItem({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="pb-1 pt-2 text-[17px] tracking-[1px] text-ink-2">
+        <div className="pb-1 pt-2 text-lead tracking-[1px] text-ink-2">
           {profileHref ? (
             <Link href={profileHref} className="hover:underline">
               {review.authorName}
@@ -53,7 +53,7 @@ export function ReviewItem({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] leading-none text-ink-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-label leading-none text-ink-3">
           {/* inline-flex: bez něj se hvězdičky (SVG) zarovnají na účaří textu
               a vůči datu „uskakují" nahoru — flex je vycentruje na střed řádku. */}
           <span className="inline-flex items-center">

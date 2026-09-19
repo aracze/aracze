@@ -40,7 +40,7 @@ export function PageContributor({
         )}
       </div>
       <div className="inline-block pt-[3px]">
-        <div className="block text-[12px] leading-[20.4px] text-ink-2">
+        <div className="block text-label leading-[20.4px] text-ink-2">
           {contributor.profileHref ? (
             <Link
               href={contributor.profileHref}
@@ -52,7 +52,7 @@ export function PageContributor({
             <span className="font-semibold">{contributor.name}</span>
           )}
         </div>
-        <div className="block text-[12px] leading-[20.4px] text-ink-3">Cestovní průvodce</div>
+        <div className="block text-label leading-[20.4px] text-ink-3">Cestovní průvodce</div>
       </div>
     </div>
   )

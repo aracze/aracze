@@ -197,10 +197,10 @@ export function UserProfile({
                 maxLength={MAX_NAME}
                 placeholder="Tvoje jméno"
                 aria-label="Jméno"
-                className="relative mt-3.5 w-full max-w-[420px] rounded-lg border-2 border-dashed border-white/45 bg-white/10 px-3 py-1 text-center text-[32px] md:text-[40px] font-semibold leading-tight tracking-normal text-white outline-none transition-colors placeholder:text-white/50 hover:border-white/65 focus:border-white/85"
+                className="relative mt-3.5 w-full max-w-[420px] rounded-lg border-2 border-dashed border-white/45 bg-white/10 px-3 py-1 text-center text-display md:text-display-lg font-semibold leading-tight tracking-normal text-white outline-none transition-colors placeholder:text-white/50 hover:border-white/65 focus:border-white/85"
               />
             ) : (
-              <h1 className="relative mt-3.5 max-w-full truncate text-center text-[32px] md:text-[40px] font-semibold leading-none text-white tracking-normal">
+              <h1 className="relative mt-3.5 max-w-full truncate text-center text-display md:text-display-lg font-semibold leading-none text-white tracking-normal">
                 {displayName}
               </h1>
             )}
@@ -209,11 +209,11 @@ export function UserProfile({
                 pak končil jménem natvrdo, takže místo uživatelského jména přijde tenká
                 linka — stejná, jakou mají titulky ostatních stránek webu. */}
             {editing ? (
-              <p className="relative mt-2.5 text-[13px] font-medium text-white/70">
+              <p className="relative mt-2.5 text-label font-medium text-white/70">
                 @{profile.username} · uživatelské jméno se nemění, je z něj adresa profilu
               </p>
             ) : displayName !== profile.username ? (
-              <p className="relative mt-2.5 text-[15px] font-medium text-white/75">
+              <p className="relative mt-2.5 text-body font-medium text-white/75">
                 @{profile.username}
               </p>
             ) : (
@@ -239,7 +239,7 @@ export function UserProfile({
                 <div className="relative rounded-xl border-2 border-dashed border-line-strong p-3 transition-colors focus-within:border-brand hover:border-line-strong">
                   <label
                     htmlFor="profil-o-mne"
-                    className="absolute -top-2.5 left-3 bg-white px-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-3"
+                    className="absolute -top-2.5 left-3 bg-white px-1.5 text-meta font-bold uppercase tracking-wider text-ink-3"
                   >
                     O mně
                   </label>
@@ -250,7 +250,7 @@ export function UserProfile({
                     maxLength={MAX_DESCRIPTION}
                     defaultValue={profile.description ?? ''}
                     placeholder="Napiš pár vět o sobě…"
-                    className="w-full resize-y bg-transparent text-center text-[17px] leading-relaxed text-ink-2 outline-none placeholder:text-ink-3"
+                    className="w-full resize-y bg-transparent text-center text-lead leading-relaxed text-ink-2 outline-none placeholder:text-ink-3"
                   />
                 </div>
 
@@ -262,7 +262,7 @@ export function UserProfile({
                     maxLength={MAX_URL}
                     placeholder="www.mujweb.cz"
                     aria-label="Webové stránky"
-                    className="w-[250px] rounded-md border-2 border-dashed border-line-strong bg-transparent px-2 py-1 text-center text-[15px] text-brand outline-none transition-colors placeholder:text-ink-3 hover:border-line-strong focus:border-brand"
+                    className="w-[250px] rounded-md border-2 border-dashed border-line-strong bg-transparent px-2 py-1 text-center text-body text-brand outline-none transition-colors placeholder:text-ink-3 hover:border-line-strong focus:border-brand"
                   />
                 </div>
 
@@ -272,12 +272,12 @@ export function UserProfile({
               </div>
             )}
             {!editing && profile.description && (
-              <p className="whitespace-pre-line text-[17px] leading-relaxed text-ink-2">
+              <p className="whitespace-pre-line text-lead leading-relaxed text-ink-2">
                 {profile.description}
               </p>
             )}
             {!editing && profile.myWebUrl && (
-              <p className="mt-4 flex items-center justify-center gap-2 text-[15px]">
+              <p className="mt-4 flex items-center justify-center gap-2 text-body">
                 <Globe aria-hidden="true" className="h-4 w-4 shrink-0 text-brand" />
                 <a
                   href={websiteHref(profile.myWebUrl)}
@@ -296,7 +296,7 @@ export function UserProfile({
               <p className="mt-6">
                 <Link
                   href={`/profil/${encodeURIComponent(profile.username)}?upravit=1`}
-                  className="inline-flex items-center gap-2 rounded-full border-2 border-line-strong px-6 py-2 font-heading text-[12.5px] font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
+                  className="inline-flex items-center gap-2 rounded-full border-2 border-line-strong px-6 py-2 font-heading text-label font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-brand hover:text-brand"
                 >
                   <Pencil aria-hidden="true" className="h-[13px] w-[13px]" strokeWidth={2.2} />
                   Upravit profil
@@ -317,10 +317,10 @@ export function UserProfile({
                         href={s.href}
                         className="flex min-w-[96px] flex-col items-center gap-0.5 rounded-lg px-4 py-2 hover:bg-surface"
                       >
-                        <span className="font-heading text-[24px] font-bold leading-tight text-brand tabular-nums">
+                        <span className="font-heading text-heading font-bold leading-tight text-brand tabular-nums">
                           {s.count}
                         </span>
-                        <span className="text-[13px] text-ink-2">{s.label}</span>
+                        <span className="text-label text-ink-2">{s.label}</span>
                       </a>
                     </li>
                   ))}
@@ -461,7 +461,7 @@ function SectionHeading({ title, subtitle }: { title: string; subtitle: string }
         {title}
       </h2>
       <div className="mb-5 h-[1px] w-[30px] rounded-full bg-accent" />
-      <p className="max-w-xl text-[17px] leading-relaxed text-ink-3">{subtitle}</p>
+      <p className="max-w-xl text-lead leading-relaxed text-ink-3">{subtitle}</p>
     </div>
   )
 }
