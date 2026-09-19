@@ -156,8 +156,10 @@ ale který se musel u každé nové komponenty znovu hádat.
 3. **Nový stupeň = zápis na dvě místa.** Do `@theme` v `globals.css` **a** do seznamu
    v `extendTailwindMerge` (`src/lib/utils.ts`). Bez druhého zápisu bere slučovač tříd
    `text-neco` jako barvu textu a při kombinaci s barvou ho zahodí: velikost spadne na
-   zděděných 16 px, nebo naopak zmizí barva. `tsc` ani lint to nechytí — ověřuje se
-   `getComputedStyle().fontSize` v prohlížeči.
+   zděděných 16 px, nebo naopak zmizí barva. `tsc` ani lint to nechytí; hlídá to test
+   `tests/int/font-size-tokens.int.spec.ts` — porovná seznam v `utils.ts` s tokeny
+   `--text-*` v `globals.css` a ověří, že každý token přežije v `cn()` vedle barvy.
+   Zapomenutý zápis = červené CI, ne až překvapení v prohlížeči.
 4. **Všechno v `.prose` a `.pi-prose` drží původní velikost.** Text článku (18 px odstavec,
    20 px perex, 36/22/21 px nadpisy) i vložené widgety (sezónnost, Nice-to-know, rozpočet)
    — parita se starým webem je záměr, stejná výjimka jako u modré v textu článku. Kde se

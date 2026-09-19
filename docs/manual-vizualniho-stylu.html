@@ -501,7 +501,9 @@ color: <span class="v">var(--color-ink-3)</span>;</pre>
         (<span class="mono">src/lib/utils.ts</span>). Bez druhého zápisu považuje slučovač tříd
         <span class="mono">text-neco</span> za barvu textu a při kombinaci s barvou ho tiše
         zahodí — velikost pak spadne na zděděných 16 px, nebo naopak zmizí barva. Ani
-        TypeScript, ani lint to nechytí; pozná se to jen v prohlížeči.</p>
+        TypeScript, ani lint to nechytí; hlídá to test
+        <span class="mono">tests/int/font-size-tokens.int.spec.ts</span>, který v CI porovná oba
+        seznamy a ověří chování <span class="mono">cn()</span>.</p>
 
       <h3>Mimo tokeny</h3>
       <ul class="small">
