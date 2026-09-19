@@ -779,10 +779,22 @@ async function fetchArticlesBySlugUncached(
         .filter((s): s is string => typeof s === 'string' && !!s)
         .map(stripSlashes)
       const mainPageDoc = mainPageId != null ? (parentById.get(mainPageId) ?? null) : null
+      // Rodič pro kanonickou adresu. Bez vyplněné `mainPage` bere PRVNÍHO
+      // platného rodiče, ne cestu z URL: článek visí pod několika místy
+      // a každá jeho adresa by se jinak prohlásila za originál (Search Console
+      // to hlásí jako „Duplicate without user-selected canonical", 19. 9. 2026).
+      // Pořadí `pages` je v CMS stabilní, takže volba nekolísá mezi requesty.
+      const canonicalParentDoc =
+        mainPageDoc ??
+        parentIdsOf(raw)
+          .map((id) => parentById.get(id))
+          .find((doc) => typeof doc?.fullSlug === 'string' && !!doc.fullSlug) ??
+        null
       const article = {
         ...enriched[0],
         text: enrichedText,
         mainPage: mainPageDoc ?? null,
+        canonicalParent: canonicalParentDoc ?? null,
       } as unknown as Article
       return { article, validParentSlugs }
     }),

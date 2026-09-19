@@ -16,6 +16,7 @@
     "format": "prettier --write .",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
+    "seo:canonical-slugs": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/seo-canonical-and-slugs.ts",
     "promote:admin": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/promote-admin.ts",
     "backfill:affiliate-deals": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/backfill-affiliate-deals.ts",
     "backup:avatars": "cross-env NODE_OPTIONS=--no-deprecation node --import=tsx/esm scripts/backup-avatars-r2.ts",

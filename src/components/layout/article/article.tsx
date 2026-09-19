@@ -72,12 +72,13 @@ export const Article: React.FC<ArticleProps> = async ({ article, contextSlug }) 
 
   const { threads, count: commentCount } = await commentsPromise
 
-  // Kanonická adresa článku (mainPage + slug) — tu samou dává i generateMetadata,
-  // takže strukturovaná data ukazují na stejnou URL jako `rel=canonical`.
-  // Bez mainPage stejná cesta, jakou má generateMetadata (aktuální rodič z URL
-  // = contextPage), ne nejbližší místo — JSON-LD a rel=canonical musí sedět.
-  const canonicalHref = article.mainPage?.fullSlug
-    ? articlePath(article.mainPage.fullSlug, article.slug)
+  // Kanonická adresa článku (domovský rodič + slug) — tu samou dává
+  // i generateMetadata, takže strukturovaná data ukazují na stejnou URL jako
+  // `rel=canonical`. `canonicalParent` = mainPage, bez ní první ze stránek
+  // článku (src/lib/payload.ts). Teprve když článek nemá platného rodiče, padá
+  // se na aktuální cestu z URL (contextPage) — JSON-LD a rel=canonical musí sedět.
+  const canonicalHref = article.canonicalParent?.fullSlug
+    ? articlePath(article.canonicalParent.fullSlug, article.slug)
     : contextPage
       ? articlePath(contextPage.fullSlug, article.slug)
       : null

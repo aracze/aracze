@@ -276,6 +276,13 @@ export interface Article {
   updatedAt?: string | null
   featuredImage: ArticleFeaturedImage | null
   mainPage?: ArticleMainPage | null
+  /**
+   * Rodič, pod kterým článek bydlí pro vyhledávače (`rel=canonical`, JSON-LD).
+   * Virtuální — doplňuje ho datová vrstva (`fetchArticlesBySlug`): `mainPage`,
+   * a když ji redaktor nevyplnil, první ze stránek článku. Díky tomu ukazují
+   * všechny adresy jednoho článku na tutéž originální.
+   */
+  canonicalParent?: ArticleMainPage | null
   createdByPublic?: ArticleAuthor | null
   /** SEO záložka z CMS (plugin-seo) — titulek a popisek pro vyhledávače. */
   meta?: GeneratedArticle['meta']

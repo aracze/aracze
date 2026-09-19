@@ -43,10 +43,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (resolution.kind === 'article') {
     const { article } = resolution
-    // Kanonická adresa = mainPage + slug (článek může viset i pod vedlejšími
-    // stránkami; ty odkazují sem). Bez mainPage aspoň aktuální cesta.
-    const canonicalPath = article.mainPage?.fullSlug
-      ? articlePath(article.mainPage.fullSlug, article.slug)
+    // Kanonická adresa = domovský rodič + slug (článek může viset i pod
+    // vedlejšími stránkami; ty odkazují sem). `canonicalParent` je mainPage,
+    // a když chybí, první ze stránek článku — viz src/lib/payload.ts. Aktuální
+    // cesta se použije, až když článek nemá platného rodiče vůbec.
+    const canonicalPath = article.canonicalParent?.fullSlug
+      ? articlePath(article.canonicalParent.fullSlug, article.slug)
       : `/${fullSlug}`
     const author = article.createdByPublic
     const title = resolveSeoTitle(article.meta, article.title)
