@@ -16,7 +16,7 @@
 -- Idempotentní; původní hodnoty ukládá do zaloha.pages_meta_dupl_2026_09_19.
 -- Běží proti živému CMS: dotčené řádky drží FOR UPDATE po celou transakci a maže se jen
 -- hodnota, kterou skript klasifikoval (souběžná editace v adminu se nepřepíše); z verzí
--- jen poslední PUBLIKOVANÁ (rozpracovaný draft editora i historie zůstávají).
+-- jen poslední PUBLIKOVANÁ, i když nad ní visí novější koncept (koncept i historie zůstávají).
 -- Spuštění (dev):  docker compose exec -T postgres psql -U postgres -d aracze < scripts/seo-duplicitni-titulky.sql
 -- Prod: stejně proti produkční DB (služba `postgres`), potom `docker compose up -d --force-recreate cms` (cache).
 BEGIN;
@@ -55,10 +55,12 @@ INSERT INTO zaloha.pages_meta_dupl_2026_09_19 (id, title, meta_title, meta_descr
 -- Titulek: maže se jen hodnota, kterou skript klasifikoval (pojistka k zámku výše).
 UPDATE pages p SET meta_title = NULL
   FROM l WHERE p.id = l.id AND NOT l.ma_nazev AND p.meta_title = l.meta_title;
+-- Poslední PUBLIKOVANÁ verze nezávisle na `latest`: když má stránka novější koncept,
+-- `latest` ukazuje na něj a publikovaná verze by zůstala s duplicitou (CodeRabbit, PR #116).
 UPDATE _pages_v v SET version_meta_title = NULL
-  FROM l WHERE v.parent_id = l.id AND NOT l.ma_nazev
-    AND v.latest AND v.version__status = 'published'
-    AND v.version_meta_title = l.meta_title;
+  FROM l WHERE NOT l.ma_nazev AND v.version_meta_title = l.meta_title
+    AND v.id = (SELECT pv.id FROM _pages_v pv WHERE pv.parent_id = l.id AND pv.version__status = 'published'
+                ORDER BY pv.updated_at DESC, pv.id DESC LIMIT 1);
 
 -- Popisek jen tam, kde je taky doslova převzatý od jiné stránky (dnes /turecko/kultura).
 -- Ostatní popisky jsou vlastní, i když titulek byl společný — ty se nechávají být.
@@ -72,9 +74,9 @@ WHERE NOT l.ma_nazev AND l.meta_description IS NOT NULL AND l.meta_description <
 UPDATE pages p SET meta_description = NULL
   FROM dd WHERE p.id = dd.id AND p.meta_description = dd.meta_description;
 UPDATE _pages_v v SET version_meta_description = NULL
-  FROM dd WHERE v.parent_id = dd.id
-    AND v.latest AND v.version__status = 'published'
-    AND v.version_meta_description = dd.meta_description;
+  FROM dd WHERE v.version_meta_description = dd.meta_description
+    AND v.id = (SELECT pv.id FROM _pages_v pv WHERE pv.parent_id = dd.id AND pv.version__status = 'published'
+                ORDER BY pv.updated_at DESC, pv.id DESC LIMIT 1);
 
 SELECT count(*) FILTER (WHERE NOT ma_nazev) AS vynulovanych_titulku,
        (SELECT count(*) FROM dd) AS vynulovanych_popisku,

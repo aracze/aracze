@@ -129,6 +129,11 @@ const slugyDiakritika = [
     permanent: true,
   },
   {
+    source: '/island/reykjavik/islandske-narodni-muzeum1715030766227/:rest*',
+    destination: '/island/reykjavik/islandske-narodni-muzeum/:rest*',
+    permanent: true,
+  },
+  {
     source: '/island/reykjavik/jomenningarhusi/:rest*',
     destination: '/island/reykjavik/thjodmenningarhusid/:rest*',
     permanent: true,

@@ -102,6 +102,12 @@ async function main() {
       select: { title: true, slug: true, mainPage: true, pages: true },
       joins: false,
     })
+    // `slug` není v kolekci articles unikátní — při dvou shodách nelze poznat,
+    // kterému článku hlavní stránka patří, tak radši nic (CodeRabbit, PR #116).
+    if (found.docs.length > 1) {
+      console.warn(`NEJEDNOZNAČNÉ: slug ${articleSlug} má ${found.docs.length} článků — přeskočeno`)
+      continue
+    }
     const article = found.docs[0] as unknown as
       | { id: number; title: string; mainPage?: number | { id: number } | null; pages?: unknown[] }
       | undefined

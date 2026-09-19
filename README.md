@@ -753,9 +753,11 @@ subdoménách typu `bokom.ara.cz`, ty řešit nejde ani netřeba).
   starší přesměrování nezmizí; soubor prožene prettierem a needituje se ručně. Na produkci
   jsou pravidla už v nasazeném buildu — skript tam mění jen DB a jeho dry-run musí ukázat
   stejnou sadu kandidátů jako repo. Stránky, jejichž nová adresa by kolidovala s jinou,
-  skript vynechá a vypíše: dnes dvě „Islandské národní muzeum" pod Reykjavíkem (duplikát ze
-  starého webu, druhá má ve slugu časové razítko) — které z nich žít dál, je obsahové
-  rozhodnutí. Název „Bašèaršija" (poškozené `č` z původního webu) opraven na „Baščaršija"
+  skript vynechá a vypíše — tak se našel duplikát „Islandské národní muzeum" pod Reykjavíkem
+  (dvě autorky o témže muzeu, starý web srážku vyřešil časovým razítkem ve slugu); sloučil ho
+  `pnpm merge:islandske-muzeum -- --apply` (`scripts/merge-islandske-narodni-muzeum.ts`,
+  zůstává novější text, fotka smazané stránky připojená do textu; přejmenování a 301 pak udělal
+  `seo:slugy-diakritika`, proto na produkci v tomto pořadí). Název „Bašèaršija" (poškozené `č` z původního webu) opraven na „Baščaršija"
   před přepočtem. Oba SEO skripty (`seo:canonical-slugs`, `seo:slugy-diakritika`) jsou
   idempotentní a na pořadí spuštění nezáleží — 15 cílů z prvního by druhý přejmenoval stejně.
 
