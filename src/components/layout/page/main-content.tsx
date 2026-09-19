@@ -42,7 +42,7 @@ function PanelWeather({ weather }: { weather: PanelWeatherData }) {
           Celý popisek zůstává v title a stránka počasí ho má vypsaný. */}
       <span
         title={weather.condition}
-        className="block h-[15px] max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-caps-sm font-bold uppercase leading-[15px] tracking-[0.1em] text-ink-3"
+        className="block h-[1.5em] max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-caps-sm font-bold uppercase leading-normal tracking-[0.1em] text-ink-3"
       >
         {weather.condition}
       </span>
@@ -528,7 +528,7 @@ export const MainContent = ({
                       )}
                     </div>
                     <div className="inline-block pt-[3px]">
-                      <div className="block text-label leading-[20.4px] text-ink-2">
+                      <div className="block text-label leading-relaxed text-ink-2">
                         {contributor.profileHref ? (
                           <Link
                             href={contributor.profileHref}
@@ -540,7 +540,7 @@ export const MainContent = ({
                           <span className="font-semibold">{contributor.name}</span>
                         )}
                       </div>
-                      <div className="block text-label leading-[20.4px] text-ink-3">
+                      <div className="block text-label leading-relaxed text-ink-3">
                         Cestovní průvodce
                       </div>
                     </div>

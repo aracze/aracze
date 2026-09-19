@@ -158,11 +158,16 @@ ale který se musel u každé nové komponenty znovu hádat.
    `text-neco` jako barvu textu a při kombinaci s barvou ho zahodí: velikost spadne na
    zděděných 16 px, nebo naopak zmizí barva. `tsc` ani lint to nechytí — ověřuje se
    `getComputedStyle().fontSize` v prohlížeči.
-4. **Sazba článku stojí mimo stupnici.** `.prose` a `.pi-prose` mají vlastní hodnoty
-   (18 px odstavec, 20 px perex, 36/22/21 px nadpisy) kvůli paritě se starým webem —
-   stejná výjimka jako u modré v textu článku. V `rem`, ale mimo tuto řadu.
+4. **Všechno v `.prose` a `.pi-prose` drží původní velikost.** Text článku (18 px odstavec,
+   20 px perex, 36/22/21 px nadpisy) i vložené widgety (sezónnost, Nice-to-know, rozpočet)
+   — parita se starým webem je záměr, stejná výjimka jako u modré v textu článku. Kde se
+   velikost kryje se stupněm, používá se token (`@apply text-small`); kde ne, zůstává
+   hodnota v `rem` (`font-size: 0.75rem`). Nic uvnitř `.prose` se zavedením stupnice
+   nezměnilo.
 5. **Kresba zůstává v pixelech.** Linky (`h-[1px]`), rámečky, `ring-*`, pevné rozměry
    a ikony kreslené písmem (emoji počasí `text-[46px]`, ikona deštivosti). Ikona není text.
+   Jediná textová výjimka: aktuální teplota `text-[46px]` vedle emoji stejné velikosti —
+   dvojice musí sedět na pixel, proto zůstává s ikonou v px a nemá vlastní stupeň.
 6. **Hierarchii dělej velikostí a tučností**, ne dalším odstínem šedé (viz pravidlo 2
    u barev). Pozor na sousední prvky: sloučení dvou stupňů do jednoho umí srazit nadpis
    a podtext na stejnou velikost a blok tím ztratí hierarchii.

@@ -674,7 +674,9 @@
   }
 
   .prose .month-label {
-    @apply text-label font-bold text-ink-3 mt-3 tracking-normal;
+    @apply font-bold text-ink-3 mt-3 tracking-normal;
+    /* 12 px — jako všechno v .prose drží původní velikost; stupnice 12 px nemá jinde než u verzálek */
+    font-size: 0.75rem;
   }
 
   /* Barvy podle stavu — táž škála jako klimatický graf na stránkách počasí
@@ -738,7 +740,8 @@
   }
 
   .prose .legend-label {
-    @apply font-bold text-ink text-label;
+    @apply font-bold text-ink;
+    font-size: 0.75rem; /* 12 px — viz .month-label */
   }
 
   .prose .legend-time {
@@ -814,7 +817,7 @@
     background-color: var(--color-dusk);
     width: 150px;
     height: 63px;
-    line-height: 20px;
+    line-height: 1.25rem; /* = 20 px; v rem, ne bezrozměrně — vnořený menší text má dědit celých 20 px jako dřív */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -855,13 +858,13 @@
     padding-top: 5px;
     font-size: 1.25rem;
     font-weight: bold;
-    line-height: 20px;
+    line-height: 1.25rem; /* = 20 px; v rem, ne bezrozměrně — vnořený menší text má dědit celých 20 px jako dřív */
   }
 
   .prose .nice-to-know-item__content__header--currency > span {
     display: inline-block;
     padding: 3px 0 0;
-    line-height: 32px;
+    line-height: 2rem; /* = 32 px */
     font-size: 1.5rem;
     font-weight: bold;
     color: rgb(59, 68, 79);

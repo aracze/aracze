@@ -588,9 +588,12 @@ jsou popsaná v [docs/navigace.md](docs/navigace.md). Adresy se přepočítával
 tvary názvů míst doplňovaly jednorázovými doběhy (`fix:page-urls`, `fix:declension`); ty jsou
 hotové a odstraněné — u nových míst se tvary vyplňují v adminu.
 
-Barvy webu jsou definované jako tokeny v `@theme` bloku `src/app/(frontend)/globals.css`;
-role, pravidla a kontrasty popisuje [docs/design-system.md](docs/design-system.md).
-V komponentách se nepíší hexy ani Tailwind šedé, jen utility z tokenů (`bg-surface`, `text-ink-2`).
+Barvy i velikosti písma jsou definované jako tokeny v `@theme` blocích
+`src/app/(frontend)/globals.css`; role, pravidla a kontrasty popisuje
+[docs/design-system.md](docs/design-system.md). V komponentách se nepíší hexy, Tailwind šedé
+ani `text-[13px]`, jen utility z tokenů (`bg-surface`, `text-ink-2`, `text-label`). Nový stupeň
+písma se zapisuje i do `extendTailwindMerge` v `src/lib/utils.ts` — hlídá to test
+`tests/int/font-size-tokens.int.spec.ts`.
 
 ### SEO — metadata, sitemap, strukturovaná data
 
