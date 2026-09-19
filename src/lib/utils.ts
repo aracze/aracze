@@ -6,32 +6,42 @@ import type { Article } from '@/types/payload'
 // závislostí DOMPurify) je záměrně v samostatném `rich-text-html.ts`, aby se
 // DOMPurify nedostal do klientského bundlu přes tento sdílený modul.
 
-// Vlastní stupně velikosti písma z bloku `@theme` (globals.css) tailwind-merge
-// nezná: `text-label` vypadá jako barva (`text-brand`), takže je při slučování
-// zahodil jako duplicitní barvu a velikost tiše spadla na zděděných 16 px.
-// Seznam je proto nutné držet v souladu s tokeny `--text-*` v globals.css.
-const twMerge = extendTailwindMerge({
+/**
+ * Stupně velikosti písma z bloku `@theme` v globals.css. Seznam musí sedět
+ * s tokeny `--text-*` — hlídá to tests/int/font-size-tokens.int.spec.ts.
+ */
+export const FONT_SIZE_TOKENS = [
+  'caps-sm',
+  'caps',
+  'meta',
+  'label',
+  'small',
+  'body',
+  'lead',
+  'lead-lg',
+  'title',
+  'section',
+  'heading',
+  'display',
+  'display-lg',
+] as const
+
+// tailwind-merge vlastní stupně nezná: `text-label` mu vypadá jako barva
+// (`text-brand`), takže by ho při slučování zahodil jako duplicitní barvu
+// a velikost by tiše spadla na zděděných 16 px. Tokeny mají vlastní skupinu,
+// ne rozšíření výchozí `font-size`: ta má v základu pravidlo „velikost maže
+// dřívější leading-*“ (Tailwindí text-sm řádkování nastavuje), jenže naše
+// tokeny řádkování nenastavují, takže `cn('leading-snug', 'text-small')` musí
+// obojí zachovat. Vůči výchozím velikostem (text-sm, text-[14px]) se tokeny
+// přebíjejí oběma směry — poslední vyhrává, jak se čeká.
+const twMerge = extendTailwindMerge<'font-size-token'>({
   extend: {
     classGroups: {
-      'font-size': [
-        {
-          text: [
-            'caps-sm',
-            'caps',
-            'meta',
-            'label',
-            'small',
-            'body',
-            'lead',
-            'lead-lg',
-            'title',
-            'section',
-            'heading',
-            'display',
-            'display-lg',
-          ],
-        },
-      ],
+      'font-size-token': [{ text: [...FONT_SIZE_TOKENS] }],
+    },
+    conflictingClassGroups: {
+      'font-size-token': ['font-size'],
+      'font-size': ['font-size-token'],
     },
   },
 })
