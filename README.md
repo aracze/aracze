@@ -655,7 +655,25 @@ průvodce Ara.cz`, `- Cestovní inspirace Ara.cz`, překlep `•vAra.cz`) i už 
   titulku je všude „ • Ara.cz" (layout šablona i generátor v adminu).
   Pády míst, která po migraci žádné neměla (456 z 669), doplňuje
   `scripts/seo-fill-place-cases.sql` (tvary navržené AI, prošlé uživatelem 4. 9. 2026;
-  zapisuje jen do prázdných polí, i do `_pages_v`).
+  zapisuje jen do prázdných polí, i do `_pages_v`). Duplicitní titulky (36 stránek v 15
+  skupinách sdílelo jeden `meta_title`, např. pět památek v Zadaru „Cestovní průvodce
+  Zadarem", a `/turecko/kultura` mělo titulek i popisek omylem z `/turecko/jidlo` — chyba
+  zděděná ze starého webu) vynuluje `scripts/seo-duplicitni-titulky.sql` (19. 9. 2026): ve
+  skupině nechá hodnotu tam, kde titulek obsahuje první slovo názvu stránky, jinde se
+  uplatní šablona. Google takové stránky hlásil jako „Crawled - currently not indexed". „Vlastník" = titulek
+  obsahuje celé slovo názvu stránky (≥ 4 znaky); kdyby jich ve skupině zůstalo víc, skript je
+  na konci vypíše k ručnímu rozhodnutí.
+- **Kanonická adresa článku** = `canonicalParent` + slug (`src/lib/payload.ts`): vyplněná
+  **Hlavní stránka** článku, a když chybí, první z jeho **Stránek**. Článek visí pod několika
+  místy a je dostupný na adrese každého z nich; dřív se bez hlavní stránky každá adresa
+  prohlásila za originál sama a Search Console je hlásila jako „Duplicate without
+  user-selected canonical" (19. 9. 2026). Sitemap, RSS a náhled v adminu čtou jen
+  `mainPage`, proto ji od téhož dne **doplňuje už při uložení** hook v `Articles.ts`
+  (prázdná → první ze Stránek); čtecí fallback zůstává jen jako pojistka pro data zapsaná
+  mimo admin. Pěti článkům, které pole neměly, ho nastavil
+  `pnpm seo:canonical-slugs -- --apply` (`scripts/seo-canonical-and-slugs.ts`) — tentýž
+  skript vrací 15 turistickým cílům adresu, která se rovná jejich názvu (viz „Adresy
+  a přesměrování" níž).
 - **Strukturovaná data navíc**: homepage `WebSite` + `SearchAction` (`/hledani?q=…`) a
   `Organization` (logo `/icon-512.png`) v jednom `@graph`; stránky „Místo k navštívení"
   `TouristDestination` (popis, fotka, souřadnice, nadřazené místo); turistické cíle
@@ -686,6 +704,63 @@ průvodce Ara.cz`, `- Cestovní inspirace Ara.cz`, překlep `•vAra.cz`) i už 
   h1 je název v heru) a nebezpečný odkaz vypíše jen jako text (dřív `href="#"`).
 - **Písma**: načítají se jen používané řezy — Open Sans 300–700, Poppins 400/600/700/800
   (každý řez × subset je samostatný preload soupeřící s hero fotkou).
+
+### Adresy a přesměrování ze starého webu
+
+Starý web měl adresu uloženou jako jeden řetězec (`page.unique_url`), nový ji skládá
+z hierarchie (`buildPageUrl` + plugin nested-docs). Z 3 065 migrovaných stránek se tím
+adresa změnila 38× a Google na ně dál chodil — export „Not found" ze Search Console
+(19. 9. 2026) měl 98 mrtvých adres na ara.cz (dalších 130 v něm bylo na neexistujících
+subdoménách typu `bokom.ara.cz`, ty řešit nejde ani netřeba).
+
+- **Slug = název cíle** (pravidlo uživatele 19. 9. 2026). Legacy slugy nesly jméno místa
+  („konstanz-minster"), migrace ten prefix uřízla, protože ho hierarchie dodá z rodiče —
+  jenže pak adresa přestala odpovídat názvu („Konstanz Minster" na `/nemecko/konstanz/minster`).
+  `pnpm seo:canonical-slugs -- --apply` ho u 15 cílů vrátil; zapisuje přes Local API, aby
+  plugin přepočítal `fullSlug` i `breadcrumbs`. Vedlejší efekt: tyhle adresy se shodují
+  s tím, co má Google zaindexované, takže nepotřebují přesměrování.
+- **Zbytek řeší 301 v `next.config.mjs`** (ne Payload kolekce — je to malá, stabilní sada).
+  Obecná pravidla jsou jen tam, kde se přestěhovala celá větev (Grand Canyon, Keflavík,
+  `/inspirace`, `/destinace`, `/jizni-amerika`, `/australie-oceanie`); jinde je výčet.
+  **Prefixové pravidlo `{starý předek}/:rest*` je past** — `/novy-zeland/jizni-ostrov`
+  i `/usa/kalifornie` se přestěhovaly jen zčásti a pod oběma dál žijí platné stránky
+  (`/novy-zeland/jizni-ostrov/lake-tekapo`, `/usa/kalifornie/pocasi`), takže se vypisují
+  konkrétní města. Na **pořadí záleží**: Next bere první shodu, proto jdou adresy článků
+  pod `/destinace/clanky/…` PŘED obecné pravidlo pro segment `clanky`.
+- `/:rest*` bere i holou adresu (nula segmentů), takže jedno prefixové pravidlo pokryje
+  stránku i vše pod ní; holou adresu zvlášť potřebují jen cíle v kořeni (`/inspirace` → `/`).
+- Řetěz dvou 301 je v pořádku (Google jich následuje až pět) — `/agios-nikolaos/mista` jde
+  přes `/agios-nikolaos#mista` na `/recko/kreta/agios-nikolaos#mista`. Staré výpisy mají
+  vlastní kotvu: `…/mista` → `#mista`, `…/clanky` (i `clanky-cestopisy`,
+  `clanky-a-cestopisy`) → `#clanky`.
+- 404 zůstává správně u smazaných profilů, `/cdn-cgi/…`, `/rpr/index.html`, `/archiv`
+  a zrušených provizních odkazů (`/go/porovnej24`).
+- **Slugy ošizené o písmena bez NFD rozkladu.** Starý web (a první verze hooku `slugField`)
+  písmena jako ö, ø, þ, ł, đ, ı, ß prostě smazal — odtud `/svedsko/malm`, `/rakousko/viden/schnbrunn`,
+  `/island/reykjavik/jomenningarhusi`. `slugify` v `src/utilities/formatSlug.ts` je teď přepisuje
+  (Malmö → `malmo`, Þjóðmenningarhúsið → `thjodmenningarhusid`) a apostrofy vypouští místo
+  pomlčky (`fishermans-wharf`); hlídá to `tests/int/slugify.int.spec.ts`. Existující stránky
+  přepočítal `pnpm seo:slugy-diakritika -- --apply` (`scripts/seo-slugy-diakritika.ts`, 19. 9. 2026: 98 slugů, 120 změněných adres i s podstránkami; zapisuje přes Local API
+  sekvenčně od kořene v jedné transakci, nakonec porovná adresy v DB s předpočtem přes
+  `buildPageUrl`; soubor redirectů se při `--apply` zapisuje až po potvrzení transakce).
+  **Kritérium je „slug ≠ slugify(název)"**, ne jen diakritika — ručně nastavený slug by
+  další běh přepsal (a přesměroval), proto se pouští vědomě po přečtení dry-runu, ne jako
+  údržba. Koncepty přeskakuje (plugin u nich nepřepočítá potomky) a stejně tak publikovanou
+  stránku s rozpracovaným konceptem (`update` bez `draft: true` staví z poslední verze —
+  koncept by publikoval). Skript zároveň **generuje `redirects/slugy-diakritika.mjs`**
+  (jedno prefixové `/stará/:rest*` na přejmenovanou stránku, řazené od nejhlubší adresy,
+  aby potomek s vlastní změnou předběhl pravidlo předka), který `next.config.mjs` rozbaluje
+  na konec seznamu. Další běh pravidla **sloučí** s dosavadními podle zdrojové adresy, takže
+  starší přesměrování nezmizí; soubor prožene prettierem a needituje se ručně. Na produkci
+  jsou pravidla už v nasazeném buildu — skript tam mění jen DB a jeho dry-run musí ukázat
+  stejnou sadu kandidátů jako repo. Stránky, jejichž nová adresa by kolidovala s jinou,
+  skript vynechá a vypíše — tak se našel duplikát „Islandské národní muzeum" pod Reykjavíkem
+  (dvě autorky o témže muzeu, starý web srážku vyřešil časovým razítkem ve slugu); sloučil ho
+  `pnpm merge:islandske-muzeum -- --apply` (`scripts/merge-islandske-narodni-muzeum.ts`,
+  zůstává novější text, fotka smazané stránky připojená do textu; přejmenování a 301 pak udělal
+  `seo:slugy-diakritika`, proto na produkci v tomto pořadí). Název „Bašèaršija" (poškozené `č` z původního webu) opraven na „Baščaršija"
+  před přepočtem. Oba SEO skripty (`seo:canonical-slugs`, `seo:slugy-diakritika`) jsou
+  idempotentní a na pořadí spuštění nezáleží — 15 cílů z prvního by druhý přejmenoval stejně.
 
 ### Sdílené stavební prvky výpisů (dlaždice, řádky, tlačítka, hodnocení)
 

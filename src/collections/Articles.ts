@@ -179,7 +179,24 @@ export const Articles: CollectionConfig = {
       hasMany: false,
       admin: {
         position: 'sidebar',
-        description: 'Určuje výslednou domovskou URL adresu článku a kanonický odkaz pro Google.',
+        description:
+          'Určuje výslednou domovskou URL adresu článku a kanonický odkaz pro Google. Když zůstane prázdné, doplní se první z „Other Pages“.',
+      },
+      hooks: {
+        beforeChange: [
+          // Článek bez hlavní stránky měl na každé své adrese canonical sám na sebe
+          // (Search Console: „Duplicate without user-selected canonical", 19. 9. 2026).
+          // Sitemap, RSS i náhled v adminu čtou jen `mainPage`, proto se doplňuje už
+          // při uložení — ne až při čtení — a všechny zdroje adresy se shodnou.
+          ({ value, data }) => {
+            if (value != null && value !== '') return value
+            const first = Array.isArray(data?.pages) ? data.pages[0] : undefined
+            if (first == null) return value
+            return typeof first === 'object' && first !== null && 'id' in first
+              ? (first as { id: number | string }).id
+              : first
+          },
+        ],
       },
     },
     {

@@ -774,15 +774,29 @@ async function fetchArticlesBySlugUncached(
         enrichFeaturedImages([raw]),
         enrichRichTextImages(raw.text),
       ])
-      const validParentSlugs = parentIdsOf(raw)
-        .map((id) => parentById.get(id)?.fullSlug)
-        .filter((s): s is string => typeof s === 'string' && !!s)
-        .map(stripSlashes)
+      // Platní rodiče v pořadí [mainPage, ...pages] — jen publikovaní s adresou
+      // (dotaz výš běží s overrideAccess false). Z TÉHOŽ seznamu jde jak
+      // validace cesty z URL, tak kanonický rodič, aby canonical vždy mířil na
+      // adresu, kterou resolver opravdu obslouží.
+      const validParents = parentIdsOf(raw)
+        .map((id) => parentById.get(id))
+        .filter(
+          (doc): doc is NonNullable<typeof doc> & { fullSlug: string } =>
+            typeof doc?.fullSlug === 'string' && !!doc.fullSlug,
+        )
+      const validParentSlugs = validParents.map((doc) => stripSlashes(doc.fullSlug))
       const mainPageDoc = mainPageId != null ? (parentById.get(mainPageId) ?? null) : null
+      // Rodič pro kanonickou adresu = první platný, tj. mainPage, když je
+      // vyplněná. Bez ní první ze stránek článku, ne cesta z URL: článek visí
+      // pod několika místy a každá jeho adresa by se jinak prohlásila za originál
+      // („Duplicate without user-selected canonical", 19. 9. 2026). Při uložení
+      // v adminu se prázdná mainPage doplní hookem (Articles.ts), tohle je
+      // pojistka pro data zapsaná mimo něj; pořadí `pages` je stabilní.
       const article = {
         ...enriched[0],
         text: enrichedText,
-        mainPage: mainPageDoc ?? null,
+        mainPage: mainPageDoc,
+        canonicalParent: validParents[0] ?? null,
       } as unknown as Article
       return { article, validParentSlugs }
     }),

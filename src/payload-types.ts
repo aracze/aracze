@@ -529,7 +529,7 @@ export interface Article {
   legacyArticleId?: number | null;
   createdBy?: (number | null) | User;
   /**
-   * Určuje výslednou domovskou URL adresu článku a kanonický odkaz pro Google.
+   * Určuje výslednou domovskou URL adresu článku a kanonický odkaz pro Google. Když zůstane prázdné, doplní se první z „Other Pages“.
    */
   mainPage?: (number | null) | Page;
   /**
