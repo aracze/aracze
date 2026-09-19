@@ -1024,7 +1024,9 @@ m.cloudinary_public_id = a.cloudinary_public_id` musí vrátit 0.
   volá se z `richTextToHtml`): za autorovou částkou přibude tlumený doplněk
   „120 EUR (≈ 2 900 Kč)“; po najetí nebo klepnutí se ukáže bublina „Kurz ČNB 1 EUR =
   24,31 Kč (18. 9. 2026)“ (CSS `.amount::after` z `data-tip`, span má `tabindex`, takže
-  funguje i dotykem — nativní `title` na klik nereaguje). Původní zápis zůstává (na místě se platí
+  funguje i dotykem — nativní `title` na klik nereaguje; pro čtečky je tentýž text ve
+  skrytém spanu `.amount-tip` přes `aria-describedby`, id čísluje čítač sdílený celým
+  dokumentem). Původní zápis zůstává (na místě se platí
   místní měnou a čtenář porovnává s cenovkou), koruny jsou orientace — proto se
   **zaokrouhlují** podle velikosti (do 100 Kč na pětikoruny, do 1 000 na desítky, do
   10 000 na stovky, výš na tisíce) a nesou znak ≈. Rozpoznávají se ISO kódy, symboly

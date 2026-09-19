@@ -28,7 +28,16 @@ const table: ExchangeRates = {
     EGP: 0.41,
   },
   dates: { EUR: D, USD: D, GBP: D, THB: D, AUD: D, JPY: D, IDR: D, EGP: '31. 8. 2026' },
-  source: 'ČNB',
+  sources: {
+    EUR: 'ČNB',
+    USD: 'ČNB',
+    GBP: 'ČNB',
+    THB: 'ČNB',
+    AUD: 'ČNB',
+    JPY: 'ČNB',
+    IDR: 'ČNB',
+    EGP: 'ČNB',
+  },
 }
 
 function czk(text: string) {
@@ -94,7 +103,10 @@ describe('zaokrouhlení a zápis korun', () => {
   it('bublina nese zdroj, kurz a datum měny', () => {
     expect(rateTip('EUR', table)).toBe(`Kurz ČNB 1${NB}EUR = 24,31${NB}Kč (${D})`)
     expect(rateTip('EGP', table)).toBe(`Kurz ČNB 100${NB}EGP = 41,00${NB}Kč (31. 8. 2026)`)
-    expect(rateTip('EUR', { ...table, dates: {} })).toBe(`Kurz ČNB 1${NB}EUR = 24,31${NB}Kč`)
+    expect(rateTip('EUR', { ...table, dates: {}, sources: {} })).toBe(
+      `Kurz 1${NB}EUR = 24,31${NB}Kč`,
+    )
+    expect(rateTip('EUR', { ...table, sources: { EUR: 'ECB' } })).toContain('Kurz ECB 1')
   })
 })
 
@@ -104,6 +116,16 @@ describe('přepočet částek v textu', () => {
     expect(out).toBe(
       `vyjít s ca. ${eurTip}120${NB}EUR${NB}${czk(`2${NB}900${NB}Kč`)}</span> na týden`,
     )
+  })
+  it('s čítačem id přidá skrytý popis pro čtečky', () => {
+    const ids = { count: 0 }
+    const out = annotateAmountsHtml('2 eura a 5 eur', table, 'EUR', ids)
+    expect(ids.count).toBe(2)
+    expect(out).toContain('aria-describedby="kurz-1"')
+    expect(out).toContain(
+      `<span id="kurz-1" class="amount-tip">Kurz ČNB 1${NB}EUR = 24,31${NB}Kč (${D})</span>`,
+    )
+    expect(out).toContain('aria-describedby="kurz-2"')
   })
   it('české tvary slov, desetinná čárka a tisícová mezera', () => {
     expect(annotateAmountsHtml('Pivo stojí 2 eura.', table, 'EUR')).toContain(
@@ -194,7 +216,7 @@ describe('v rich textu', () => {
   const text = (t: string, format = 0) => ({ type: 'text', text: t, format })
   const doc = (children: unknown[]) => ({ root: { type: 'root', children } })
 
-  it('odstavec s řádkem kurzu i částkou', () => {
+  it('odstavec s řádkem kurzu i částkou, id bublin číslovaná v pořadí dokumentu', () => {
     const html = richTextToHtml(
       doc([
         {
@@ -210,12 +232,14 @@ describe('v rich textu', () => {
       ]),
       { currencyCode: 'EUR', exchangeRates: table },
     )
-    // DOMPurify nezlomitelné mezery serializuje jako &nbsp;; data-tip a tabindex musí projít sanitizací.
+    // DOMPurify nezlomitelné mezery serializuje jako &nbsp;; data-tip, tabindex
+    // a aria-describedby musí projít sanitizací.
     expect(html).toContain(
-      `a aktuální kurz: <strong><span class="amount" tabindex="0" data-tip="Kurz ČNB z ${D}">1&nbsp;EUR = 24,31&nbsp;Kč</span></strong></p>`,
+      `a aktuální kurz: <strong><span class="amount" tabindex="0" data-tip="Kurz ČNB z ${D}" aria-describedby="kurz-1">1&nbsp;EUR = 24,31&nbsp;Kč<span id="kurz-1" class="amount-tip">Kurz ČNB z ${D}</span></span></strong></p>`,
     )
-    expect(html).toContain('120&nbsp;EUR&nbsp;<span class="amount-czk">')
+    expect(html).toContain('aria-describedby="kurz-2">120&nbsp;EUR&nbsp;<span class="amount-czk">')
     expect(html).toContain(`data-tip="Kurz ČNB 1&nbsp;EUR = 24,31&nbsp;Kč (${D})"`)
+    expect(html).toContain('<span id="kurz-2" class="amount-tip">')
   })
 
   it('bez kurzů text nemění, v nadpisu a odkazu nepřepočítává', () => {
@@ -272,15 +296,29 @@ describe('kurzovní lístek ČNB', () => {
     expect(formatRateDate('2026-09-18')).toBe('18. 9. 2026')
     expect(formatRateDate('nesmysl')).toBeNull()
   })
-  it('denní lístek přepisuje měsíční, datum jde s měnou', () => {
-    const monthly = { rates: { EUR: 24.0, EGP: 0.41 }, date: '31. 8. 2026' }
-    const daily = parseCnbRates(txt)
-    const merged = mergeRateSheets([monthly, daily], 'ČNB')
+  it('denní lístek přepisuje měsíční; datum a zdroj jdou s měnou', () => {
+    const monthly = {
+      sheet: { rates: { EUR: 24.0, EGP: 0.41 }, date: '31. 8. 2026' },
+      source: 'ČNB' as const,
+    }
+    const daily = { sheet: parseCnbRates(txt), source: 'ČNB' as const }
+    const merged = mergeRateSheets([monthly, daily])
     expect(merged?.rates.EUR).toBeCloseTo(24.34, 6)
     expect(merged?.dates.EUR).toBe('18. 9. 2026')
     expect(merged?.rates.EGP).toBe(0.41)
     expect(merged?.dates.EGP).toBe('31. 8. 2026')
-    expect(merged?.source).toBe('ČNB')
-    expect(mergeRateSheets([null, null], 'ECB')).toBeNull()
+    expect(merged?.sources.EUR).toBe('ČNB')
+    expect(mergeRateSheets([{ sheet: null, source: 'ECB' }])).toBeNull()
+  })
+  it('při záloze ECB zůstávají měny z měsíčního lístku ČNB', () => {
+    const monthly = {
+      sheet: { rates: { EGP: 0.41 }, date: '31. 8. 2026' },
+      source: 'ČNB' as const,
+    }
+    const ecb = { sheet: { rates: { EUR: 24.3 }, date: '18. 9. 2026' }, source: 'ECB' as const }
+    const merged = mergeRateSheets([monthly, ecb])
+    expect(merged?.sources).toEqual({ EGP: 'ČNB', EUR: 'ECB' })
+    expect(rateTip('EGP', merged!)).toContain('Kurz ČNB')
+    expect(rateTip('EUR', merged!)).toContain('Kurz ECB')
   })
 })

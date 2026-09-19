@@ -77,7 +77,7 @@ export function composePracticalInfoHtml(
   sections: PracticalInfoSection[],
   // Tvar kontextu sdílíme s richTextToHtml, ať se při přidání dalšího pole
   // (jako se stalo s pásmem) nemusí měnit dvě definice.
-  context: Omit<RichTextRenderContext, 'usedHeadingIds'> = {},
+  context: Omit<RichTextRenderContext, 'usedHeadingIds' | 'amountTipIds'> = {},
 ): string {
   const present = sectionDefs
     .map((def) => {
@@ -89,13 +89,16 @@ export function composePracticalInfoHtml(
   // Kotvy sekcí rezervujeme PŘEDEM — kdyby některý text obsahoval nadpis se
   // stejným id jako pozdější sekce, dostane příponu -2 on, ne sekce.
   const usedHeadingIds = new Set<string>(present.map(({ title }) => sectionAnchor(title)))
+  // Čítač id bublin u částek sdílí všechny sekce — jinak by každá začala od 1.
+  const amountTipIds = { count: 0 }
+  const shared = { ...context, usedHeadingIds, amountTipIds }
 
   const parts: string[] = []
-  const ownHtml = richTextToHtml(ownText, { ...context, usedHeadingIds })
+  const ownHtml = richTextToHtml(ownText, shared)
   if (ownHtml) parts.push(ownHtml)
 
   for (const { page, title } of present) {
-    const body = demoteHeadings(richTextToHtml(page.text, { ...context, usedHeadingIds }))
+    const body = demoteHeadings(richTextToHtml(page.text, shared))
     parts.push(
       `<h2 id="${sectionAnchor(title)}"><a href="${escapeHtml(page.fullSlug)}">${escapeHtml(title)}</a></h2>`,
       body,

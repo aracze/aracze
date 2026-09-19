@@ -1,5 +1,5 @@
 import { cache } from 'react'
-import type { ExchangeRates } from './currency-amounts'
+import type { ExchangeRates, RateSource } from './currency-amounts'
 
 /**
  * Kurzy měn jako JEDNA tabulka „Kč za jednotku měny“ pro všechny stránky:
@@ -25,11 +25,15 @@ const CNB_OTHER_URL =
   'https://www.cnb.cz/cs/financni-trhy/devizovy-trh/kurzy-ostatnich-men/kurzy-ostatnich-men/kurzy.txt'
 const FRANKFURTER_URL = 'https://api.frankfurter.dev/v1/latest'
 
-const FETCH_INIT: RequestInit & { next: { revalidate: number } } = {
-  // Timeout, ať se render nezasekne na pomalém/nedostupném upstreamu —
-  // abort spadne do catch a vrátí null (cache 24h zůstává zachovaná).
-  signal: AbortSignal.timeout(10_000),
-  next: { revalidate: 86400 },
+/**
+ * Volby fetchu — POKAŽDÉ nové: `AbortSignal.timeout` začne odpočítávat hned
+ * při vytvoření, sdílený signál na úrovni modulu by po 10 s od startu zůstal
+ * navždy „aborted“ a každé další stažení by selhalo okamžitě. Timeout chrání
+ * render před pomalým upstreamem (abort spadne do catch → null, cache 24 h
+ * zůstává zachovaná).
+ */
+function fetchInit(): RequestInit & { next: { revalidate: number } } {
+  return { signal: AbortSignal.timeout(10_000), next: { revalidate: 86400 } }
 }
 
 /** Jeden načtený lístek: kurzy a datum platnosti společné pro všechny jeho měny. */
@@ -64,7 +68,7 @@ export function parseCnbRates(text: string): RateSheet | null {
 
 async function fetchCnbRates(url: string): Promise<RateSheet | null> {
   try {
-    const res = await fetch(url, FETCH_INIT)
+    const res = await fetch(url, fetchInit())
     if (!res.ok) return null
     return parseCnbRates(await res.text())
   } catch {
@@ -81,7 +85,7 @@ interface FrankfurterResponse {
 /** Frankfurter kótuje vše k euru — křížem přes CZK/EUR vznikne Kč za jednotku. */
 async function fetchFrankfurterRates(): Promise<RateSheet | null> {
   try {
-    const res = await fetch(FRANKFURTER_URL, FETCH_INIT)
+    const res = await fetch(FRANKFURTER_URL, fetchInit())
     if (!res.ok) return null
     const data: FrankfurterResponse = await res.json()
     const czkPerEur = data.rates?.CZK
@@ -97,16 +101,20 @@ async function fetchFrankfurterRates(): Promise<RateSheet | null> {
   }
 }
 
-/** Slije lístky do tabulky; pozdější lístek v pořadí přepisuje dřívější. */
+/**
+ * Slije lístky do tabulky; pozdější lístek v pořadí přepisuje dřívější.
+ * Datum i zdroj jdou s každou měnou zvlášť (měsíční lístek ČNB má jiné datum
+ * než denní a při záloze ECB zůstávají jeho měny ČNB).
+ */
 export function mergeRateSheets(
-  sheets: (RateSheet | null)[],
-  source: ExchangeRates['source'],
+  sheets: { sheet: RateSheet | null; source: RateSource }[],
 ): ExchangeRates | null {
-  const table: ExchangeRates = { rates: {}, dates: {}, source }
-  for (const sheet of sheets) {
+  const table: ExchangeRates = { rates: {}, dates: {}, sources: {} }
+  for (const { sheet, source } of sheets) {
     if (!sheet) continue
     for (const [code, rate] of Object.entries(sheet.rates)) {
       table.rates[code] = rate
+      table.sources[code] = source
       if (sheet.date) table.dates[code] = sheet.date
       else delete table.dates[code]
     }
@@ -119,10 +127,11 @@ async function fetchExchangeRatesRaw(): Promise<ExchangeRates | null> {
     fetchCnbRates(CNB_DAILY_URL),
     fetchCnbRates(CNB_OTHER_URL),
   ])
-  if (daily) return mergeRateSheets([other, daily], 'ČNB')
+  const monthly = { sheet: other, source: 'ČNB' as const }
+  if (daily) return mergeRateSheets([monthly, { sheet: daily, source: 'ČNB' }])
   // Bez denního lístku ČNB: ECB jako hlavní, měsíční „ostatní měny“ ČNB doplní zbytek.
   const ecb = await fetchFrankfurterRates()
-  return mergeRateSheets([other, ecb], ecb ? 'ECB' : 'ČNB')
+  return mergeRateSheets([monthly, { sheet: ecb, source: 'ECB' }])
 }
 
 export const fetchExchangeRates = cache(fetchExchangeRatesRaw)

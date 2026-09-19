@@ -14,7 +14,10 @@
  * vypustí i s úvodem „a aktuální kurz:“.
  */
 
-/** Tabulka kurzů: Kč za jednotku měny, datum platnosti podle měny a zdroj. */
+/** Odkud kurz je; do bubliny („Kurz ČNB …“). */
+export type RateSource = 'ČNB' | 'ECB'
+
+/** Tabulka kurzů: Kč za jednotku měny, datum platnosti a zdroj podle měny. */
 export type ExchangeRates = {
   /** Klíč = ISO kód, hodnota = kolik Kč stojí jedna jednotka měny. */
   rates: Record<string, number>
@@ -23,9 +26,20 @@ export type ExchangeRates = {
    * měsíční „ostatní měny“ mají různá data. Chybí-li, bublina datum neuvede.
    */
   dates: Record<string, string>
-  /** Zdroj kurzů; do bubliny („Kurz ČNB …“). */
-  source: 'ČNB' | 'ECB'
+  /**
+   * Zdroj podle měny: při výpadku denního lístku ČNB nese většinu měn ECB,
+   * ale měny jen z měsíčního lístku ČNB zůstávají ČNB — jeden štítek pro
+   * celou tabulku by u nich lhal.
+   */
+  sources: Record<string, RateSource>
 }
+
+/**
+ * Čítač id pro `aria-describedby` bublin v rámci jednoho dokumentu — sdílí ho
+ * všechny texty jedné stránky (i složené Praktické informace), aby se id
+ * neopakovala. Bez čítače se bublina vykreslí jen vizuálně (testy, cizí volání).
+ */
+export type TipIds = { count: number }
 
 export const NBSP = ' '
 
@@ -196,12 +210,23 @@ export function formatRateLine(code: string, czkPerUnit: number): string {
 /** Text bubliny: „Kurz ČNB 1 EUR = 24,31 Kč (18. 9. 2026)“. */
 export function rateTip(code: string, table: ExchangeRates): string {
   const date = table.dates[code]
-  return `Kurz ${table.source} ${formatRateLine(code, table.rates[code])}${date ? ` (${date})` : ''}`
+  const source = table.sources[code]
+  return `Kurz ${source ? `${source} ` : ''}${formatRateLine(code, table.rates[code])}${date ? ` (${date})` : ''}`
 }
 
-/** Obal s bublinou: fokusovatelný (klepnutí na mobilu i klik ukážou bublinu). */
-function tipSpan(tip: string, inner: string): string {
-  return `<span class="amount" tabindex="0" data-tip="${tip}">${inner}</span>`
+/**
+ * Obal s bublinou: fokusovatelný (klepnutí na mobilu i klik ukážou bublinu).
+ * Bublina je CSS pseudoelement z `data-tip`, který čtečky nečtou — proto je
+ * text i ve skrytém spanu navázaném přes `aria-describedby` (čtečka ho řekne
+ * při fokusu, ne uprostřed věty). Bez čítače id se skrytý span vynechá.
+ */
+function tipSpan(tip: string, inner: string, ids?: TipIds): string {
+  if (!ids) return `<span class="amount" tabindex="0" data-tip="${tip}">${inner}</span>`
+  const id = `kurz-${++ids.count}`
+  return (
+    `<span class="amount" tabindex="0" data-tip="${tip}" aria-describedby="${id}">${inner}` +
+    `<span id="${id}" class="amount-tip">${tip}</span></span>`
+  )
 }
 
 /**
@@ -241,6 +266,7 @@ function annotatedAmountHtml(
   code: string,
   amount: number,
   table: ExchangeRates,
+  ids?: TipIds,
 ): string | null {
   const rate = table.rates[code]
   if (!rate || !Number.isFinite(rate)) return null
@@ -249,6 +275,7 @@ function annotatedAmountHtml(
   return tipSpan(
     rateTip(code, table),
     `${original}${NBSP}<span class="amount-czk">(≈${NBSP}${formatCzk(czk)})</span>`,
+    ids,
   )
 }
 
@@ -265,6 +292,7 @@ export function annotateAmountsHtml(
   escapedText: string,
   table: ExchangeRates | null | undefined,
   pageCurrency?: string | null,
+  ids?: TipIds,
 ): string {
   if (!table || !escapedText || !/\d/.test(escapedText)) return escapedText
   if (isLegacyRateLine(escapedText)) return escapedText
@@ -302,7 +330,7 @@ export function annotateAmountsHtml(
         num !== undefined
           ? `${numberNb}${gap ? NBSP : ''}${token}`
           : `${symBefore}${NBSP}${numberNb}`
-      const annotated = annotatedAmountHtml(original, code, amount, table)
+      const annotated = annotatedAmountHtml(original, code, amount, table, ids)
       return annotated ? `${lead}${annotated}` : match
     },
   )
@@ -328,6 +356,7 @@ export function replaceLegacyRateLine(
   paragraphHtml: string,
   table: ExchangeRates | null | undefined,
   pageCurrency?: string | null,
+  ids?: TipIds,
 ): string {
   if (!paragraphHtml.includes(' CZK')) return paragraphHtml
   return paragraphHtml.replace(
@@ -343,8 +372,9 @@ export function replaceLegacyRateLine(
       const matchesPage = !pageCurrency || pageCurrency === code
       if (!table || !rate || !matchesPage) return ''
       const date = table.dates[code]
-      const tip = `Kurz ${table.source}${date ? ` z ${date}` : ''}`
-      return `${lead ?? ''}${open ?? ''}${tipSpan(tip, formatRateLine(code, rate))}${close ?? ''}`
+      const source = table.sources[code]
+      const tip = `Kurz${source ? ` ${source}` : ''}${date ? ` z ${date}` : ''}`
+      return `${lead ?? ''}${open ?? ''}${tipSpan(tip, formatRateLine(code, rate), ids)}${close ?? ''}`
     },
   )
 }

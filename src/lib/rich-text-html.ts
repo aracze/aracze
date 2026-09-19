@@ -5,6 +5,7 @@ import {
   annotateAmountsHtml,
   replaceLegacyRateLine,
   type ExchangeRates,
+  type TipIds,
 } from '@/lib/currency-amounts'
 
 // Rendering Lexical rich-textu do (sanitizovaného) HTML. Vyčleněno z `utils.ts`,
@@ -26,6 +27,8 @@ export type RichTextRenderContext = {
   timezone?: string | null
   /** Už použitá heading id v rámci jednoho dokumentu (unikátnost kotev). */
   usedHeadingIds?: Set<string>
+  /** Čítač id bublin u částek (`aria-describedby`), sdílený v rámci dokumentu. */
+  amountTipIds?: TipIds
 }
 
 const CC_ICON_SVG =
@@ -88,6 +91,7 @@ export function richTextToHtml(value: unknown, context: RichTextRenderContext = 
   const ctx: RichTextRenderContext = {
     ...context,
     usedHeadingIds: context.usedHeadingIds ?? new Set<string>(),
+    amountTipIds: context.amountTipIds ?? { count: 0 },
   }
   const rawHtml = richTextToHtmlInternal(value, ctx)
   return DOMPurify.sanitize(rawHtml, {
@@ -134,7 +138,12 @@ function richTextToHtmlInternal(value: unknown, context: RichTextRenderContext =
   if (type === 'text' || ('text' in node && typeof node.text === 'string')) {
     let text = escapeHtml(node.text as string)
     if (!context.noAmounts) {
-      text = annotateAmountsHtml(text, context.exchangeRates, context.currencyCode)
+      text = annotateAmountsHtml(
+        text,
+        context.exchangeRates,
+        context.currencyCode,
+        context.amountTipIds,
+      )
     }
     const format = (node.format as number) ?? 0
     if (format & 1) text = `<strong>${text}</strong>`
@@ -162,7 +171,7 @@ function richTextToHtmlInternal(value: unknown, context: RichTextRenderContext =
     }
     case 'paragraph':
       // Řádek „a aktuální kurz: 1 EUR = 1 CZK“ z migrace → živý kurz, nebo pryč.
-      return `<p>${replaceLegacyRateLine(children, context.exchangeRates, context.currencyCode)}</p>`
+      return `<p>${replaceLegacyRateLine(children, context.exchangeRates, context.currencyCode, context.amountTipIds)}</p>`
     case 'heading': {
       const rawTag = String((node.tag as string | undefined) || 'h2').toLowerCase()
       const tag = allowedHeadingTags.has(rawTag) ? rawTag : 'h2' // h1 i neznámé → h2

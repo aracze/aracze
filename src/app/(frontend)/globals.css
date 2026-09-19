@@ -377,6 +377,17 @@
     white-space: nowrap;
   }
 
+  /* Text bubliny pro čtečky (aria-describedby): v DOM, ale neviditelný a bez
+     vlivu na tok textu — pseudoelement ::after čtečky nečtou. */
+  .prose .amount-tip {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   /* Emphasis (legacy used font-weight:600 / semibold, not the browser-default 700). */
   .prose strong,
   .prose b {

@@ -283,6 +283,8 @@ export const MainContent = ({
     exchangeRates,
     timezone,
     usedHeadingIds: new Set<string>(),
+    // Čítač id bublin u částek — společný pro text před i za blokem uprostřed.
+    amountTipIds: { count: 0 },
   }
   // Řez pro `midText` na úrovni Lexical uzlů (ne v HTML — odstavce v tabulkách
   // či popiscích bloků nejsou na nejvyšší úrovni a řez v řetězci by rozbil
