@@ -163,6 +163,15 @@ describe('přepočet částek v textu', () => {
     expect(annotateAmountsHtml('v roce 2002 euro nahradilo drachmu', table)).toBe(
       'v roce 2002 euro nahradilo drachmu',
     )
+    // Datum s měsícem slovem i číslem (chyba z Chorvatska: „2023 euro (≈ 49 000 Kč)“).
+    expect(annotateAmountsHtml('je od 1. ledna 2023 euro, které nahradilo kunu', table)).toBe(
+      'je od 1. ledna 2023 euro, které nahradilo kunu',
+    )
+    expect(annotateAmountsHtml('platí od 1. 1. 2026 eurem', table)).toBe(
+      'platí od 1. 1. 2026 eurem',
+    )
+    // Skutečná částka za rokem musí projít dál.
+    expect(annotateAmountsHtml('od roku 2010 stojí vstup 2000 eur', table)).toContain('amount-czk')
     expect(annotateAmountsHtml('ujdete 10 km za 3 dny', table)).toBe('ujdete 10 km za 3 dny')
     expect(annotateAmountsHtml('ne jen 5 jen', table)).toBe('ne jen 5 jen')
     expect(annotateAmountsHtml('50 MAD za vstup', table, 'MAD')).toBe('50 MAD za vstup') // bez kurzu

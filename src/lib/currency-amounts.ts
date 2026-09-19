@@ -246,8 +246,14 @@ const AMOUNT_RE = new RegExp(
   'gu',
 )
 
-/** Slova, po nichž čtyřmístné číslo znamená letopočet, ne částku. */
-const YEAR_CONTEXT_RE = /(?:^|\s)(?:v\s+)?(?:roce|roku|rok|letech|let|r\.)\s*$/i
+/**
+ * Kontext, po němž čtyřmístné číslo znamená letopočet, ne částku: „v roce
+ * 2002 euro“, „od 1. ledna 2023 euro“ (název měsíce), „od 1. 1. 2026 eurem“
+ * (den a měsíc číslem), „po roce 2000 eur“ — bez toho by se rok přepočítal
+ * na koruny (stalo se u Chorvatska: „2023 euro (≈ 49 000 Kč)“).
+ */
+const YEAR_CONTEXT_RE =
+  /(?:^|\s|\.)(?:v\s+)?(?:roce|roku|rok|letech|let|r\.|ledna|února|března|dubna|května|června|července|srpna|září|října|listopadu|prosince|\d{1,2}\.[  ]?\d{1,2}\.)[  ]*$/i
 
 function parseCzechNumber(text: string): number {
   const normalized = text
