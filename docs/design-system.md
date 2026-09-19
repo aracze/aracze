@@ -145,9 +145,11 @@ ale který se musel u každé nové komponenty znovu hádat.
 
 ### Pravidla
 
-1. **Verzálky mají vlastní, nižší stupně.** Kapitálky s prostrkáním opticky narůstají —
-   na stupni běžného textu působí o číslo větší. Nový verzálkový štítek patří na
-   `caps-sm` / `caps`, ne na `meta` / `label`.
+1. **Verzálky posuzuj opticky.** Kapitálky s prostrkáním narůstají — na stupni běžného
+   textu působí o číslo větší, takže verzálkový štítek často patří o stupeň níž, než by
+   se zdálo. Kvůli tomu `caps-sm` a `caps` vznikly. **Neznamená to, že každý verzálkový
+   text na ně patří**: verzálky na 11 i 13 px jsou na webu taky a je to v pořádku. Token
+   se vybírá podle **výsledné velikosti**, ne podle toho, že text je verzálkový.
 2. **Token nese jen velikost, ne řádkování.** Prokládání zůstává na prvku
    (`leading-*`). Spárované `--text-*--line-height` by změnilo prokládání na všech
    288 místech naráz.
