@@ -15,5 +15,8 @@
     "BACKUP_HOST": "media-backup.ara.cz",
   },
   "r2_buckets": [{ "binding": "BACKUP", "bucket_name": "aracze" }],
+  // Měření provozu (kdo chce jaké varianty, co jde na Cloudinary) — viz README
+  // „Měření provozu“. Free plán: 100 000 datových bodů/den, retence 3 měsíce.
+  "analytics_engine_datasets": [{ "binding": "STATS", "dataset": "media_proxy_requests" }],
   "observability": { "enabled": true },
 }

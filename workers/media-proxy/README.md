@@ -38,6 +38,93 @@ Frontend na proxy přepisuje adresy přes `toMediaProxy`
    zrcadlem `TRAINING_BOTS` v appu, shodu hlídá test. Vyhledávací a
    asistenční boti zůstávají povolení (citace v AI odpovědích vodí lidi).
 
+## Měření provozu (Workers Analytics Engine)
+
+Worker zapisuje ke každému požadavku jeden datový bod do datasetu
+`media_proxy_requests` (binding `STATS`, `src/telemetry.ts`). Účel: rozhodovat
+o počtu variant fotek (šířky, formáty) a o keši podle skutečného provozu, ne
+odhadem — Cloudinary účtuje jen to, co si Worker musí stáhnout (přenos)
+a co musí vyrobit (transformace), a to dělají hlavně roboti, ne návštěvníci.
+Bez bindingu (lokální `wrangler dev`, testy) se nic neměří. Free plán: 100 000
+bodů/den (= limit požadavků Workeru), retence 3 měsíce, při špičkách Cloudflare
+vzorkuje — proto se v dotazech sčítá `_sample_interval`, ne `COUNT(*)`.
+Žádné osobní údaje: třída klienta, země, adresa obrázku.
+
+Schéma (pořadí je smlouva, hlídá ho test `test/telemetry.test.ts`):
+
+| Sloupec   | Obsah                                                                            |
+| --------- | -------------------------------------------------------------------------------- |
+| `index1`  | výsledek (viz `blob1`) — klíč vzorkování                                         |
+| `blob1`   | výsledek: `cloudinary` / `fallback` (R2) / `unavailable` / `rejected` / `robots` |
+| `blob2`   | `cf-cache-status` subrequestu na Cloudinary (`HIT`, `MISS`, `EXPIRED`… / `''`)   |
+| `blob3`   | třída klienta: `browser` / `search-bot` / `ai-bot` / `other-bot`                 |
+| `blob4`   | jméno robota (`googlebot-image`, `gptbot`, `curl`…), u prohlížeče prázdné        |
+| `blob5`   | co klient umí podle `Accept`: `avif` / `webp` / `none`                           |
+| `blob6`   | šířka z transformace (`640`), bez šířky prázdné                                  |
+| `blob7`   | doručený formát: `avif` / `webp` / `png` / `jpg` / `orig`                        |
+| `blob8`   | celá transformace po vyjednání formátu                                           |
+| `blob9`   | `image` / `raw`                                                                  |
+| `blob10`  | `versioned` / `legacy` (adresa bez `v123`)                                       |
+| `blob11`  | země klienta (ISO kód)                                                           |
+| `blob12`  | metoda (`GET` / `HEAD`)                                                          |
+| `double1` | HTTP stav odpovědi                                                               |
+| `double2` | `content-length` odpovědi (0 = neznámá)                                          |
+| `double3` | bajty skutečně stažené z Cloudinary (jen `cloudinary` a ne-HIT; HIT = 0)         |
+
+Dotazy jdou přes SQL API (dashboard pro Analytics Engine neexistuje). Token:
+dashboard → My Profile → API Tokens → Create Token → Account · _Account
+Analytics_ · Read; Account ID je v přehledu účtu.
+
+```sh
+export CF_ACCOUNT_ID=… CF_ANALYTICS_TOKEN=…
+q() { curl -s -H "Authorization: Bearer $CF_ANALYTICS_TOKEN" \
+  "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/analytics_engine/sql" \
+  --data "$1"; }
+```
+
+Kdo za posledních 7 dní tahá data z Cloudinary (přenos = kredity):
+
+```sql
+SELECT blob3 AS client, blob4 AS bot,
+  SUM(_sample_interval) AS requests,
+  SUM(_sample_interval * double3) / 1e9 AS origin_gb
+FROM media_proxy_requests
+WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'cloudinary'
+GROUP BY client, bot ORDER BY origin_gb DESC
+```
+
+Které šířky a formáty se reálně chtějí a kolik z nich mine keš (kandidáti na
+vyhození = málo požadavků, hodně stažení):
+
+```sql
+SELECT blob6 AS width, blob7 AS format, blob3 AS client,
+  SUM(_sample_interval) AS requests,
+  SUM(_sample_interval * double3) / 1e9 AS origin_gb
+FROM media_proxy_requests
+WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'cloudinary'
+GROUP BY width, format, client ORDER BY requests DESC
+```
+
+Poměr zásahů keše po dnech (efekt Tiered Cache / změn variant):
+
+```sql
+SELECT toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day, blob2 AS cache,
+  SUM(_sample_interval) AS requests,
+  SUM(_sample_interval * double3) / 1e9 AS origin_gb
+FROM media_proxy_requests
+WHERE timestamp > NOW() - INTERVAL '14' DAY AND blob1 = 'cloudinary'
+GROUP BY day, cache ORDER BY day, requests DESC
+```
+
+Kdo umí AVIF (rozhodnutí, zda vypustit WebP):
+
+```sql
+SELECT blob3 AS client, blob5 AS accepts, SUM(_sample_interval) AS requests
+FROM media_proxy_requests
+WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob9 = 'image'
+GROUP BY client, accepts ORDER BY requests DESC
+```
+
 ## Nasazení
 
 ```sh
