@@ -26,6 +26,8 @@ export interface Sample {
   status: number
   /** content-length odpovědi (0 = neznámá). */
   bytes: number
+  /** Doba subrequestu na Cloudinary v ms (0 = žádný subrequest). */
+  durationMs: number
 }
 
 /** Vyhledávací roboti — vodí návštěvníky, chceme je vidět zvlášť. */
@@ -134,18 +136,20 @@ export function formatOf(transform: string | null): string {
   return match ? match[1] : 'orig'
 }
 
+/** Stavy edge keše, při kterých Worker stahuje celé tělo z Cloudinary. */
+const ORIGIN_FETCH_STATUSES = new Set(['MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC'])
+
 /**
- * Bajty, které Worker reálně stáhl z Cloudinary. HIT = nic; REVALIDATED /
- * STALE / UPDATING = jen podmíněný dotaz (~0); MISS / EXPIRED / BYPASS /
- * DYNAMIC / bez hlavičky = celé tělo. Přesně tohle Cloudinary účtuje jako přenos.
+ * Bajty, které Worker reálně stáhl z Cloudinary — přesně tohle Cloudinary
+ * účtuje jako přenos. HIT / REVALIDATED / STALE / UPDATING = nic nebo jen
+ * podmíněný dotaz. Chybějící hlavička se počítá jako keš: ověřeno 27. 9. 2026,
+ * že u opakovaných požadavků `cf-cache-status` občas chybí (odpověď ~150 ms
+ * = z keše), zatímco skutečné stažení hlásí MISS vždy. Kontrola: `durationMs`
+ * (double4) — pomalé odpovědi bez hlavičky by byly stažení.
  */
 export function originBytes(sample: Pick<Sample, 'outcome' | 'cacheStatus' | 'bytes'>): number {
   if (sample.outcome !== 'cloudinary') return 0
-  const status = sample.cacheStatus.toUpperCase()
-  if (status === 'HIT' || status === 'REVALIDATED' || status === 'STALE' || status === 'UPDATING') {
-    return 0
-  }
-  return sample.bytes
+  return ORIGIN_FETCH_STATUSES.has(sample.cacheStatus.toUpperCase()) ? sample.bytes : 0
 }
 
 export interface RequestFacts {
@@ -184,6 +188,7 @@ export function buildDataPoint(
       sample.status, // double1
       sample.bytes, // double2
       originBytes(sample), // double3
+      sample.durationMs, // double4
     ],
   }
 }

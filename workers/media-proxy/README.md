@@ -48,6 +48,9 @@ a co musí vyrobit (transformace), a to dělají hlavně roboti, ne návštěvn�
 Bez bindingu (lokální `wrangler dev`, testy) se nic neměří. Free plán: 100 000
 bodů/den (= limit požadavků Workeru), retence 3 měsíce, při špičkách Cloudflare
 vzorkuje — proto se v dotazech sčítá `_sample_interval`, ne `COUNT(*)`.
+Past: `cf-cache-status` subrequestu u opakovaných požadavků občas chybí, i když
+odpověď jde z keše (~150 ms; skutečné stažení hlásí `MISS` a trvá ~1 s) — prázdný
+stav se proto bere jako keš; kontrola přes `double4`.
 Žádné osobní údaje: třída klienta, země, adresa obrázku.
 
 Schéma (pořadí je smlouva, hlídá ho test `test/telemetry.test.ts`):
@@ -69,7 +72,8 @@ Schéma (pořadí je smlouva, hlídá ho test `test/telemetry.test.ts`):
 | `blob12`  | metoda (`GET` / `HEAD`)                                                          |
 | `double1` | HTTP stav odpovědi                                                               |
 | `double2` | `content-length` odpovědi (0 = neznámá)                                          |
-| `double3` | bajty skutečně stažené z Cloudinary (jen `cloudinary` a ne-HIT; HIT = 0)         |
+| `double3` | bajty stažené z Cloudinary (`MISS`/`EXPIRED`/`BYPASS`/`DYNAMIC`; HIT i `''` = 0) |
+| `double4` | doba subrequestu na Cloudinary v ms (0 = bez subrequestu)                        |
 
 Dotazy jdou přes SQL API (dashboard pro Analytics Engine neexistuje). Token:
 dashboard → My Profile → API Tokens → Create Token → Account · _Account

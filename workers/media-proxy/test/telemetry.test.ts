@@ -84,12 +84,13 @@ describe('widthOf / formatOf', () => {
 
 describe('originBytes', () => {
   const base = { outcome: 'cloudinary' as const, bytes: 1000 }
-  it('HIT a podmíněné dotazy nestahují tělo, MISS/EXPIRED/bez hlavičky ano', () => {
+  it('HIT, podmíněné dotazy a chybějící hlavička nestahují tělo, MISS/EXPIRED ano', () => {
     expect(originBytes({ ...base, cacheStatus: 'HIT' })).toBe(0)
     expect(originBytes({ ...base, cacheStatus: 'REVALIDATED' })).toBe(0)
     expect(originBytes({ ...base, cacheStatus: 'MISS' })).toBe(1000)
     expect(originBytes({ ...base, cacheStatus: 'EXPIRED' })).toBe(1000)
-    expect(originBytes({ ...base, cacheStatus: '' })).toBe(1000)
+    // Ověřeno naostro: u opakovaných (zjevně kešovaných) požadavků hlavička občas chybí.
+    expect(originBytes({ ...base, cacheStatus: '' })).toBe(0)
   })
   it('záloha z R2 ani odmítnutí Cloudinary nestojí', () => {
     expect(originBytes({ outcome: 'fallback', cacheStatus: '', bytes: 1000 })).toBe(0)
@@ -107,6 +108,7 @@ describe('buildDataPoint', () => {
       versioned: true,
       status: 200,
       bytes: 54321,
+      durationMs: 812,
     }
     expect(
       buildDataPoint(sample, {
@@ -131,7 +133,7 @@ describe('buildDataPoint', () => {
         'US',
         'GET',
       ],
-      doubles: [200, 54321, 54321],
+      doubles: [200, 54321, 54321, 812],
     })
   })
 })

@@ -177,6 +177,7 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
   // po výměně fotky pod stejným public_id držela starou verzi až rok.
   const versioned = version !== ''
   let upstream: Response | undefined
+  const started = Date.now()
   try {
     upstream = await fetch(upstreamUrl, {
       signal: AbortSignal.timeout(10_000),
@@ -185,6 +186,7 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
   } catch {
     upstream = undefined
   }
+  sample.durationMs = Date.now() - started
   if (upstream?.ok) {
     sample.cacheStatus = upstream.headers.get('cf-cache-status') ?? ''
     return finish(
@@ -252,6 +254,7 @@ const mediaProxy = {
       versioned: false,
       status: 0,
       bytes: 0,
+      durationMs: 0,
     }
     try {
       return await serve(request, env, sample)

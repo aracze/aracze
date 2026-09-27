@@ -61,7 +61,7 @@ describe('media proxy: měření (Analytics Engine)', () => {
     expect(points[0].doubles?.[0]).toBe(200)
     expect(points[1].indexes).toEqual(['rejected'])
     expect(points[1].blobs?.slice(0, 6)).toEqual(['rejected', '', 'other-bot', 'curl', 'avif', ''])
-    expect(points[1].doubles).toEqual([400, 0, 0])
+    expect(points[1].doubles).toEqual([400, 0, 0, 0])
   })
 
   it('chyba měření neshodí odpověď', async () => {
@@ -90,6 +90,7 @@ describe('media proxy: měření (Analytics Engine)', () => {
       versioned: false,
       status: 200,
       bytes: 0,
+      durationMs: 0,
     }
     expect(sample.outcome).toBe('robots')
   })
