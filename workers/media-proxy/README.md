@@ -78,7 +78,8 @@ Schéma (pořadí je smlouva, hlídá ho test `test/telemetry.test.ts`):
 `double3` je pohodlí, ale pravidlo je zapečené do dat — po každé změně pravidla
 nesou staré řádky starou verzi. Pro srovnání přes delší období proto počítej
 přenos v SQL z `blob2` + `double2` (níže `origin_mb`); `if()` chce stejné typy,
-tedy `0.0`, ne `0`. `CASE` ani `quantiles` SQL API neumí.
+tedy `0.0`, ne `0`; stejné pravidlo jako `originBytes` (vše mimo stavy z keše).
+`CASE`, `trim` ani `quantiles` SQL API neumí; vážený kvantil je `quantileExactWeighted`.
 
 Dotazy jdou přes SQL API (dashboard pro Analytics Engine neexistuje). Token:
 dashboard → My Profile → API Tokens → Create Token → Account · _Account
@@ -96,7 +97,7 @@ Kdo za posledních 7 dní tahá data z Cloudinary (přenos = kredity):
 ```sql
 SELECT blob3 AS client, blob4 AS bot,
   SUM(_sample_interval) AS requests,
-  SUM(_sample_interval * if(upper(blob2) IN ('MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC'), double2, 0.0))
+  SUM(_sample_interval * if(upper(blob2) NOT IN ('', 'HIT', 'REVALIDATED', 'STALE', 'UPDATING'), double2, 0.0))
     / 1000000000 AS origin_gb
 FROM media_proxy_requests
 WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'cloudinary'
@@ -109,7 +110,7 @@ vyhození = málo požadavků, hodně stažení):
 ```sql
 SELECT blob6 AS width, blob7 AS format, blob3 AS client,
   SUM(_sample_interval) AS requests,
-  SUM(_sample_interval * if(upper(blob2) IN ('MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC'), double2, 0.0))
+  SUM(_sample_interval * if(upper(blob2) NOT IN ('', 'HIT', 'REVALIDATED', 'STALE', 'UPDATING'), double2, 0.0))
     / 1000000000 AS origin_gb
 FROM media_proxy_requests
 WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'cloudinary'
@@ -121,7 +122,7 @@ Poměr zásahů keše po dnech (efekt Tiered Cache / změn variant):
 ```sql
 SELECT toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day, blob2 AS cache,
   SUM(_sample_interval) AS requests,
-  SUM(_sample_interval * if(upper(blob2) IN ('MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC'), double2, 0.0))
+  SUM(_sample_interval * if(upper(blob2) NOT IN ('', 'HIT', 'REVALIDATED', 'STALE', 'UPDATING'), double2, 0.0))
     / 1000000000 AS origin_gb
 FROM media_proxy_requests
 WHERE timestamp > NOW() - INTERVAL '14' DAY AND blob1 = 'cloudinary'
@@ -132,8 +133,10 @@ Kontrola předpokladu „chybějící `cf-cache-status` = keš“ (řádky s pr�
 stavem mají mít TTFB jako HIT, ne jako MISS):
 
 ```sql
-SELECT blob2 AS cache, avg(double4) AS avg_ms, max(double4) AS max_ms,
-  SUM(_sample_interval) AS requests
+SELECT blob2 AS cache,
+  SUM(double4 * _sample_interval) / SUM(_sample_interval) AS avg_ms,
+  quantileExactWeighted(0.9)(double4, _sample_interval) AS p90_ms,
+  max(double4) AS max_ms, SUM(_sample_interval) AS requests
 FROM media_proxy_requests
 WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'cloudinary'
 GROUP BY cache ORDER BY requests DESC
