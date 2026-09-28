@@ -18,7 +18,7 @@ export type ClientClass = 'browser' | 'search-bot' | 'ai-bot' | 'other-bot'
 
 export interface Sample {
   outcome: Outcome
-  /** Hodnota cf-cache-status SUBREQUESTU na Cloudinary ('' = žádný subrequest). */
+  /** Hodnota cf-cache-status SUBREQUESTU na Cloudinary ('' = bez subrequestu, nebo hlavička chybí). */
   cacheStatus: string
   transform: string | null
   resourceType: string
@@ -26,6 +26,8 @@ export interface Sample {
   status: number
   /** content-length odpovědi (0 = neznámá). */
   bytes: number
+  /** Doba subrequestu na Cloudinary do příchodu hlaviček (TTFB) v ms; 0 = žádný subrequest. */
+  durationMs: number
 }
 
 /** Vyhledávací roboti — vodí návštěvníky, chceme je vidět zvlášť. */
@@ -135,17 +137,23 @@ export function formatOf(transform: string | null): string {
 }
 
 /**
- * Bajty, které Worker reálně stáhl z Cloudinary. HIT = nic; REVALIDATED /
- * STALE / UPDATING = jen podmíněný dotaz (~0); MISS / EXPIRED / BYPASS /
- * DYNAMIC / bez hlavičky = celé tělo. Přesně tohle Cloudinary účtuje jako přenos.
+ * Stavy edge keše, při kterých Worker tělo z Cloudinary NEstahuje: HIT,
+ * podmíněné dotazy (REVALIDATED / STALE / UPDATING) a chybějící hlavička.
+ * Prázdný stav = keš je ověřeno naostro 27. 9. 2026: u opakovaných požadavků
+ * `cf-cache-status` občas chybí (odpověď ~150 ms), zatímco skutečné stažení
+ * hlásí MISS vždy (~1 s). Cokoli jiného (MISS, EXPIRED, BYPASS, DYNAMIC,
+ * neznámé hodnoty) se konzervativně počítá jako stažení.
+ */
+const CACHE_SERVED_STATUSES = new Set(['', 'HIT', 'REVALIDATED', 'STALE', 'UPDATING'])
+
+/**
+ * Bajty, které Worker reálně stáhl z Cloudinary — přesně tohle Cloudinary
+ * účtuje jako přenos. Pozor: je to pravidlo zapečené do dat (double3); pro
+ * srovnání přes změny pravidla počítej v SQL z blob2 + double2 (viz README).
  */
 export function originBytes(sample: Pick<Sample, 'outcome' | 'cacheStatus' | 'bytes'>): number {
   if (sample.outcome !== 'cloudinary') return 0
-  const status = sample.cacheStatus.toUpperCase()
-  if (status === 'HIT' || status === 'REVALIDATED' || status === 'STALE' || status === 'UPDATING') {
-    return 0
-  }
-  return sample.bytes
+  return CACHE_SERVED_STATUSES.has(sample.cacheStatus.trim().toUpperCase()) ? 0 : sample.bytes
 }
 
 export interface RequestFacts {
@@ -184,6 +192,7 @@ export function buildDataPoint(
       sample.status, // double1
       sample.bytes, // double2
       originBytes(sample), // double3
+      sample.durationMs, // double4
     ],
   }
 }

@@ -177,6 +177,7 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
   // po výměně fotky pod stejným public_id držela starou verzi až rok.
   const versioned = version !== ''
   let upstream: Response | undefined
+  const started = Date.now()
   try {
     upstream = await fetch(upstreamUrl, {
       signal: AbortSignal.timeout(10_000),
@@ -185,8 +186,11 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
   } catch {
     upstream = undefined
   }
+  // Měření: TTFB subrequestu (tělo se streamuje až po záznamu) + stav keše
+  // i pro ne-2xx odpovědi (kešované 404 apod.), ať '' znamená jen „hlavička chybí".
+  sample.durationMs = Date.now() - started
+  sample.cacheStatus = upstream?.headers.get('cf-cache-status') ?? ''
   if (upstream?.ok) {
-    sample.cacheStatus = upstream.headers.get('cf-cache-status') ?? ''
     return finish(
       sample,
       buildResponse(upstream, versioned ? IMMUTABLE_CACHE : UNVERSIONED_CACHE, isHead),
@@ -252,6 +256,7 @@ const mediaProxy = {
       versioned: false,
       status: 0,
       bytes: 0,
+      durationMs: 0,
     }
     try {
       return await serve(request, env, sample)

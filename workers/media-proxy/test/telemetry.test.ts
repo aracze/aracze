@@ -84,15 +84,20 @@ describe('widthOf / formatOf', () => {
 
 describe('originBytes', () => {
   const base = { outcome: 'cloudinary' as const, bytes: 1000 }
-  it('HIT a podmíněné dotazy nestahují tělo, MISS/EXPIRED/bez hlavičky ano', () => {
-    expect(originBytes({ ...base, cacheStatus: 'HIT' })).toBe(0)
-    expect(originBytes({ ...base, cacheStatus: 'REVALIDATED' })).toBe(0)
-    expect(originBytes({ ...base, cacheStatus: 'MISS' })).toBe(1000)
-    expect(originBytes({ ...base, cacheStatus: 'EXPIRED' })).toBe(1000)
-    expect(originBytes({ ...base, cacheStatus: '' })).toBe(1000)
+  it('z keše (HIT, podmíněné dotazy, chybějící hlavička) = 0', () => {
+    for (const status of ['HIT', 'REVALIDATED', 'STALE', 'UPDATING', 'hit', ' HIT ']) {
+      expect(originBytes({ ...base, cacheStatus: status })).toBe(0)
+    }
+    // Ověřeno naostro: u opakovaných (zjevně kešovaných) požadavků hlavička občas chybí.
+    expect(originBytes({ ...base, cacheStatus: '' })).toBe(0)
+  })
+  it('stažení (MISS, EXPIRED, BYPASS, DYNAMIC) i neznámý stav = celé tělo', () => {
+    for (const status of ['MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC', 'NONE/UNKNOWN', 'novy-stav']) {
+      expect(originBytes({ ...base, cacheStatus: status })).toBe(1000)
+    }
   })
   it('záloha z R2 ani odmítnutí Cloudinary nestojí', () => {
-    expect(originBytes({ outcome: 'fallback', cacheStatus: '', bytes: 1000 })).toBe(0)
+    expect(originBytes({ outcome: 'fallback', cacheStatus: 'MISS', bytes: 1000 })).toBe(0)
     expect(originBytes({ outcome: 'rejected', cacheStatus: '', bytes: 20 })).toBe(0)
   })
 })
@@ -107,6 +112,7 @@ describe('buildDataPoint', () => {
       versioned: true,
       status: 200,
       bytes: 54321,
+      durationMs: 812,
     }
     expect(
       buildDataPoint(sample, {
@@ -131,7 +137,7 @@ describe('buildDataPoint', () => {
         'US',
         'GET',
       ],
-      doubles: [200, 54321, 54321],
+      doubles: [200, 54321, 54321, 812],
     })
   })
 })
