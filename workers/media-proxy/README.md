@@ -50,7 +50,7 @@ bodů/den (= limit požadavků Workeru), retence 3 měsíce, při špičkách Cl
 vzorkuje — proto se v dotazech sčítá `_sample_interval`, ne `COUNT(*)`.
 Past: `cf-cache-status` subrequestu u opakovaných požadavků občas chybí, i když
 odpověď jde z keše (~150 ms; skutečné stažení hlásí `MISS` a trvá ~1 s) — prázdný
-stav se proto bere jako keš; kontrola přes `double4`.
+stav se proto bere jako keš; kontrolní dotaz přes `double4` je níže.
 Žádné osobní údaje: třída klienta, země, adresa obrázku.
 
 Schéma (pořadí je smlouva, hlídá ho test `test/telemetry.test.ts`):
@@ -72,8 +72,13 @@ Schéma (pořadí je smlouva, hlídá ho test `test/telemetry.test.ts`):
 | `blob12`  | metoda (`GET` / `HEAD`)                                                          |
 | `double1` | HTTP stav odpovědi                                                               |
 | `double2` | `content-length` odpovědi (0 = neznámá)                                          |
-| `double3` | bajty stažené z Cloudinary (`MISS`/`EXPIRED`/`BYPASS`/`DYNAMIC`; HIT i `''` = 0) |
-| `double4` | doba subrequestu na Cloudinary v ms (0 = bez subrequestu)                        |
+| `double3` | bajty stažené z Cloudinary podle pravidla ve Workeru (`originBytes`; keš = 0)    |
+| `double4` | doba subrequestu na Cloudinary do příchodu hlaviček (TTFB) v ms; 0 = bez něj     |
+
+`double3` je pohodlí, ale pravidlo je zapečené do dat — po každé změně pravidla
+nesou staré řádky starou verzi. Pro srovnání přes delší období proto počítej
+přenos v SQL z `blob2` + `double2` (níže `origin_mb`); `if()` chce stejné typy,
+tedy `0.0`, ne `0`. `CASE` ani `quantiles` SQL API neumí.
 
 Dotazy jdou přes SQL API (dashboard pro Analytics Engine neexistuje). Token:
 dashboard → My Profile → API Tokens → Create Token → Account · _Account
@@ -91,7 +96,8 @@ Kdo za posledních 7 dní tahá data z Cloudinary (přenos = kredity):
 ```sql
 SELECT blob3 AS client, blob4 AS bot,
   SUM(_sample_interval) AS requests,
-  SUM(_sample_interval * double3) / 1e9 AS origin_gb
+  SUM(_sample_interval * if(upper(blob2) IN ('MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC'), double2, 0.0))
+    / 1000000000 AS origin_gb
 FROM media_proxy_requests
 WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'cloudinary'
 GROUP BY client, bot ORDER BY origin_gb DESC
@@ -103,7 +109,8 @@ vyhození = málo požadavků, hodně stažení):
 ```sql
 SELECT blob6 AS width, blob7 AS format, blob3 AS client,
   SUM(_sample_interval) AS requests,
-  SUM(_sample_interval * double3) / 1e9 AS origin_gb
+  SUM(_sample_interval * if(upper(blob2) IN ('MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC'), double2, 0.0))
+    / 1000000000 AS origin_gb
 FROM media_proxy_requests
 WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'cloudinary'
 GROUP BY width, format, client ORDER BY requests DESC
@@ -114,10 +121,22 @@ Poměr zásahů keše po dnech (efekt Tiered Cache / změn variant):
 ```sql
 SELECT toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day, blob2 AS cache,
   SUM(_sample_interval) AS requests,
-  SUM(_sample_interval * double3) / 1e9 AS origin_gb
+  SUM(_sample_interval * if(upper(blob2) IN ('MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC'), double2, 0.0))
+    / 1000000000 AS origin_gb
 FROM media_proxy_requests
 WHERE timestamp > NOW() - INTERVAL '14' DAY AND blob1 = 'cloudinary'
 GROUP BY day, cache ORDER BY day, requests DESC
+```
+
+Kontrola předpokladu „chybějící `cf-cache-status` = keš“ (řádky s prázdným
+stavem mají mít TTFB jako HIT, ne jako MISS):
+
+```sql
+SELECT blob2 AS cache, avg(double4) AS avg_ms, max(double4) AS max_ms,
+  SUM(_sample_interval) AS requests
+FROM media_proxy_requests
+WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob1 = 'cloudinary'
+GROUP BY cache ORDER BY requests DESC
 ```
 
 Kdo umí AVIF (rozhodnutí, zda vypustit WebP):

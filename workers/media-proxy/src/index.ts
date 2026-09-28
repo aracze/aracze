@@ -186,9 +186,11 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
   } catch {
     upstream = undefined
   }
+  // Měření: TTFB subrequestu (tělo se streamuje až po záznamu) + stav keše
+  // i pro ne-2xx odpovědi (kešované 404 apod.), ať '' znamená jen „hlavička chybí".
   sample.durationMs = Date.now() - started
+  sample.cacheStatus = upstream?.headers.get('cf-cache-status') ?? ''
   if (upstream?.ok) {
-    sample.cacheStatus = upstream.headers.get('cf-cache-status') ?? ''
     return finish(
       sample,
       buildResponse(upstream, versioned ? IMMUTABLE_CACHE : UNVERSIONED_CACHE, isHead),

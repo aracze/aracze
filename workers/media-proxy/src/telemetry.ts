@@ -18,7 +18,7 @@ export type ClientClass = 'browser' | 'search-bot' | 'ai-bot' | 'other-bot'
 
 export interface Sample {
   outcome: Outcome
-  /** Hodnota cf-cache-status SUBREQUESTU na Cloudinary ('' = žádný subrequest). */
+  /** Hodnota cf-cache-status SUBREQUESTU na Cloudinary ('' = bez subrequestu, nebo hlavička chybí). */
   cacheStatus: string
   transform: string | null
   resourceType: string
@@ -26,7 +26,7 @@ export interface Sample {
   status: number
   /** content-length odpovědi (0 = neznámá). */
   bytes: number
-  /** Doba subrequestu na Cloudinary v ms (0 = žádný subrequest). */
+  /** Doba subrequestu na Cloudinary do příchodu hlaviček (TTFB) v ms; 0 = žádný subrequest. */
   durationMs: number
 }
 
@@ -136,20 +136,24 @@ export function formatOf(transform: string | null): string {
   return match ? match[1] : 'orig'
 }
 
-/** Stavy edge keše, při kterých Worker stahuje celé tělo z Cloudinary. */
-const ORIGIN_FETCH_STATUSES = new Set(['MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC'])
+/**
+ * Stavy edge keše, při kterých Worker tělo z Cloudinary NEstahuje: HIT,
+ * podmíněné dotazy (REVALIDATED / STALE / UPDATING) a chybějící hlavička.
+ * Prázdný stav = keš je ověřeno naostro 27. 9. 2026: u opakovaných požadavků
+ * `cf-cache-status` občas chybí (odpověď ~150 ms), zatímco skutečné stažení
+ * hlásí MISS vždy (~1 s). Cokoli jiného (MISS, EXPIRED, BYPASS, DYNAMIC,
+ * neznámé hodnoty) se konzervativně počítá jako stažení.
+ */
+const CACHE_SERVED_STATUSES = new Set(['', 'HIT', 'REVALIDATED', 'STALE', 'UPDATING'])
 
 /**
  * Bajty, které Worker reálně stáhl z Cloudinary — přesně tohle Cloudinary
- * účtuje jako přenos. HIT / REVALIDATED / STALE / UPDATING = nic nebo jen
- * podmíněný dotaz. Chybějící hlavička se počítá jako keš: ověřeno 27. 9. 2026,
- * že u opakovaných požadavků `cf-cache-status` občas chybí (odpověď ~150 ms
- * = z keše), zatímco skutečné stažení hlásí MISS vždy. Kontrola: `durationMs`
- * (double4) — pomalé odpovědi bez hlavičky by byly stažení.
+ * účtuje jako přenos. Pozor: je to pravidlo zapečené do dat (double3); pro
+ * srovnání přes změny pravidla počítej v SQL z blob2 + double2 (viz README).
  */
 export function originBytes(sample: Pick<Sample, 'outcome' | 'cacheStatus' | 'bytes'>): number {
   if (sample.outcome !== 'cloudinary') return 0
-  return ORIGIN_FETCH_STATUSES.has(sample.cacheStatus.toUpperCase()) ? sample.bytes : 0
+  return CACHE_SERVED_STATUSES.has(sample.cacheStatus.trim().toUpperCase()) ? 0 : sample.bytes
 }
 
 export interface RequestFacts {
