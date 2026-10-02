@@ -220,6 +220,27 @@ describe('media proxy: měření (Analytics Engine)', () => {
       expect(response.headers.get('cache-control')).toBe('public, max-age=86400')
     })
 
+    it('MEDIA_SOURCE=backup: chyba R2 (výjimka) = 503 no-store, ne 404', async () => {
+      calls.length = 0
+      stubFetch()
+      const brokenEnv = {
+        ...cloudinaryEnv,
+        MEDIA_SOURCE: 'backup',
+        BACKUP: {
+          head: async () => {
+            throw new Error('R2 down')
+          },
+        },
+      } as unknown as Env
+      const response = await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/v1/abc.jpg', { headers: browser }),
+        brokenEnv,
+      )
+      expect(response.status).toBe(503)
+      expect(response.headers.get('cache-control')).toBe('no-store')
+      expect(calls).toEqual([])
+    })
+
     it('MEDIA_SOURCE=backup: objekt mimo zálohu = 404 unavailable, bez volání sítě', async () => {
       calls.length = 0
       points.length = 0

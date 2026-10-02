@@ -124,8 +124,9 @@ export function classifyClient(userAgent: string | null): { client: ClientClass;
  * i staré verze) a moderní navíc `Sec-Fetch-Dest`. V 9/2026 dělali takoví
  * klienti (BD, BR, VN, IN…) ~45 % požadavků a ~60 % přenosu. Známí roboti
  * (vyhledávače, náhledy sociálních sítí, curl…) sem nespadají — ty řídí
- * robots.txt. Jediný známý falešně pozitivní: starší Safari (< 16.4) při
- * přímém otevření adresy fotky v nové záložce (posílá jen text/html, *\/*).
+ * robots.txt. Navigace na adresu fotky (otevření v nové záložce) má Accept
+ * s `text/html` — i ve starém Safari bez Sec-Fetch-Dest — a projde; blokuje
+ * se jen holé `*\/*` / chybějící Accept, typické pro HTTP knihovny.
  */
 export function isDisguisedScraper(facts: {
   userAgent: string | null
@@ -134,7 +135,8 @@ export function isDisguisedScraper(facts: {
 }): boolean {
   if (classifyClient(facts.userAgent).client !== 'browser') return false
   if (facts.secFetchDest !== null) return false
-  return !/image\//i.test(facts.accept ?? '')
+  const accept = facts.accept ?? ''
+  return !/image\//i.test(accept) && !/text\/html/i.test(accept)
 }
 
 /** Nejlepší moderní formát, který klient hlásí v Accept (stejná logika jako negotiateFormat). */

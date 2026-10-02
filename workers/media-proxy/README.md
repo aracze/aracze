@@ -13,6 +13,7 @@ Frontend na proxy přepisuje adresy přes `toMediaProxy`
   klouzavá 30denní spotřeba klesne a půjde downgrade na Free. Náklad: Image
   Transformations 5 000 unikátních variant/měsíc zdarma, dál 0,50 $/1 000
   (sledovat v dashboardu Images). Během pauzy se nenahrávají nové fotky.
+  Objekt mimo zálohu = 404; chyba R2 (výjimka bindingu) = 503 `no-store`.
 - `cloudinary` (výchozí, když proměnná chybí): původní chování níže.
 
 Přepnutí = změna hodnoty ve `wrangler.jsonc` + deploy (nebo jednorázově
@@ -60,8 +61,9 @@ Přepnutí = změna hodnoty ve `wrangler.jsonc` + deploy (nebo jednorázově
    (`isDisguisedScraper`). Skutečné prohlížeče obojí posílají, známí roboti
    (vyhledávače, náhledy sociálních sítí, curl) pravidlu nepodléhají — ty řídí
    robots.txt. V 9/2026 dělali tihle klienti ~45 % požadavků a ~60 % přenosu.
-   Známá výjimka: staré Safari (< 16.4) při přímém otevření adresy fotky.
-   Měří se jako outcome `blocked`; odpověď `no-store`, ať jde pravidlo vrátit hned.
+   Navigace na adresu fotky (Accept s `text/html`, i staré Safari) projde;
+   blokuje se jen holé `*/*` / chybějící Accept. Měří se jako outcome `blocked`;
+   odpověď `no-store`, ať jde pravidlo vrátit hned.
 
 ## Měření provozu (Workers Analytics Engine)
 

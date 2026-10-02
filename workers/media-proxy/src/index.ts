@@ -203,8 +203,19 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
 
   if (env.MEDIA_SOURCE === 'backup') {
     const served = await serveFromBackup(ctx, { ...longCache, outcome: 'backup' })
-    if (served) return served
-    return finish(sample, new Response('Image unavailable', { status: 404 }), 'unavailable')
+    if (served instanceof Response) return served
+    // Chyba R2 (výjimka bindingu) není totéž co chybějící objekt: 503 bez keše,
+    // ať se klient (i edge) zkusí znovu a 404 zůstane vyhrazené pro „opravdu není".
+    return finish(
+      sample,
+      served === 'error'
+        ? new Response('Backup unavailable', {
+            status: 503,
+            headers: { 'cache-control': 'no-store' },
+          })
+        : new Response('Image unavailable', { status: 404 }),
+      'unavailable',
+    )
   }
 
   // Query string se zahazuje (Cloudinary ho ignoruje, jen by kazil keš).
@@ -247,7 +258,7 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
     cacheTtl: FALLBACK_TTL,
     outcome: 'fallback',
   })
-  if (served) return served
+  if (served instanceof Response) return served
 
   // Není ani na Cloudinary, ani v záloze → propagovat stav upstreamu.
   return finish(
@@ -266,19 +277,25 @@ interface BackupOptions {
 /**
  * Záloha z R2: pokud možno zmenšená přes Cloudflare Image Transformations
  * (zdroj = custom doména bucketu), jinak surový originál. `raw` (SVG) se podává
- * tak, jak je. Vrací null, když objekt v záloze není.
+ * tak, jak je. Vrací 'missing', když objekt v záloze není, a 'error', když R2
+ * selhalo (výjimka bindingu) — volající rozhodne o 404 vs. 503.
  */
 async function serveFromBackup(
   ctx: MediaContext,
   options: BackupOptions,
-): Promise<Response | null> {
+): Promise<Response | 'missing' | 'error'> {
   const { env, isHead, resourceType, key, transform, sample } = ctx
   const { cacheControl, cacheTtl, outcome } = options
   const imageOptions = resourceType === 'image' ? cfImageOptions(transform) : null
+  let r2Error = false
+  const r2Failed = () => {
+    r2Error = true
+    return null
+  }
   for (const r2Key of deriveR2Keys(key)) {
     // Chyba R2 bindingu (výjimka, ne jen miss) nesmí shodit celý požadavek —
     // radši řízená odpověď níž než neodchycená 1101.
-    const exists = await env.BACKUP.head(r2Key).catch(() => null)
+    const exists = await env.BACKUP.head(r2Key).catch(r2Failed)
     if (!exists) continue
 
     if (imageOptions) {
@@ -302,7 +319,7 @@ async function serveFromBackup(
 
     // Poslední záchrana: surový originál přímo z bucketu.
     // HEAD obsloužíme z metadat (exists), ať se tělo z R2 zbytečně nestahuje.
-    const object = isHead ? exists : await env.BACKUP.get(r2Key).catch(() => null)
+    const object = isHead ? exists : await env.BACKUP.get(r2Key).catch(r2Failed)
     if (!object) continue
     const headers = new Headers()
     object.writeHttpMetadata(headers)
@@ -314,7 +331,7 @@ async function serveFromBackup(
     const body = !isHead && 'body' in object ? (object.body as ReadableStream) : null
     return finish(sample, new Response(body, { status: 200, headers }), outcome)
   }
-  return null
+  return r2Error ? 'error' : 'missing'
 }
 
 const mediaProxy = {

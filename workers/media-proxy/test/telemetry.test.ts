@@ -149,13 +149,6 @@ describe('isDisguisedScraper', () => {
   it('UA prohlížeče bez Accept pro obrázky a bez Sec-Fetch-Dest = scraper', () => {
     expect(isDisguisedScraper({ userAgent: chrome, accept: '*/*', secFetchDest: null })).toBe(true)
     expect(isDisguisedScraper({ userAgent: chrome, accept: null, secFetchDest: null })).toBe(true)
-    expect(
-      isDisguisedScraper({
-        userAgent: chrome,
-        accept: 'text/html,application/xhtml+xml,*/*;q=0.8',
-        secFetchDest: null,
-      }),
-    ).toBe(true)
   })
   it('skutečný prohlížeč projde: Accept s image/, nebo Sec-Fetch-Dest (i přímé otevření adresy)', () => {
     expect(
@@ -170,6 +163,14 @@ describe('isDisguisedScraper', () => {
       isDisguisedScraper({
         userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_0) Safari/604.1',
         accept: 'image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5',
+        secFetchDest: null,
+      }),
+    ).toBe(false)
+    // staré Safari (< 16.4), přímé otevření adresy fotky: bez Sec-Fetch-Dest, Accept text/html
+    expect(
+      isDisguisedScraper({
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/15.6 Safari/605.1.15',
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         secFetchDest: null,
       }),
     ).toBe(false)
