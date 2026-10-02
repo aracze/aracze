@@ -4,6 +4,7 @@ import {
   buildDataPoint,
   classifyClient,
   formatOf,
+  isDisguisedScraper,
   originBytes,
   widthOf,
   type Sample,
@@ -84,20 +85,20 @@ describe('widthOf / formatOf', () => {
 
 describe('originBytes', () => {
   const base = { outcome: 'cloudinary' as const, bytes: 1000 }
-  it('z keše (HIT, podmíněné dotazy, chybějící hlavička) = 0', () => {
+  it('z keše (HIT, podmíněné dotazy) = 0, i malými písmeny / s mezerami', () => {
     for (const status of ['HIT', 'REVALIDATED', 'STALE', 'UPDATING', 'hit', ' HIT ']) {
       expect(originBytes({ ...base, cacheStatus: status })).toBe(0)
     }
-    // Ověřeno naostro: u opakovaných (zjevně kešovaných) požadavků hlavička občas chybí.
-    expect(originBytes({ ...base, cacheStatus: '' })).toBe(0)
   })
-  it('stažení (MISS, EXPIRED, BYPASS, DYNAMIC) i neznámý stav = celé tělo', () => {
-    for (const status of ['MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC', 'NONE/UNKNOWN', 'novy-stav']) {
+  it('stažení (MISS, EXPIRED, BYPASS, DYNAMIC), CHYBĚJÍCÍ hlavička i neznámý stav = celé tělo', () => {
+    // '' = stažení: ověřeno 5 dny měření (TTFB '' ≈ MISS, ne HIT), viz komentář v kódu.
+    for (const status of ['MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC', '', 'NONE/UNKNOWN', 'novy']) {
       expect(originBytes({ ...base, cacheStatus: status })).toBe(1000)
     }
   })
   it('záloha z R2 ani odmítnutí Cloudinary nestojí', () => {
     expect(originBytes({ outcome: 'fallback', cacheStatus: 'MISS', bytes: 1000 })).toBe(0)
+    expect(originBytes({ outcome: 'backup', cacheStatus: 'MISS', bytes: 1000 })).toBe(0)
     expect(originBytes({ outcome: 'rejected', cacheStatus: '', bytes: 20 })).toBe(0)
   })
 })
@@ -139,5 +140,80 @@ describe('buildDataPoint', () => {
       ],
       doubles: [200, 54321, 54321, 812],
     })
+  })
+})
+
+describe('isDisguisedScraper', () => {
+  const chrome =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36'
+  it('UA prohlížeče bez Accept pro obrázky a bez Sec-Fetch-Dest = scraper', () => {
+    expect(isDisguisedScraper({ userAgent: chrome, accept: '*/*', secFetchDest: null })).toBe(true)
+    expect(isDisguisedScraper({ userAgent: chrome, accept: null, secFetchDest: null })).toBe(true)
+  })
+  it('skutečný prohlížeč projde: Accept s image/, nebo Sec-Fetch-Dest (i přímé otevření adresy)', () => {
+    expect(
+      isDisguisedScraper({
+        userAgent: chrome,
+        accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        secFetchDest: 'image',
+      }),
+    ).toBe(false)
+    // staré Safari: jen image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5
+    expect(
+      isDisguisedScraper({
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_0) Safari/604.1',
+        accept: 'image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5',
+        secFetchDest: null,
+      }),
+    ).toBe(false)
+    // staré Safari (< 16.4), přímé otevření adresy fotky: bez Sec-Fetch-Dest, Accept text/html
+    expect(
+      isDisguisedScraper({
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/15.6 Safari/605.1.15',
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        secFetchDest: null,
+      }),
+    ).toBe(false)
+    // navigace na adresu fotky v moderním prohlížeči: Sec-Fetch-Dest: document
+    expect(
+      isDisguisedScraper({
+        userAgent: chrome,
+        accept: 'text/html,*/*;q=0.8',
+        secFetchDest: 'document',
+      }),
+    ).toBe(false)
+  })
+  it('známí roboti se neblokují (řídí je robots.txt), ani náhledy sociálních sítí', () => {
+    for (const ua of [
+      'Googlebot-Image/1.0',
+      'facebookexternalhit/1.1',
+      'curl/8.0',
+      'GPTBot/1.0',
+      '',
+    ]) {
+      expect(isDisguisedScraper({ userAgent: ua, accept: '*/*', secFetchDest: null })).toBe(false)
+    }
+  })
+  it('klient, který se za prohlížeč nevydává (knihovny, fetchery), se neblokuje', () => {
+    for (const ua of [
+      'Mediapartners-Google',
+      'GoogleOther',
+      'Cardyb/1.1',
+      'http.rb/5.1.1 (Mastodon/4.2.0; +https://example.social/)',
+      'node',
+      'undici',
+      'Mozilla/5.0 (compatible; Neznamy/1.0)', // Mozilla bez engine tokenu
+    ]) {
+      expect(isDisguisedScraper({ userAgent: ua, accept: '*/*', secFetchDest: null })).toBe(false)
+    }
+    // Mediapartners s plným UA Chrome je v seznamu robotů → taky projde.
+    expect(
+      isDisguisedScraper({
+        userAgent:
+          'Mozilla/5.0 (Linux; Android 6.0.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36 (compatible; Mediapartners-Google)',
+        accept: '*/*',
+        secFetchDest: null,
+      }),
+    ).toBe(false)
   })
 })

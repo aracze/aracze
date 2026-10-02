@@ -138,6 +138,212 @@ describe('media proxy: měření (Analytics Engine)', () => {
     })
   })
 
+  describe('strop originálů a režim backup (fetch podvržený)', () => {
+    afterEach(() => vi.unstubAllGlobals())
+    const calls: string[] = []
+    const stubFetch = (status = 200, headers: Record<string, string> = {}) =>
+      vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+        calls.push(String(input))
+        return new Response('x'.repeat(10), {
+          status,
+          headers: { 'content-length': '10', 'cf-cache-status': 'MISS', ...headers },
+        })
+      })
+    const cloudinaryEnv = {
+      ...statsEnv,
+      CLOUDINARY_ORIGIN: 'https://res.cloudinary.com/test',
+      BACKUP_HOST: 'backup.example',
+      BACKUP: { head: async () => null, get: async () => null },
+    } as unknown as Env
+    const browser = { 'user-agent': 'Mozilla/5.0 Safari', accept: 'image/avif,image/webp,*/*' }
+
+    it('fotka bez transformace se stropuje na w_1920 (tvar loaderu, dle Accept)', async () => {
+      calls.length = 0
+      points.length = 0
+      stubFetch()
+      const response = await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/v1753093400/abc.jpg', { headers: browser }),
+        cloudinaryEnv,
+      )
+      expect(response.status).toBe(200)
+      expect(calls).toEqual([
+        'https://res.cloudinary.com/test/image/upload/f_avif,q_auto,c_limit,w_1920/v1753093400/abc.jpg',
+      ])
+      expect(points[0].blobs?.slice(5, 8)).toEqual(['1920', 'avif', 'f_avif,q_auto,c_limit,w_1920'])
+    })
+
+    it('transformace bez rozměru (f_jpg,q_auto) dostane strop také', async () => {
+      calls.length = 0
+      stubFetch()
+      await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/f_jpg,q_auto/v1753093400/abc.jpg', {
+          headers: browser,
+        }),
+        cloudinaryEnv,
+      )
+      expect(calls).toEqual([
+        'https://res.cloudinary.com/test/image/upload/f_jpg,q_auto,c_limit,w_1920/v1753093400/abc.jpg',
+      ])
+    })
+
+    it('MEDIA_SOURCE=backup: 200 s cf-resized err= se bere jako selhání zmenšení (krátká keš originálu)', async () => {
+      stubFetch(200, { 'cf-resized': 'err=9412' })
+      const backupEnv = {
+        ...cloudinaryEnv,
+        MEDIA_SOURCE: 'backup',
+        BACKUP: {
+          head: async () => null,
+          get: async () => ({
+            size: 5,
+            body: new Response('orig!').body,
+            writeHttpMetadata: (h: Headers) => h.set('content-type', 'image/jpeg'),
+          }),
+        },
+      } as unknown as Env
+      const response = await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/f_auto,q_auto,c_limit,w_640/v1/abc.jpg', {
+          headers: browser,
+        }),
+        backupEnv,
+      )
+      expect(response.status).toBe(200)
+      expect(response.headers.get('cache-control')).toBe('public, max-age=300')
+    })
+
+    it('raw (SVG) se nestropuje', async () => {
+      calls.length = 0
+      stubFetch()
+      await mediaProxy.fetch(
+        new Request('https://media.ara.cz/raw/upload/v1753093400/ikona.svg', { headers: browser }),
+        cloudinaryEnv,
+      )
+      expect(calls).toEqual(['https://res.cloudinary.com/test/raw/upload/v1753093400/ikona.svg'])
+    })
+
+    it('MEDIA_SOURCE=backup: Cloudinary se nevolá, R2 + Image Transformations s dlouhou keší, bez R2 HEAD', async () => {
+      calls.length = 0
+      points.length = 0
+      stubFetch(200, { 'cf-cache-status': 'HIT', 'content-type': 'image/avif' })
+      const head = vi.fn(async () => ({ size: 10 }))
+      const get = vi.fn(async () => null)
+      const backupEnv = {
+        ...cloudinaryEnv,
+        MEDIA_SOURCE: 'backup',
+        BACKUP: { head, get },
+      } as unknown as Env
+      const response = await mediaProxy.fetch(
+        new Request(
+          'https://media.ara.cz/image/upload/f_auto,q_auto,c_limit,w_640/v1753093400/abc.jpg',
+          { headers: browser },
+        ),
+        backupEnv,
+      )
+      expect(response.status).toBe(200)
+      expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+      expect(response.headers.get('x-upstream-cache')).toBe('HIT')
+      // Verze v query: klíč v R2 ji nenese, keš zmenšeniny ano (výměna fotky).
+      expect(calls).toEqual(['https://backup.example/abc.jpg?v=1753093400'])
+      // Zásah keše zmenšeniny nesmí stát R2 operaci (CodeRabbit, PR #119).
+      expect(head).not.toHaveBeenCalled()
+      expect(get).not.toHaveBeenCalled()
+      expect(points[0].blobs?.slice(0, 2)).toEqual(['backup', 'HIT'])
+      expect(points[0].doubles?.[2]).toBe(0)
+    })
+
+    it('MEDIA_SOURCE=backup: když zmenšování selže, surový originál jen s krátkou keší', async () => {
+      stubFetch(503)
+      const backupEnv = {
+        ...cloudinaryEnv,
+        MEDIA_SOURCE: 'backup',
+        BACKUP: {
+          head: async () => null,
+          get: async () => ({
+            size: 5,
+            body: new Response('orig!').body,
+            writeHttpMetadata: (h: Headers) => h.set('content-type', 'image/jpeg'),
+          }),
+        },
+      } as unknown as Env
+      const response = await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/f_auto,q_auto,c_limit,w_640/v1/abc.jpg', {
+          headers: browser,
+        }),
+        backupEnv,
+      )
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toBe('image/jpeg')
+      // NE roční immutable — pod adresou varianty nesmí zůstat originál.
+      expect(response.headers.get('cache-control')).toBe('public, max-age=300')
+    })
+
+    it('MEDIA_SOURCE=backup: legacy adresa bez verze má jen denní keš', async () => {
+      stubFetch()
+      const backupEnv = { ...cloudinaryEnv, MEDIA_SOURCE: 'backup' } as unknown as Env
+      const response = await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/c_fit,w_790/abc', { headers: browser }),
+        backupEnv,
+      )
+      expect(response.headers.get('cache-control')).toBe('public, max-age=86400')
+    })
+
+    it('MEDIA_SOURCE=backup: zmenšování selže a R2 vyhodí výjimku = 503 no-store, ne 404', async () => {
+      stubFetch(503)
+      const brokenEnv = {
+        ...cloudinaryEnv,
+        MEDIA_SOURCE: 'backup',
+        BACKUP: {
+          head: async () => null,
+          get: async () => {
+            throw new Error('R2 down')
+          },
+        },
+      } as unknown as Env
+      const response = await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/v1/abc.jpg', { headers: browser }),
+        brokenEnv,
+      )
+      expect(response.status).toBe(503)
+      expect(response.headers.get('cache-control')).toBe('no-store')
+    })
+
+    it('MEDIA_SOURCE=backup: objekt mimo zálohu (404 z bucketu, nic v R2) = 404 unavailable', async () => {
+      calls.length = 0
+      points.length = 0
+      stubFetch(404)
+      const backupEnv = { ...cloudinaryEnv, MEDIA_SOURCE: 'backup' } as unknown as Env
+      const response = await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/v1/chybi.jpg', { headers: browser }),
+        backupEnv,
+      )
+      expect(response.status).toBe(404)
+      expect(calls).toEqual(['https://backup.example/chybi.jpg?v=1'])
+      expect(points[0].blobs?.[0]).toBe('unavailable')
+    })
+  })
+
+  it('maskovaný scraper dostane 403 bez volání sítě, zapíše se outcome blocked', async () => {
+    points.length = 0
+    const response = await mediaProxy.fetch(
+      new Request('https://media.ara.cz/image/upload/f_auto,q_auto,c_limit,w_640/v1/abc.jpg', {
+        headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0) Chrome/128.0 Safari/537.36' },
+      }),
+      statsEnv,
+    )
+    expect(response.status).toBe(403)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(points[0].blobs?.slice(0, 3)).toEqual(['blocked', '', 'browser'])
+    // SVG (raw) pravidlo nehlídá — ikony tahají i nástroje bez Accept.
+    const raw = await mediaProxy
+      .fetch(
+        new Request('https://media.ara.cz/raw/upload/v1/ikona.svg', {
+          headers: { 'user-agent': 'Mozilla/5.0 Chrome/128.0 Safari/537.36' },
+        }),
+        { ...statsEnv, CLOUDINARY_ORIGIN: 'https://res.cloudinary.com/test' } as unknown as Env,
+      )
+      .catch(() => null)
+    expect(raw === null || raw.status !== 403).toBe(true)
+  })
+
   it('chyba měření neshodí odpověď', async () => {
     const broken = {
       STATS: {

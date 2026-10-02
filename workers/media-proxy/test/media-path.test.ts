@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  capTransform,
   cfImageOptions,
   deriveR2Keys,
   isValidTransform,
   negotiateFormat,
   parsePath,
   robotsTxt,
+  BLOCKED_CRAWLERS,
+  CRAWLER_ALLOWED_TRANSFORMS,
   signTransform,
   TRAINING_BOTS,
 } from '../src/media-path'
@@ -176,6 +179,7 @@ describe('cfImageOptions', () => {
       width: 640,
       fit: 'scale-down',
       format: 'avif',
+      quality: 80,
     })
   })
 
@@ -186,6 +190,7 @@ describe('cfImageOptions', () => {
       fit: 'cover',
       gravity: 'auto',
       format: 'webp',
+      quality: 80,
     })
   })
 
@@ -200,6 +205,22 @@ describe('cfImageOptions', () => {
 
   it('bez transformace vrací null (podá se originál)', () => {
     expect(cfImageOptions(null)).toBeNull()
+  })
+})
+
+describe('capTransform', () => {
+  it('bez transformace → tvar loaderu s w_1920; raw beze změny', () => {
+    expect(capTransform(null, 'image')).toBe('f_auto,q_auto,c_limit,w_1920')
+    expect(capTransform(null, 'raw')).toBeNull()
+  })
+  it('transformace se šířkou nebo výškou se nemění', () => {
+    expect(capTransform('f_auto,q_auto,c_limit,w_640', 'image')).toBe('f_auto,q_auto,c_limit,w_640')
+    expect(capTransform('c_fill,g_auto,h_44', 'image')).toBe('c_fill,g_auto,h_44')
+  })
+  it('transformace bez rozměru dostane strop (c_limit jen když chybí ořez)', () => {
+    expect(capTransform('f_jpg,q_auto', 'image')).toBe('f_jpg,q_auto,c_limit,w_1920')
+    expect(capTransform('q_auto', 'image')).toBe('q_auto,c_limit,w_1920')
+    expect(capTransform('c_fill,g_auto,ar_1:1', 'image')).toBe('c_fill,g_auto,ar_1:1,w_1920')
   })
 })
 
@@ -232,13 +253,22 @@ describe('náhled adminu Payloadu', () => {
 })
 
 describe('robotsTxt', () => {
-  it('všem povolí vše a trénovacím botům zakáže vše', () => {
+  it('běžným robotům jen vybrané šířky, Baidu a trénovacím botům nic', () => {
     const text = robotsTxt()
-    expect(text.startsWith('User-Agent: *\nAllow: /\n\n')).toBe(true)
+    // Běžní roboti: fotky jen ve vybraných šířkách (nejdelší shoda vyhrává), SVG volně.
+    expect(text.startsWith('User-Agent: *\nDisallow: /image/upload/\n')).toBe(true)
+    for (const pattern of CRAWLER_ALLOWED_TRANSFORMS) {
+      expect(text).toContain(`Allow: /image/upload/${pattern}\n`)
+    }
+    expect(text).toContain('Allow: /raw/upload/\n\n')
+    // Vzory musí odpovídat tvarům, které web generuje (konec segmentu = šířka).
+    expect(CRAWLER_ALLOWED_TRANSFORMS).toEqual(['*,w_640/', '*,w_1200/', 'c_fit,w_790/'])
+    for (const bot of BLOCKED_CRAWLERS) expect(text).toContain(`User-Agent: ${bot}\n`)
     for (const bot of TRAINING_BOTS) expect(text).toContain(`User-Agent: ${bot}\n`)
     expect(text.endsWith('Disallow: /\n')).toBe(true)
-    // Jediný zákaz je ten společný pro trénovací skupinu.
-    expect(text.match(/Disallow:/g)).toHaveLength(1)
+    // Přesně dva zákazy: prefix fotek pro všechny a úplný pro Baidu + trénovací skupinu.
+    expect(text.match(/Disallow:/g)).toHaveLength(2)
+    expect(text.match(/Disallow: \/\n/g)).toHaveLength(1)
   })
 
   it('má stejný seznam trénovacích botů jako src/app/robots.ts', () => {

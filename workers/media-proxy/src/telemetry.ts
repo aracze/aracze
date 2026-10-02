@@ -8,9 +8,11 @@
 /** Co se s požadavkem stalo (index pro vzorkování + blob1). */
 export type Outcome =
   | 'cloudinary' // odpověď z upstreamu (stav edge keše viz cacheStatus)
+  | 'backup' // záloha z R2 jako hlavní zdroj (MEDIA_SOURCE=backup)
   | 'fallback' // záloha z R2 (Cloudinary neodpověděla)
   | 'unavailable' // ani Cloudinary, ani záloha
   | 'rejected' // 400/404 z parsování cesty
+  | 'blocked' // 403: „prohlížeč“ bez Accept pro obrázky (maskovaný scraper)
   | 'robots' // /robots.txt
   | 'method' // 405
 
@@ -34,6 +36,16 @@ export interface Sample {
 const SEARCH_BOTS = [
   'googlebot-image',
   'googlebot',
+  // Další Google fetchery (AdSense, inspekce, feedy…) — nesmí spadnout do
+  // „browser" a dostat 403 od isDisguisedScraper.
+  'mediapartners-google',
+  'adsbot-google',
+  'googleother',
+  'feedfetcher-google',
+  'google-inspectiontool',
+  'storebot-google',
+  'google-read-aloud',
+  'google-safety',
   'bingbot',
   'bingpreview',
   'yandex',
@@ -91,6 +103,17 @@ const OTHER_BOTS = [
   'python-urllib',
   'go-http-client',
   'okhttp',
+  'cardyb', // Bluesky náhledy
+  'mastodon',
+  'http.rb',
+  'undici',
+  'node',
+  'deno',
+  'axios',
+  'scrapy',
+  'aiohttp',
+  'httpx',
+  'guzzle',
   'curl/',
   'wget/',
   'java/',
@@ -116,6 +139,39 @@ export function classifyClient(userAgent: string | null): { client: ClientClass;
   return { client: 'browser', bot: '' }
 }
 
+/**
+ * Maskovaný scraper: hlásí se jako prohlížeč, ale chová se jinak — skutečný
+ * prohlížeč posílá u obrázku `Accept` s `image/…` (Chrome, Firefox, Safari
+ * i staré verze) a moderní navíc `Sec-Fetch-Dest`. V 9/2026 dělali takoví
+ * klienti (BD, BR, VN, IN…) ~45 % požadavků a ~60 % přenosu. Známí roboti
+ * (vyhledávače, náhledy sociálních sítí, curl…) sem nespadají — ty řídí
+ * robots.txt. Navigace na adresu fotky (otevření v nové záložce) má Accept
+ * s `text/html` — i ve starém Safari bez Sec-Fetch-Dest — a projde; blokuje
+ * se jen holé `*\/*` / chybějící Accept, typické pro HTTP knihovny.
+ * Blokuje se jen klient, který se VÝSLOVNĚ vydává za prohlížeč (Mozilla/5.0
+ * + engine token) — neznámý UA bez tohoto nároku (knihovny, fetchery) projde,
+ * aby heuristika classifyClient (stačí pro statistiku) nerozhodovala o 403.
+ */
+export function looksLikeBrowser(userAgent: string | null): boolean {
+  const ua = userAgent ?? ''
+  return (
+    /mozilla\/5\.0/i.test(ua) &&
+    /\b(chrome|crios|firefox|fxios|safari|edg[a-z]?|opr|version)\//i.test(ua)
+  )
+}
+
+export function isDisguisedScraper(facts: {
+  userAgent: string | null
+  accept: string | null
+  secFetchDest: string | null
+}): boolean {
+  if (!looksLikeBrowser(facts.userAgent)) return false
+  if (classifyClient(facts.userAgent).client !== 'browser') return false
+  if (facts.secFetchDest !== null) return false
+  const accept = facts.accept ?? ''
+  return !/image\//i.test(accept) && !/text\/html/i.test(accept)
+}
+
 /** Nejlepší moderní formát, který klient hlásí v Accept (stejná logika jako negotiateFormat). */
 export function acceptClass(accept: string | null): 'avif' | 'webp' | 'none' {
   const value = accept ?? ''
@@ -137,14 +193,14 @@ export function formatOf(transform: string | null): string {
 }
 
 /**
- * Stavy edge keše, při kterých Worker tělo z Cloudinary NEstahuje: HIT,
- * podmíněné dotazy (REVALIDATED / STALE / UPDATING) a chybějící hlavička.
- * Prázdný stav = keš je ověřeno naostro 27. 9. 2026: u opakovaných požadavků
- * `cf-cache-status` občas chybí (odpověď ~150 ms), zatímco skutečné stažení
- * hlásí MISS vždy (~1 s). Cokoli jiného (MISS, EXPIRED, BYPASS, DYNAMIC,
- * neznámé hodnoty) se konzervativně počítá jako stažení.
+ * Stavy edge keše, při kterých Worker tělo z Cloudinary NEstahuje: HIT
+ * a podmíněné dotazy (REVALIDATED / STALE / UPDATING). Chybějící hlavička
+ * se počítá jako STAŽENÍ: 5 dní měření (27. 9.–2. 10. 2026) ukázalo TTFB
+ * u '' 480 ms / p90 1 026 ms = stejné jako MISS (566 / 1 127), zatímco HIT má
+ * 28 / 50 ms. Takto spočtený přenos sedí s grafem Cloudinary (~300 MB/den).
+ * Cokoli neznámého se konzervativně počítá jako stažení.
  */
-const CACHE_SERVED_STATUSES = new Set(['', 'HIT', 'REVALIDATED', 'STALE', 'UPDATING'])
+const CACHE_SERVED_STATUSES = new Set(['HIT', 'REVALIDATED', 'STALE', 'UPDATING'])
 
 /**
  * Bajty, které Worker reálně stáhl z Cloudinary — přesně tohle Cloudinary
