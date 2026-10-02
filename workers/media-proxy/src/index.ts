@@ -6,6 +6,7 @@
 // Čistá logika cest je v media-path.ts, tady jen síť a hlavičky.
 
 import {
+  capTransform,
   cfImageOptions,
   deriveR2Keys,
   negotiateFormat,
@@ -47,16 +48,14 @@ const IMMUTABLE_CACHE = `public, max-age=${YEAR_SECONDS}, immutable`
 /** Bez verze (legacy adresy) by výměna fotky pod stejným jménem zůstala v keši. */
 const UNVERSIONED_CACHE = `public, max-age=${DAY_SECONDS}`
 /** Nouzový režim jen krátce — po oživení Cloudinary se rychle vrátí zmenšeniny. */
-const FALLBACK_CACHE = 'public, max-age=300'
 const FALLBACK_TTL = 300
+const FALLBACK_CACHE = `public, max-age=${FALLBACK_TTL}`
 /**
- * Fotka bez transformace (adresy originálů z RSC payloadu a starých indexů)
- * má 1,5–3 MB a v 9/2026 dělala ~40 % přenosu z Cloudinary — stahovali je
- * Googlebot-Image a scrapeři. Originál se proto vždy stropuje na šířku hlavní
- * fotky, stejným tvarem jako next/image loader (sdílí už existující
- * odvozeniny). `raw` (SVG) se nestropuje.
+ * `cacheTtl` by kešovalo i chyby na celou dobu (404 z bucketu = objekt ještě
+ * nezrcadlený → rok „Image unavailable"). Po stavech: úspěch dlouho, 404 chvíli,
+ * chyby serveru vůbec.
  */
-const ORIGINAL_CAP_TRANSFORM = 'f_auto,q_auto,c_limit,w_1920'
+const cacheTtlByStatus = (ttl: number) => ({ '200-299': ttl, '404': 60, '500-599': 0 })
 /**
  * robots.txt: hlavička je pro keše botů (Google si ho drží až 24 h), ne pro edge —
  * custom doména Workeru volá Worker vždy a odpověď bez subrequestu se na edge
@@ -171,8 +170,9 @@ function serve(request: Request, env: Env, sample: Sample): Promise<Response> | 
       'blocked',
     )
   }
-  const requested =
-    parsed.path.transform ?? (resourceType === 'image' ? ORIGINAL_CAP_TRANSFORM : null)
+  // Fotka bez šířky dostane strop (viz capTransform) — originály ani
+  // „f_jpg,q_auto" nesmí ven v plné velikosti.
+  const requested = capTransform(parsed.path.transform, resourceType)
   // f_auto → konkrétní formát dle Accept (Cloudflare keš ignoruje Vary).
   const transform = negotiateFormat(requested, request.headers.get('accept') ?? '')
   sample.transform = transform
@@ -236,7 +236,7 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
   try {
     upstream = await fetch(upstreamUrl, {
       signal: AbortSignal.timeout(10_000),
-      cf: { cacheEverything: true, cacheTtl: longCache.cacheTtl },
+      cf: { cacheEverything: true, cacheTtlByStatus: cacheTtlByStatus(longCache.cacheTtl) },
     })
   } catch {
     upstream = undefined
@@ -275,57 +275,77 @@ interface BackupOptions {
 }
 
 /**
- * Záloha z R2: pokud možno zmenšená přes Cloudflare Image Transformations
- * (zdroj = custom doména bucketu), jinak surový originál. `raw` (SVG) se podává
- * tak, jak je. Vrací 'missing', když objekt v záloze není, a 'error', když R2
- * selhalo (výjimka bindingu) — volající rozhodne o 404 vs. 503.
+ * Záloha z R2. Pořadí: 1) zmenšenina přes Cloudflare Image Transformations
+ * ze zdroje = custom doména bucketu — BEZ dotazu do R2, takže zásah edge keše
+ * nestojí ani R2 operaci, ani latenci; 2) surový originál přímo z bucketu jen
+ * jako záchrana (zmenšování selhalo) nebo pro `raw` (SVG). Vrací 'missing',
+ * když objekt v záloze není, a 'error', když R2 selhalo (výjimka bindingu) —
+ * volající rozhodne o 404 vs. 503.
  */
 async function serveFromBackup(
   ctx: MediaContext,
   options: BackupOptions,
 ): Promise<Response | 'missing' | 'error'> {
-  const { env, isHead, resourceType, key, transform, sample } = ctx
+  const { env, isHead, resourceType, version, key, transform, sample } = ctx
   const { cacheControl, cacheTtl, outcome } = options
   const imageOptions = resourceType === 'image' ? cfImageOptions(transform) : null
+  // Klíč v R2 verzi nenese (hook přepisuje stejný objekt). Keš zmenšeniny je
+  // klíčovaná URL subrequestu, proto verzi přidáme jako query (bucket ji
+  // ignoruje) — jinak by po výměně fotky pod stejným jménem rok ležela stará.
+  const versionQuery = version ? `?v=${version.replace(/\D/g, '')}` : ''
   let r2Error = false
   const r2Failed = () => {
     r2Error = true
     return null
   }
   for (const r2Key of deriveR2Keys(key)) {
-    // Chyba R2 bindingu (výjimka, ne jen miss) nesmí shodit celý požadavek —
-    // radši řízená odpověď níž než neodchycená 1101.
-    const exists = await env.BACKUP.head(r2Key).catch(r2Failed)
-    if (!exists) continue
-
     if (imageOptions) {
       const started = Date.now()
       try {
-        const resized = await fetch(`https://${env.BACKUP_HOST}/${encodeURI(r2Key)}`, {
-          signal: AbortSignal.timeout(10_000),
-          cf: { image: imageOptions, cacheEverything: true, cacheTtl },
-        })
+        const resized = await fetch(
+          `https://${env.BACKUP_HOST}/${encodeURI(r2Key)}${versionQuery}`,
+          {
+            signal: AbortSignal.timeout(10_000),
+            cf: {
+              image: imageOptions,
+              cacheEverything: true,
+              cacheTtlByStatus: cacheTtlByStatus(cacheTtl),
+            },
+          },
+        )
         // V režimu backup je tohle „ten" subrequest — měří se jako u Cloudinary.
         if (outcome === 'backup') {
           sample.durationMs = Date.now() - started
           sample.cacheStatus = resized.headers.get('cf-cache-status') ?? ''
         }
-        if (resized.ok) return finish(sample, buildResponse(resized, cacheControl, isHead), outcome)
+        // Obrana: kdyby zmenšování pustilo originál s 200 a `cf-resized: err=…`,
+        // nesmí pod adresou varianty skončit v roční keši — jde to na krátkou níž.
+        const resizeFailed = resized.headers.get('cf-resized')?.includes('err=') ?? false
+        if (resized.ok && !resizeFailed) {
+          return finish(sample, buildResponse(resized, cacheControl, isHead), outcome)
+        }
         void resized.body?.cancel()
+        // 404 z bucketu = pod tímto klíčem nic není → další kandidát klíče.
+        if (resized.status === 404) continue
       } catch {
-        // zmenšování nedostupné (kvóta/vypnuto) → poslední záchrana níž
+        // zmenšování nedostupné (kvóta/vypnuto/timeout) → poslední záchrana níž
       }
     }
 
-    // Poslední záchrana: surový originál přímo z bucketu.
-    // HEAD obsloužíme z metadat (exists), ať se tělo z R2 zbytečně nestahuje.
-    const object = isHead ? exists : await env.BACKUP.get(r2Key).catch(r2Failed)
+    // Poslední záchrana: surový originál přímo z bucketu. U fotek VŽDY jen
+    // s krátkou keší — pod adresou varianty nesmí rok ležet 2MB originál,
+    // jakmile se zmenšování vzpamatuje. SVG (raw) dostane běžnou keš.
+    // Chyba R2 bindingu (výjimka) nesmí shodit požadavek — radši 'error' níž.
+    // HEAD obsloužíme z metadat, ať se tělo z R2 zbytečně nestahuje.
+    const object = isHead
+      ? await env.BACKUP.head(r2Key).catch(r2Failed)
+      : await env.BACKUP.get(r2Key).catch(r2Failed)
     if (!object) continue
     const headers = new Headers()
     object.writeHttpMetadata(headers)
     if (!headers.get('content-type')) headers.set('content-type', 'application/octet-stream')
     headers.set('content-length', String(object.size))
-    headers.set('cache-control', cacheControl)
+    headers.set('cache-control', imageOptions ? FALLBACK_CACHE : cacheControl)
     headers.set('vary', 'Accept')
     headers.set('x-content-type-options', 'nosniff')
     const body = !isHead && 'body' in object ? (object.body as ReadableStream) : null

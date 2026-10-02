@@ -199,6 +199,25 @@ export function deriveR2Keys(key: string): string[] {
   return ['jpg', 'png', 'webp'].map((extension) => `${decoded}.${extension}`)
 }
 
+/** Strop pro fotky bez šířky (hlavní fotka webu, viz MAX_IMAGE_WIDTH v appu). */
+export const ORIGINAL_CAP_WIDTH = 1920
+
+/**
+ * Fotka bez omezení velikosti (žádná transformace, nebo transformace bez
+ * `w_`/`h_` jako `f_jpg,q_auto`) by šla ven jako originál o 1,5–3 MB — v 9/2026
+ * ~40 % přenosu (adresy originálů z RSC payloadu stahoval Googlebot-Image
+ * a scrapeři). Doplní se strop na šířku hlavní fotky; bez transformace stejným
+ * tvarem jako next/image loader (sdílí existující odvozeniny). `raw` (SVG) ne.
+ */
+export function capTransform(transform: string | null, resourceType: string): string | null {
+  if (resourceType !== 'image') return transform
+  if (transform === null) return `f_auto,q_auto,c_limit,w_${ORIGINAL_CAP_WIDTH}`
+  const components = transform.split(',')
+  if (components.some((c) => /^[wh]_\d+$/.test(c))) return transform
+  const hasCrop = components.some((c) => /^c_/.test(c))
+  return `${transform},${hasCrop ? '' : 'c_limit,'}w_${ORIGINAL_CAP_WIDTH}`
+}
+
 /** Podmnožina voleb Cloudflare Image Transformations, kterou používáme. */
 export type CfImageOptions = {
   width?: number
@@ -227,6 +246,9 @@ export function cfImageOptions(transform: string | null): CfImageOptions | null 
     else if (component === 'c_fill') options.fit = 'cover'
     else if (component === 'g_auto') options.gravity = 'auto'
     else if ((match = component.match(/^q_(\d+)$/))) options.quality = Number(match[1])
+    // q_auto nemá u Cloudflare protějšek; bez hodnoty by kódoval výchozích 85
+    // (znatelně větší soubory než Cloudinary q_auto). 80 ≈ Cloudinary „good".
+    else if (component === 'q_auto') options.quality = 80
     else if ((match = component.match(/^ar_(\d+):(\d+)$/))) {
       aspectWidth = Number(match[1])
       aspectHeight = Number(match[2])

@@ -13,7 +13,14 @@ Frontend na proxy přepisuje adresy přes `toMediaProxy`
   klouzavá 30denní spotřeba klesne a půjde downgrade na Free. Náklad: Image
   Transformations 5 000 unikátních variant/měsíc zdarma, dál 0,50 $/1 000
   (sledovat v dashboardu Images). Během pauzy se nenahrávají nové fotky.
-  Objekt mimo zálohu = 404; chyba R2 (výjimka bindingu) = 503 `no-store`.
+  Zmenšenina se bere rovnou přes Image Transformations z custom domény bucketu
+  (zásah keše nestojí žádnou R2 operaci); surový originál z R2 jen když
+  zmenšování selže, a to vždy jen s krátkou keší (pod adresou varianty nesmí
+  rok ležet originál). Objekt mimo zálohu = 404; chyba R2 = 503 `no-store`.
+  Keš zmenšeniny nese verzi z adresy jako `?v=…` (klíč v R2 verzi nemá —
+  výměna fotky pod stejným jménem by jinak rok ukazovala starou), chyby se
+  kešují jen krátce (`cacheTtlByStatus`: 404 minutu, 5xx vůbec). `q_auto`
+  se mapuje na `quality: 80` (Cloudflare výchozí 85 = větší soubory).
 - `cloudinary` (výchozí, když proměnná chybí): původní chování níže.
 
 Přepnutí = změna hodnoty ve `wrangler.jsonc` + deploy (nebo jednorázově
@@ -30,8 +37,9 @@ Přepnutí = změna hodnoty ve `wrangler.jsonc` + deploy (nebo jednorázově
    Krátká keš (5 min), ať se po oživení rychle vrátí normál.
 3. **Strop originálů:** fotka bez transformace (adresy originálů z RSC payloadu,
    staré indexy) se podává jako `f_auto,q_auto,c_limit,w_1920` — stejný tvar
-   jako next/image loader. Originály mají 1,5–3 MB a v 9/2026 dělaly ~40 %
-   přenosu (Googlebot-Image, scrapeři). `raw` (SVG) se nestropuje.
+   jako next/image loader; transformace bez `w_`/`h_` (např. `f_jpg,q_auto`)
+   dostane `c_limit,w_1920` navíc (`capTransform`). Originály mají 1,5–3 MB
+   a v 9/2026 dělaly ~40 % přenosu (Googlebot-Image, scrapeři). `raw` (SVG) ne.
 4. **Ochrany:** jen GET/HEAD; jen `/image/upload/` a `/raw/upload/`
    (`/image/fetch/` = 404); transformační segment musí projít whitelistem
    (jinak 400 — nikdo přes nás nerazí varianty a nepálí kredity);
@@ -83,25 +91,25 @@ zóna, dlouhý ocas variant) — proto režim `backup`. Kontrolní dotaz přes
 `double4` je níže.
 Schéma (pořadí je smlouva, hlídá ho test `test/telemetry.test.ts`):
 
-| Sloupec   | Obsah                                                                                                           |
-| --------- | --------------------------------------------------------------------------------------------------------------- |
-| `index1`  | výsledek (viz `blob1`) — klíč vzorkování                                                                        |
-| `blob1`   | výsledek: `cloudinary` / `backup` (R2 hlavní) / `fallback` (R2 nouzově) / `unavailable` / `rejected` / `robots` |
-| `blob2`   | `cf-cache-status` subrequestu (Cloudinary; v režimu backup zmenšení z R2)                                       |
-| `blob3`   | třída klienta: `browser` / `search-bot` / `ai-bot` / `other-bot`                                                |
-| `blob4`   | jméno robota (`googlebot-image`, `gptbot`, `curl`…), u prohlížeče prázdné                                       |
-| `blob5`   | co klient umí podle `Accept`: `avif` / `webp` / `none`                                                          |
-| `blob6`   | šířka z transformace (`640`), bez šířky prázdné                                                                 |
-| `blob7`   | doručený formát: `avif` / `webp` / `png` / `jpg` / `orig`                                                       |
-| `blob8`   | celá transformace po vyjednání formátu                                                                          |
-| `blob9`   | `image` / `raw`                                                                                                 |
-| `blob10`  | `versioned` / `legacy` (adresa bez `v123`)                                                                      |
-| `blob11`  | země klienta (ISO kód)                                                                                          |
-| `blob12`  | metoda (`GET` / `HEAD`)                                                                                         |
-| `double1` | HTTP stav odpovědi                                                                                              |
-| `double2` | `content-length` odpovědi (0 = neznámá)                                                                         |
-| `double3` | bajty stažené z Cloudinary podle pravidla ve Workeru (`originBytes`; keš = 0)                                   |
-| `double4` | doba subrequestu na Cloudinary do příchodu hlaviček (TTFB) v ms; 0 = bez něj                                    |
+| Sloupec   | Obsah                                                                                                                                              |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index1`  | výsledek (viz `blob1`) — klíč vzorkování                                                                                                           |
+| `blob1`   | výsledek: `cloudinary` / `backup` (R2 hlavní) / `fallback` (R2 nouzově) / `unavailable` / `rejected` / `blocked` (403) / `robots` / `method` (405) |
+| `blob2`   | `cf-cache-status` subrequestu (Cloudinary; v režimu backup zmenšení z R2)                                                                          |
+| `blob3`   | třída klienta: `browser` / `search-bot` / `ai-bot` / `other-bot`                                                                                   |
+| `blob4`   | jméno robota (`googlebot-image`, `gptbot`, `curl`…), u prohlížeče prázdné                                                                          |
+| `blob5`   | co klient umí podle `Accept`: `avif` / `webp` / `none`                                                                                             |
+| `blob6`   | šířka z transformace (`640`), bez šířky prázdné                                                                                                    |
+| `blob7`   | doručený formát: `avif` / `webp` / `png` / `jpg` / `orig`                                                                                          |
+| `blob8`   | celá transformace po vyjednání formátu                                                                                                             |
+| `blob9`   | `image` / `raw`                                                                                                                                    |
+| `blob10`  | `versioned` / `legacy` (adresa bez `v123`)                                                                                                         |
+| `blob11`  | země klienta (ISO kód)                                                                                                                             |
+| `blob12`  | metoda (`GET` / `HEAD`)                                                                                                                            |
+| `double1` | HTTP stav odpovědi                                                                                                                                 |
+| `double2` | `content-length` odpovědi (0 = neznámá)                                                                                                            |
+| `double3` | bajty stažené z Cloudinary podle pravidla ve Workeru (`originBytes`; keš = 0)                                                                      |
+| `double4` | doba subrequestu na Cloudinary do příchodu hlaviček (TTFB) v ms; 0 = bez něj                                                                       |
 
 `double3` je pohodlí, ale pravidlo je zapečené do dat — po každé změně pravidla
 nesou staré řádky starou verzi. Pro srovnání přes delší období proto počítej

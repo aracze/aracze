@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  capTransform,
   cfImageOptions,
   deriveR2Keys,
   isValidTransform,
@@ -178,6 +179,7 @@ describe('cfImageOptions', () => {
       width: 640,
       fit: 'scale-down',
       format: 'avif',
+      quality: 80,
     })
   })
 
@@ -188,6 +190,7 @@ describe('cfImageOptions', () => {
       fit: 'cover',
       gravity: 'auto',
       format: 'webp',
+      quality: 80,
     })
   })
 
@@ -202,6 +205,22 @@ describe('cfImageOptions', () => {
 
   it('bez transformace vrací null (podá se originál)', () => {
     expect(cfImageOptions(null)).toBeNull()
+  })
+})
+
+describe('capTransform', () => {
+  it('bez transformace → tvar loaderu s w_1920; raw beze změny', () => {
+    expect(capTransform(null, 'image')).toBe('f_auto,q_auto,c_limit,w_1920')
+    expect(capTransform(null, 'raw')).toBeNull()
+  })
+  it('transformace se šířkou nebo výškou se nemění', () => {
+    expect(capTransform('f_auto,q_auto,c_limit,w_640', 'image')).toBe('f_auto,q_auto,c_limit,w_640')
+    expect(capTransform('c_fill,g_auto,h_44', 'image')).toBe('c_fill,g_auto,h_44')
+  })
+  it('transformace bez rozměru dostane strop (c_limit jen když chybí ořez)', () => {
+    expect(capTransform('f_jpg,q_auto', 'image')).toBe('f_jpg,q_auto,c_limit,w_1920')
+    expect(capTransform('q_auto', 'image')).toBe('q_auto,c_limit,w_1920')
+    expect(capTransform('c_fill,g_auto,ar_1:1', 'image')).toBe('c_fill,g_auto,ar_1:1,w_1920')
   })
 })
 

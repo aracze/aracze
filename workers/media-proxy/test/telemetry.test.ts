@@ -194,4 +194,26 @@ describe('isDisguisedScraper', () => {
       expect(isDisguisedScraper({ userAgent: ua, accept: '*/*', secFetchDest: null })).toBe(false)
     }
   })
+  it('klient, který se za prohlížeč nevydává (knihovny, fetchery), se neblokuje', () => {
+    for (const ua of [
+      'Mediapartners-Google',
+      'GoogleOther',
+      'Cardyb/1.1',
+      'http.rb/5.1.1 (Mastodon/4.2.0; +https://example.social/)',
+      'node',
+      'undici',
+      'Mozilla/5.0 (compatible; Neznamy/1.0)', // Mozilla bez engine tokenu
+    ]) {
+      expect(isDisguisedScraper({ userAgent: ua, accept: '*/*', secFetchDest: null })).toBe(false)
+    }
+    // Mediapartners s plným UA Chrome je v seznamu robotů → taky projde.
+    expect(
+      isDisguisedScraper({
+        userAgent:
+          'Mozilla/5.0 (Linux; Android 6.0.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36 (compatible; Mediapartners-Google)',
+        accept: '*/*',
+        secFetchDest: null,
+      }),
+    ).toBe(false)
+  })
 })

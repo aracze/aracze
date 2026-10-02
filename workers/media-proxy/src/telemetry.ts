@@ -36,6 +36,16 @@ export interface Sample {
 const SEARCH_BOTS = [
   'googlebot-image',
   'googlebot',
+  // Další Google fetchery (AdSense, inspekce, feedy…) — nesmí spadnout do
+  // „browser" a dostat 403 od isDisguisedScraper.
+  'mediapartners-google',
+  'adsbot-google',
+  'googleother',
+  'feedfetcher-google',
+  'google-inspectiontool',
+  'storebot-google',
+  'google-read-aloud',
+  'google-safety',
   'bingbot',
   'bingpreview',
   'yandex',
@@ -93,6 +103,17 @@ const OTHER_BOTS = [
   'python-urllib',
   'go-http-client',
   'okhttp',
+  'cardyb', // Bluesky náhledy
+  'mastodon',
+  'http.rb',
+  'undici',
+  'node',
+  'deno',
+  'axios',
+  'scrapy',
+  'aiohttp',
+  'httpx',
+  'guzzle',
   'curl/',
   'wget/',
   'java/',
@@ -127,12 +148,24 @@ export function classifyClient(userAgent: string | null): { client: ClientClass;
  * robots.txt. Navigace na adresu fotky (otevření v nové záložce) má Accept
  * s `text/html` — i ve starém Safari bez Sec-Fetch-Dest — a projde; blokuje
  * se jen holé `*\/*` / chybějící Accept, typické pro HTTP knihovny.
+ * Blokuje se jen klient, který se VÝSLOVNĚ vydává za prohlížeč (Mozilla/5.0
+ * + engine token) — neznámý UA bez tohoto nároku (knihovny, fetchery) projde,
+ * aby heuristika classifyClient (stačí pro statistiku) nerozhodovala o 403.
  */
+export function looksLikeBrowser(userAgent: string | null): boolean {
+  const ua = userAgent ?? ''
+  return (
+    /mozilla\/5\.0/i.test(ua) &&
+    /\b(chrome|crios|firefox|fxios|safari|edg[a-z]?|opr|version)\//i.test(ua)
+  )
+}
+
 export function isDisguisedScraper(facts: {
   userAgent: string | null
   accept: string | null
   secFetchDest: string | null
 }): boolean {
+  if (!looksLikeBrowser(facts.userAgent)) return false
   if (classifyClient(facts.userAgent).client !== 'browser') return false
   if (facts.secFetchDest !== null) return false
   const accept = facts.accept ?? ''
