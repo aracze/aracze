@@ -6,6 +6,8 @@ import {
   negotiateFormat,
   parsePath,
   robotsTxt,
+  BLOCKED_CRAWLERS,
+  CRAWLER_ALLOWED_TRANSFORMS,
   signTransform,
   TRAINING_BOTS,
 } from '../src/media-path'
@@ -232,13 +234,22 @@ describe('náhled adminu Payloadu', () => {
 })
 
 describe('robotsTxt', () => {
-  it('všem povolí vše a trénovacím botům zakáže vše', () => {
+  it('běžným robotům jen vybrané šířky, Baidu a trénovacím botům nic', () => {
     const text = robotsTxt()
-    expect(text.startsWith('User-Agent: *\nAllow: /\n\n')).toBe(true)
+    // Běžní roboti: fotky jen ve vybraných šířkách (nejdelší shoda vyhrává), SVG volně.
+    expect(text.startsWith('User-Agent: *\nDisallow: /image/upload/\n')).toBe(true)
+    for (const pattern of CRAWLER_ALLOWED_TRANSFORMS) {
+      expect(text).toContain(`Allow: /image/upload/${pattern}\n`)
+    }
+    expect(text).toContain('Allow: /raw/upload/\n\n')
+    // Vzory musí odpovídat tvarům, které web generuje (konec segmentu = šířka).
+    expect(CRAWLER_ALLOWED_TRANSFORMS).toEqual(['*,w_640/', '*,w_1200/', 'c_fit,w_790/'])
+    for (const bot of BLOCKED_CRAWLERS) expect(text).toContain(`User-Agent: ${bot}\n`)
     for (const bot of TRAINING_BOTS) expect(text).toContain(`User-Agent: ${bot}\n`)
     expect(text.endsWith('Disallow: /\n')).toBe(true)
-    // Jediný zákaz je ten společný pro trénovací skupinu.
-    expect(text.match(/Disallow:/g)).toHaveLength(1)
+    // Přesně dva zákazy: prefix fotek pro všechny a úplný pro Baidu + trénovací skupinu.
+    expect(text.match(/Disallow:/g)).toHaveLength(2)
+    expect(text.match(/Disallow: \/\n/g)).toHaveLength(1)
   })
 
   it('má stejný seznam trénovacích botů jako src/app/robots.ts', () => {

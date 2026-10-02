@@ -235,6 +235,29 @@ describe('media proxy: měření (Analytics Engine)', () => {
     })
   })
 
+  it('maskovaný scraper dostane 403 bez volání sítě, zapíše se outcome blocked', async () => {
+    points.length = 0
+    const response = await mediaProxy.fetch(
+      new Request('https://media.ara.cz/image/upload/f_auto,q_auto,c_limit,w_640/v1/abc.jpg', {
+        headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0) Chrome/128.0 Safari/537.36' },
+      }),
+      statsEnv,
+    )
+    expect(response.status).toBe(403)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(points[0].blobs?.slice(0, 3)).toEqual(['blocked', '', 'browser'])
+    // SVG (raw) pravidlo nehlídá — ikony tahají i nástroje bez Accept.
+    const raw = await mediaProxy
+      .fetch(
+        new Request('https://media.ara.cz/raw/upload/v1/ikona.svg', {
+          headers: { 'user-agent': 'Mozilla/5.0 Chrome/128.0 Safari/537.36' },
+        }),
+        { ...statsEnv, CLOUDINARY_ORIGIN: 'https://res.cloudinary.com/test' } as unknown as Env,
+      )
+      .catch(() => null)
+    expect(raw === null || raw.status !== 403).toBe(true)
+  })
+
   it('chyba měření neshodí odpověď', async () => {
     const broken = {
       STATS: {

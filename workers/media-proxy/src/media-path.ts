@@ -32,13 +32,34 @@ export const TRAINING_BOTS = [
   'Applebot-Extended',
 ]
 
-/** Obsah `media.ara.cz/robots.txt`: všem povoleno, trénovacím botům zakázáno vše. */
+/**
+ * Roboti, pro které web nemá hodnotu a kteří dělají tisíce požadavků týdně
+ * (Baidu: 2 000/týden v 9/2026, čínský vyhledávač pro český cestovatelský web).
+ */
+export const BLOCKED_CRAWLERS = ['Baiduspider']
+
+/**
+ * Šířky, které smějí roboti stahovat. Robot si ze srcset bere VŠECHNY šířky
+ * a vyrábí tak dlouhý ocas variant (každá = transformace + úložiště), člověk
+ * jen tu svou. Google Obrázky si vystačí s jednou slušnou velikostí:
+ * 640 (dlaždice i hero), 1200 (hero, og:image) a 790 (fotky v článcích).
+ */
+export const CRAWLER_ALLOWED_TRANSFORMS = ['*,w_640/', '*,w_1200/', 'c_fit,w_790/']
+
+/**
+ * Obsah `media.ara.cz/robots.txt`: běžným robotům jen vybrané šířky
+ * (nejdelší shoda vyhrává — `Allow` se vzorem je delší než `Disallow`
+ * prefixu, Google i Bing to tak vyhodnocují), SVG volně; Baidu a trénovacím
+ * botům zakázáno vše. Na prohlížeče robots.txt nemá vliv.
+ */
 export function robotsTxt(): string {
   return [
     'User-Agent: *',
-    'Allow: /',
+    'Disallow: /image/upload/',
+    ...CRAWLER_ALLOWED_TRANSFORMS.map((pattern) => `Allow: /image/upload/${pattern}`),
+    'Allow: /raw/upload/',
     '',
-    ...TRAINING_BOTS.map((bot) => `User-Agent: ${bot}`),
+    ...[...BLOCKED_CRAWLERS, ...TRAINING_BOTS].map((bot) => `User-Agent: ${bot}`),
     'Disallow: /',
     '',
   ].join('\n')

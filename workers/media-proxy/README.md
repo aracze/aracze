@@ -46,14 +46,22 @@ Přepnutí = změna hodnoty ve `wrangler.jsonc` + deploy (nebo jednorázově
    Secret: `npx wrangler secret put CLOUDINARY_API_SECRET` (hodnota
    = `CLOUDINARY_API_SECRET` z `/opt/aracze/.env` na serveru). Bez secretu
    Worker posílá adresy nepodepsané → funguje jen s vypnutým strict režimem.
-6. **robots.txt pro doménu fotek:** `media.ara.cz/robots.txt` zakazuje
-   trénovacím AI botům (GPTBot, ClaudeBot, CCBot, Amazonbot, Bytespider…)
-   vše, ostatním povoluje vše. Pravidla robots.txt platí per hostname —
-   zákaz v `src/app/robots.ts` na ara.cz na fotky nedosáhl a bot, který
-   adresy fotek už zná, si je směl dál stahovat (v srpnu 2026 dělali
-   trénovací crawleři přes polovinu přenosů z Cloudinary). Seznam botů je
-   zrcadlem `TRAINING_BOTS` v appu, shodu hlídá test. Vyhledávací a
-   asistenční boti zůstávají povolení (citace v AI odpovědích vodí lidi).
+6. **robots.txt pro doménu fotek:** `media.ara.cz/robots.txt` pouští běžné
+   roboty jen na vybrané šířky (`*,w_640/`, `*,w_1200/`, `c_fit,w_790/`)
+   a SVG, Baidu a trénovacím AI botům (GPTBot, ClaudeBot, CCBot, Amazonbot,
+   Bytespider…) zakazuje vše. Důvod: robot si ze srcset bere všechny šířky
+   a vyrábí dlouhý ocas variant (každá = transformace + úložiště), člověk jen
+   svou; Google Obrázky si vystačí s jednou velikostí. Pravidla robots.txt
+   platí per hostname (zákaz na ara.cz na fotky nedosáhl). Seznam trénovacích
+   botů je zrcadlem `TRAINING_BOTS` v appu, shodu hlídá test. Vyhledávací
+   a asistenční boti zůstávají povolení (v povolených šířkách).
+7. **Blokace maskovaných scraperů (403):** klient s User-Agentem prohlížeče,
+   který ale neposílá `Accept` s `image/…` ani `Sec-Fetch-Dest`, fotku nedostane
+   (`isDisguisedScraper`). Skutečné prohlížeče obojí posílají, známí roboti
+   (vyhledávače, náhledy sociálních sítí, curl) pravidlu nepodléhají — ty řídí
+   robots.txt. V 9/2026 dělali tihle klienti ~45 % požadavků a ~60 % přenosu.
+   Známá výjimka: staré Safari (< 16.4) při přímém otevření adresy fotky.
+   Měří se jako outcome `blocked`; odpověď `no-store`, ať jde pravidlo vrátit hned.
 
 ## Měření provozu (Workers Analytics Engine)
 

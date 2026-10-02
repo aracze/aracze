@@ -13,7 +13,7 @@ import {
   robotsTxt,
   signTransform,
 } from './media-path'
-import { buildDataPoint, type Outcome, type Sample } from './telemetry'
+import { buildDataPoint, isDisguisedScraper, type Outcome, type Sample } from './telemetry'
 
 export interface Env {
   /** R2 bucket se zálohou originálů médií (plní hook v src/collections/Media.ts). */
@@ -155,6 +155,22 @@ function serve(request: Request, env: Env, sample: Sample): Promise<Response> | 
     )
   }
   const { resourceType, version, key } = parsed.path
+  // Maskované scrapery (UA prohlížeče bez Accept pro obrázky) fotky nedostanou —
+  // viz isDisguisedScraper. Krátká keš odpovědi, ať se pravidlo dá rychle vrátit.
+  if (
+    resourceType === 'image' &&
+    isDisguisedScraper({
+      userAgent: request.headers.get('user-agent'),
+      accept: request.headers.get('accept'),
+      secFetchDest: request.headers.get('sec-fetch-dest'),
+    })
+  ) {
+    return finish(
+      sample,
+      new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } }),
+      'blocked',
+    )
+  }
   const requested =
     parsed.path.transform ?? (resourceType === 'image' ? ORIGINAL_CAP_TRANSFORM : null)
   // f_auto → konkrétní formát dle Accept (Cloudflare keš ignoruje Vary).

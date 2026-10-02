@@ -4,6 +4,7 @@ import {
   buildDataPoint,
   classifyClient,
   formatOf,
+  isDisguisedScraper,
   originBytes,
   widthOf,
   type Sample,
@@ -139,5 +140,57 @@ describe('buildDataPoint', () => {
       ],
       doubles: [200, 54321, 54321, 812],
     })
+  })
+})
+
+describe('isDisguisedScraper', () => {
+  const chrome =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36'
+  it('UA prohlížeče bez Accept pro obrázky a bez Sec-Fetch-Dest = scraper', () => {
+    expect(isDisguisedScraper({ userAgent: chrome, accept: '*/*', secFetchDest: null })).toBe(true)
+    expect(isDisguisedScraper({ userAgent: chrome, accept: null, secFetchDest: null })).toBe(true)
+    expect(
+      isDisguisedScraper({
+        userAgent: chrome,
+        accept: 'text/html,application/xhtml+xml,*/*;q=0.8',
+        secFetchDest: null,
+      }),
+    ).toBe(true)
+  })
+  it('skutečný prohlížeč projde: Accept s image/, nebo Sec-Fetch-Dest (i přímé otevření adresy)', () => {
+    expect(
+      isDisguisedScraper({
+        userAgent: chrome,
+        accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        secFetchDest: 'image',
+      }),
+    ).toBe(false)
+    // staré Safari: jen image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5
+    expect(
+      isDisguisedScraper({
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_0) Safari/604.1',
+        accept: 'image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5',
+        secFetchDest: null,
+      }),
+    ).toBe(false)
+    // navigace na adresu fotky v moderním prohlížeči: Sec-Fetch-Dest: document
+    expect(
+      isDisguisedScraper({
+        userAgent: chrome,
+        accept: 'text/html,*/*;q=0.8',
+        secFetchDest: 'document',
+      }),
+    ).toBe(false)
+  })
+  it('známí roboti se neblokují (řídí je robots.txt), ani náhledy sociálních sítí', () => {
+    for (const ua of [
+      'Googlebot-Image/1.0',
+      'facebookexternalhit/1.1',
+      'curl/8.0',
+      'GPTBot/1.0',
+      '',
+    ]) {
+      expect(isDisguisedScraper({ userAgent: ua, accept: '*/*', secFetchDest: null })).toBe(false)
+    }
   })
 })

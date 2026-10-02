@@ -12,6 +12,7 @@ export type Outcome =
   | 'fallback' // záloha z R2 (Cloudinary neodpověděla)
   | 'unavailable' // ani Cloudinary, ani záloha
   | 'rejected' // 400/404 z parsování cesty
+  | 'blocked' // 403: „prohlížeč“ bez Accept pro obrázky (maskovaný scraper)
   | 'robots' // /robots.txt
   | 'method' // 405
 
@@ -115,6 +116,25 @@ export function classifyClient(userAgent: string | null): { client: ClientClass;
     if (ua.includes(name)) return { client: 'other-bot', bot: name.replace(/\/$/, '') }
   }
   return { client: 'browser', bot: '' }
+}
+
+/**
+ * Maskovaný scraper: hlásí se jako prohlížeč, ale chová se jinak — skutečný
+ * prohlížeč posílá u obrázku `Accept` s `image/…` (Chrome, Firefox, Safari
+ * i staré verze) a moderní navíc `Sec-Fetch-Dest`. V 9/2026 dělali takoví
+ * klienti (BD, BR, VN, IN…) ~45 % požadavků a ~60 % přenosu. Známí roboti
+ * (vyhledávače, náhledy sociálních sítí, curl…) sem nespadají — ty řídí
+ * robots.txt. Jediný známý falešně pozitivní: starší Safari (< 16.4) při
+ * přímém otevření adresy fotky v nové záložce (posílá jen text/html, *\/*).
+ */
+export function isDisguisedScraper(facts: {
+  userAgent: string | null
+  accept: string | null
+  secFetchDest: string | null
+}): boolean {
+  if (classifyClient(facts.userAgent).client !== 'browser') return false
+  if (facts.secFetchDest !== null) return false
+  return !/image\//i.test(facts.accept ?? '')
 }
 
 /** Nejlepší moderní formát, který klient hlásí v Accept (stejná logika jako negotiateFormat). */
