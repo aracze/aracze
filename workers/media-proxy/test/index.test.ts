@@ -138,6 +138,103 @@ describe('media proxy: měření (Analytics Engine)', () => {
     })
   })
 
+  describe('strop originálů a režim backup (fetch podvržený)', () => {
+    afterEach(() => vi.unstubAllGlobals())
+    const calls: string[] = []
+    const stubFetch = (status = 200, headers: Record<string, string> = {}) =>
+      vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+        calls.push(String(input))
+        return new Response('x'.repeat(10), {
+          status,
+          headers: { 'content-length': '10', 'cf-cache-status': 'MISS', ...headers },
+        })
+      })
+    const cloudinaryEnv = {
+      ...statsEnv,
+      CLOUDINARY_ORIGIN: 'https://res.cloudinary.com/test',
+      BACKUP_HOST: 'backup.example',
+      BACKUP: { head: async () => null },
+    } as unknown as Env
+    const browser = { 'user-agent': 'Mozilla/5.0 Safari', accept: 'image/avif,image/webp,*/*' }
+
+    it('fotka bez transformace se stropuje na w_1920 (tvar loaderu, dle Accept)', async () => {
+      calls.length = 0
+      points.length = 0
+      stubFetch()
+      const response = await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/v1753093400/abc.jpg', { headers: browser }),
+        cloudinaryEnv,
+      )
+      expect(response.status).toBe(200)
+      expect(calls).toEqual([
+        'https://res.cloudinary.com/test/image/upload/f_avif,q_auto,c_limit,w_1920/v1753093400/abc.jpg',
+      ])
+      expect(points[0].blobs?.slice(5, 8)).toEqual(['1920', 'avif', 'f_avif,q_auto,c_limit,w_1920'])
+    })
+
+    it('raw (SVG) se nestropuje', async () => {
+      calls.length = 0
+      stubFetch()
+      await mediaProxy.fetch(
+        new Request('https://media.ara.cz/raw/upload/v1753093400/ikona.svg', { headers: browser }),
+        cloudinaryEnv,
+      )
+      expect(calls).toEqual(['https://res.cloudinary.com/test/raw/upload/v1753093400/ikona.svg'])
+    })
+
+    it('MEDIA_SOURCE=backup: Cloudinary se nevolá, R2 + Image Transformations s dlouhou keší', async () => {
+      calls.length = 0
+      points.length = 0
+      stubFetch(200, { 'cf-cache-status': 'HIT', 'content-type': 'image/avif' })
+      const backupEnv = {
+        ...cloudinaryEnv,
+        MEDIA_SOURCE: 'backup',
+        BACKUP: { head: async () => ({ size: 10 }) },
+      } as unknown as Env
+      const response = await mediaProxy.fetch(
+        new Request(
+          'https://media.ara.cz/image/upload/f_auto,q_auto,c_limit,w_640/v1753093400/abc.jpg',
+          { headers: browser },
+        ),
+        backupEnv,
+      )
+      expect(response.status).toBe(200)
+      expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+      expect(response.headers.get('x-upstream-cache')).toBe('HIT')
+      expect(calls).toEqual(['https://backup.example/abc.jpg'])
+      expect(points[0].blobs?.slice(0, 2)).toEqual(['backup', 'HIT'])
+      expect(points[0].doubles?.[2]).toBe(0)
+    })
+
+    it('MEDIA_SOURCE=backup: legacy adresa bez verze má jen denní keš', async () => {
+      stubFetch()
+      const backupEnv = {
+        ...cloudinaryEnv,
+        MEDIA_SOURCE: 'backup',
+        BACKUP: { head: async () => ({ size: 10 }) },
+      } as unknown as Env
+      const response = await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/c_fit,w_790/abc', { headers: browser }),
+        backupEnv,
+      )
+      expect(response.headers.get('cache-control')).toBe('public, max-age=86400')
+    })
+
+    it('MEDIA_SOURCE=backup: objekt mimo zálohu = 404 unavailable, bez volání sítě', async () => {
+      calls.length = 0
+      points.length = 0
+      stubFetch()
+      const backupEnv = { ...cloudinaryEnv, MEDIA_SOURCE: 'backup' } as unknown as Env
+      const response = await mediaProxy.fetch(
+        new Request('https://media.ara.cz/image/upload/v1/chybi.jpg', { headers: browser }),
+        backupEnv,
+      )
+      expect(response.status).toBe(404)
+      expect(calls).toEqual([])
+      expect(points[0].blobs?.[0]).toBe('unavailable')
+    })
+  })
+
   it('chyba měření neshodí odpověď', async () => {
     const broken = {
       STATS: {

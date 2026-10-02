@@ -8,6 +8,7 @@
 /** Co se s požadavkem stalo (index pro vzorkování + blob1). */
 export type Outcome =
   | 'cloudinary' // odpověď z upstreamu (stav edge keše viz cacheStatus)
+  | 'backup' // záloha z R2 jako hlavní zdroj (MEDIA_SOURCE=backup)
   | 'fallback' // záloha z R2 (Cloudinary neodpověděla)
   | 'unavailable' // ani Cloudinary, ani záloha
   | 'rejected' // 400/404 z parsování cesty
@@ -137,14 +138,14 @@ export function formatOf(transform: string | null): string {
 }
 
 /**
- * Stavy edge keše, při kterých Worker tělo z Cloudinary NEstahuje: HIT,
- * podmíněné dotazy (REVALIDATED / STALE / UPDATING) a chybějící hlavička.
- * Prázdný stav = keš je ověřeno naostro 27. 9. 2026: u opakovaných požadavků
- * `cf-cache-status` občas chybí (odpověď ~150 ms), zatímco skutečné stažení
- * hlásí MISS vždy (~1 s). Cokoli jiného (MISS, EXPIRED, BYPASS, DYNAMIC,
- * neznámé hodnoty) se konzervativně počítá jako stažení.
+ * Stavy edge keše, při kterých Worker tělo z Cloudinary NEstahuje: HIT
+ * a podmíněné dotazy (REVALIDATED / STALE / UPDATING). Chybějící hlavička
+ * se počítá jako STAŽENÍ: 5 dní měření (27. 9.–2. 10. 2026) ukázalo TTFB
+ * u '' 480 ms / p90 1 026 ms = stejné jako MISS (566 / 1 127), zatímco HIT má
+ * 28 / 50 ms. Takto spočtený přenos sedí s grafem Cloudinary (~300 MB/den).
+ * Cokoli neznámého se konzervativně počítá jako stažení.
  */
-const CACHE_SERVED_STATUSES = new Set(['', 'HIT', 'REVALIDATED', 'STALE', 'UPDATING'])
+const CACHE_SERVED_STATUSES = new Set(['HIT', 'REVALIDATED', 'STALE', 'UPDATING'])
 
 /**
  * Bajty, které Worker reálně stáhl z Cloudinary — přesně tohle Cloudinary

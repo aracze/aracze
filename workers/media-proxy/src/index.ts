@@ -1,6 +1,8 @@
-// Media proxy (media.ara.cz): normálně proxuje na Cloudinary s dlouhou edge
-// keší (kredity za přenos přestanou téct), při výpadku Cloudinary podává
-// zálohu z R2 — pokud možno zmenšenou přes Cloudflare Image Transformations.
+// Media proxy (media.ara.cz). Dva zdroje fotek (MEDIA_SOURCE):
+//   cloudinary — proxy na Cloudinary s dlouhou edge keší; při výpadku záloha z R2
+//                zmenšená přes Cloudflare Image Transformations (krátká keš).
+//   backup     — záloha z R2 + Image Transformations jako HLAVNÍ zdroj s dlouhou
+//                keší; Cloudinary se vůbec nevolá (pauza kvůli kreditům, 10/2026).
 // Čistá logika cest je v media-path.ts, tady jen síť a hlavičky.
 
 import {
@@ -31,6 +33,11 @@ export interface Env {
    * z toho jde na Cloudinary). Volitelný: bez bindingu se nic neměří.
    */
   STATS?: AnalyticsEngineDataset
+  /**
+   * Hlavní zdroj fotek: `cloudinary` (výchozí) nebo `backup` (R2 + Image
+   * Transformations, Cloudinary se nevolá). Přepíná se v wrangler.jsonc + deploy.
+   */
+  MEDIA_SOURCE?: 'cloudinary' | 'backup'
 }
 
 const YEAR_SECONDS = 31_536_000
@@ -41,6 +48,15 @@ const IMMUTABLE_CACHE = `public, max-age=${YEAR_SECONDS}, immutable`
 const UNVERSIONED_CACHE = `public, max-age=${DAY_SECONDS}`
 /** Nouzový režim jen krátce — po oživení Cloudinary se rychle vrátí zmenšeniny. */
 const FALLBACK_CACHE = 'public, max-age=300'
+const FALLBACK_TTL = 300
+/**
+ * Fotka bez transformace (adresy originálů z RSC payloadu a starých indexů)
+ * má 1,5–3 MB a v 9/2026 dělala ~40 % přenosu z Cloudinary — stahovali je
+ * Googlebot-Image a scrapeři. Originál se proto vždy stropuje na šířku hlavní
+ * fotky, stejným tvarem jako next/image loader (sdílí už existující
+ * odvozeniny). `raw` (SVG) se nestropuje.
+ */
+const ORIGINAL_CAP_TRANSFORM = 'f_auto,q_auto,c_limit,w_1920'
 /**
  * robots.txt: hlavička je pro keše botů (Google si ho drží až 24 h), ne pro edge —
  * custom doména Workeru volá Worker vždy a odpověď bez subrequestu se na edge
@@ -139,8 +155,10 @@ function serve(request: Request, env: Env, sample: Sample): Promise<Response> | 
     )
   }
   const { resourceType, version, key } = parsed.path
+  const requested =
+    parsed.path.transform ?? (resourceType === 'image' ? ORIGINAL_CAP_TRANSFORM : null)
   // f_auto → konkrétní formát dle Accept (Cloudflare keš ignoruje Vary).
-  const transform = negotiateFormat(parsed.path.transform, request.headers.get('accept') ?? '')
+  const transform = negotiateFormat(requested, request.headers.get('accept') ?? '')
   sample.transform = transform
   sample.resourceType = resourceType
   sample.versioned = version !== ''
@@ -159,6 +177,19 @@ interface MediaContext {
 
 async function serveMedia(ctx: MediaContext): Promise<Response> {
   const { env, isHead, resourceType, version, key, transform, sample } = ctx
+  // Roční keš jen pro verzované adresy — u legacy adres bez v123 by keš
+  // po výměně fotky pod stejným public_id držela starou verzi až rok.
+  const versioned = version !== ''
+  const longCache = {
+    cacheControl: versioned ? IMMUTABLE_CACHE : UNVERSIONED_CACHE,
+    cacheTtl: versioned ? YEAR_SECONDS : DAY_SECONDS,
+  }
+
+  if (env.MEDIA_SOURCE === 'backup') {
+    const served = await serveFromBackup(ctx, { ...longCache, outcome: 'backup' })
+    if (served) return served
+    return finish(sample, new Response('Image unavailable', { status: 404 }), 'unavailable')
+  }
 
   // Query string se zahazuje (Cloudinary ho ignoruje, jen by kazil keš).
   // Upstream dostává holý GET bez klientských hlaviček — URL po vyjednání
@@ -173,15 +204,12 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
     transform ? `${transform}/` : ''
   }${version}${key}`
 
-  // Roční keš jen pro verzované adresy — u legacy adres bez v123 by keš
-  // po výměně fotky pod stejným public_id držela starou verzi až rok.
-  const versioned = version !== ''
   let upstream: Response | undefined
   const started = Date.now()
   try {
     upstream = await fetch(upstreamUrl, {
       signal: AbortSignal.timeout(10_000),
-      cf: { cacheEverything: true, cacheTtl: versioned ? YEAR_SECONDS : DAY_SECONDS },
+      cf: { cacheEverything: true, cacheTtl: longCache.cacheTtl },
     })
   } catch {
     upstream = undefined
@@ -191,17 +219,45 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
   sample.durationMs = Date.now() - started
   sample.cacheStatus = upstream?.headers.get('cf-cache-status') ?? ''
   if (upstream?.ok) {
-    return finish(
-      sample,
-      buildResponse(upstream, versioned ? IMMUTABLE_CACHE : UNVERSIONED_CACHE, isHead),
-      'cloudinary',
-    )
+    return finish(sample, buildResponse(upstream, longCache.cacheControl, isHead), 'cloudinary')
   }
   // Tělo neúspěšné (nebo u HEAD nečtené) odpovědi uvolnit, ať nedrží spojení.
   void upstream?.body?.cancel()
 
   // Nouzový režim: deaktivovaný účet = 401, chybějící asset = 404, výpadek
-  // = 5xx/timeout → záloha z R2. `raw` (SVG) se podává tak, jak je.
+  // = 5xx/timeout → záloha z R2 s krátkou keší.
+  const served = await serveFromBackup(ctx, {
+    cacheControl: FALLBACK_CACHE,
+    cacheTtl: FALLBACK_TTL,
+    outcome: 'fallback',
+  })
+  if (served) return served
+
+  // Není ani na Cloudinary, ani v záloze → propagovat stav upstreamu.
+  return finish(
+    sample,
+    new Response('Image unavailable', { status: upstream?.status ?? 502 }),
+    'unavailable',
+  )
+}
+
+interface BackupOptions {
+  cacheControl: string
+  cacheTtl: number
+  outcome: 'backup' | 'fallback'
+}
+
+/**
+ * Záloha z R2: pokud možno zmenšená přes Cloudflare Image Transformations
+ * (zdroj = custom doména bucketu), jinak surový originál. `raw` (SVG) se podává
+ * tak, jak je. Vrací null, když objekt v záloze není.
+ */
+async function serveFromBackup(
+  ctx: MediaContext,
+  options: BackupOptions,
+): Promise<Response | null> {
+  const { env, isHead, resourceType, key, transform, sample } = ctx
+  const { cacheControl, cacheTtl, outcome } = options
   const imageOptions = resourceType === 'image' ? cfImageOptions(transform) : null
   for (const r2Key of deriveR2Keys(key)) {
     // Chyba R2 bindingu (výjimka, ne jen miss) nesmí shodit celý požadavek —
@@ -210,13 +266,18 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
     if (!exists) continue
 
     if (imageOptions) {
+      const started = Date.now()
       try {
         const resized = await fetch(`https://${env.BACKUP_HOST}/${encodeURI(r2Key)}`, {
           signal: AbortSignal.timeout(10_000),
-          cf: { image: imageOptions, cacheEverything: true, cacheTtl: 300 },
+          cf: { image: imageOptions, cacheEverything: true, cacheTtl },
         })
-        if (resized.ok)
-          return finish(sample, buildResponse(resized, FALLBACK_CACHE, isHead), 'fallback')
+        // V režimu backup je tohle „ten" subrequest — měří se jako u Cloudinary.
+        if (outcome === 'backup') {
+          sample.durationMs = Date.now() - started
+          sample.cacheStatus = resized.headers.get('cf-cache-status') ?? ''
+        }
+        if (resized.ok) return finish(sample, buildResponse(resized, cacheControl, isHead), outcome)
         void resized.body?.cancel()
       } catch {
         // zmenšování nedostupné (kvóta/vypnuto) → poslední záchrana níž
@@ -231,19 +292,13 @@ async function serveMedia(ctx: MediaContext): Promise<Response> {
     object.writeHttpMetadata(headers)
     if (!headers.get('content-type')) headers.set('content-type', 'application/octet-stream')
     headers.set('content-length', String(object.size))
-    headers.set('cache-control', FALLBACK_CACHE)
+    headers.set('cache-control', cacheControl)
     headers.set('vary', 'Accept')
     headers.set('x-content-type-options', 'nosniff')
     const body = !isHead && 'body' in object ? (object.body as ReadableStream) : null
-    return finish(sample, new Response(body, { status: 200, headers }), 'fallback')
+    return finish(sample, new Response(body, { status: 200, headers }), outcome)
   }
-
-  // Není ani na Cloudinary, ani v záloze → propagovat stav upstreamu.
-  return finish(
-    sample,
-    new Response('Image unavailable', { status: upstream?.status ?? 502 }),
-    'unavailable',
-  )
+  return null
 }
 
 const mediaProxy = {

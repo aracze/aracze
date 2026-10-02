@@ -84,20 +84,20 @@ describe('widthOf / formatOf', () => {
 
 describe('originBytes', () => {
   const base = { outcome: 'cloudinary' as const, bytes: 1000 }
-  it('z keše (HIT, podmíněné dotazy, chybějící hlavička) = 0', () => {
+  it('z keše (HIT, podmíněné dotazy) = 0, i malými písmeny / s mezerami', () => {
     for (const status of ['HIT', 'REVALIDATED', 'STALE', 'UPDATING', 'hit', ' HIT ']) {
       expect(originBytes({ ...base, cacheStatus: status })).toBe(0)
     }
-    // Ověřeno naostro: u opakovaných (zjevně kešovaných) požadavků hlavička občas chybí.
-    expect(originBytes({ ...base, cacheStatus: '' })).toBe(0)
   })
-  it('stažení (MISS, EXPIRED, BYPASS, DYNAMIC) i neznámý stav = celé tělo', () => {
-    for (const status of ['MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC', 'NONE/UNKNOWN', 'novy-stav']) {
+  it('stažení (MISS, EXPIRED, BYPASS, DYNAMIC), CHYBĚJÍCÍ hlavička i neznámý stav = celé tělo', () => {
+    // '' = stažení: ověřeno 5 dny měření (TTFB '' ≈ MISS, ne HIT), viz komentář v kódu.
+    for (const status of ['MISS', 'EXPIRED', 'BYPASS', 'DYNAMIC', '', 'NONE/UNKNOWN', 'novy']) {
       expect(originBytes({ ...base, cacheStatus: status })).toBe(1000)
     }
   })
   it('záloha z R2 ani odmítnutí Cloudinary nestojí', () => {
     expect(originBytes({ outcome: 'fallback', cacheStatus: 'MISS', bytes: 1000 })).toBe(0)
+    expect(originBytes({ outcome: 'backup', cacheStatus: 'MISS', bytes: 1000 })).toBe(0)
     expect(originBytes({ outcome: 'rejected', cacheStatus: '', bytes: 20 })).toBe(0)
   })
 })
