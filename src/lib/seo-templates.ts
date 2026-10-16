@@ -119,6 +119,8 @@ export function seoTitleTemplate(page: SeoPageLike, place: SeoPlaceLike): string
       return `Jídlo a pití ${loc} – co ochutnat a vyzkoušet`
     case PageCategory.Ubytovani:
       return `Ubytování ${loc} – kde se ubytovat`
+    case PageCategory.Zajezdy:
+      return `Zájezdy ${gen} – nejlevnější zájezdy od českých cestovek`
     case PageCategory.Rubrika:
       return `${page.title} – cestovní inspirace`
     default:
@@ -181,6 +183,8 @@ export function seoDescriptionTemplate(
       return `Tradiční pokrmy a nápoje, které musíš ochutnat ${loc}. Vše o stravování, specialitách místní kuchyně a cenách v restauracích.`
     case PageCategory.Ubytovani:
       return `Doporučení, kde se ubytovat ${loc}: výběr vhodné lokality, tipy na levné hotely a porovnání aktuálních cen na mapě.`
+    case PageCategory.Zajezdy:
+      return `Aktuální letecké zájezdy ${gen} z českých letišť: pobyty u moře i poznávací zájezdy od Čedoku, Fischeru, Exim Tours, TUI a Blue Style, ceny denně obnovované.`
     case PageCategory.Rubrika:
       return lead
         ? `${lead} Články, tipy a zkušenosti z rubriky ${page.title} na Ara.cz.`

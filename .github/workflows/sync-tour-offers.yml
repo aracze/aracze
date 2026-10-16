@@ -1,0 +1,34 @@
+name: Sync tour offers
+
+# Denní obnova nabídek zájezdů (podstránky „Zájezdy“ zemí): endpoint
+# /api/sync-tour-offers stáhne přes SFTP feedy cestovek ve formátu
+# Sdovolená.cz (zatím Čedok), rozřeže je proudem na zájezdy a nahradí řádky
+# kolekce tour-offers (viz src/endpoints/syncTourOffers.ts). Stejný vzor jako
+# sync-affiliate-deals — autentizovaný HTTP požadavek na běžící produkci.
+on:
+  schedule:
+    - cron: '17 4 * * *' # denně ve 4:17 UTC, po syncu akčních nabídek a mimo špičku
+  workflow_dispatch: {} # umožní ruční spuštění z webu GitHubu
+
+concurrency:
+  group: sync-tour-offers
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions: {}
+    timeout-minutes: 10
+    steps:
+      - name: Zavolat /api/sync-tour-offers
+        # Endpoint odpoví hned 202 a sync doběhne na pozadí — stahování
+        # gigabytového feedu trvá minuty a Cloudflare utíná spojení po 100 s.
+        # Výsledek běhu je v logu serveru:
+        # docker compose logs cms | grep sync-tour-offers
+        env:
+          SYNC_URL: ${{ secrets.SYNC_ANALYTICS_URL }}
+          SYNC_SECRET: ${{ secrets.ANALYTICS_SYNC_SECRET }}
+        run: |
+          curl -fsS -X POST "$SYNC_URL/api/sync-tour-offers" \
+            -H "X-Sync-Secret: $SYNC_SECRET" \
+            --connect-timeout 10 --max-time 60 --retry 2 --retry-delay 30

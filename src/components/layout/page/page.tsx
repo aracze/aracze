@@ -15,6 +15,8 @@ import {
   type PracticalInfoLinkItem,
 } from './practical-info-links'
 import { DealsSection, parseAffiliateDeals } from './deals-section'
+import { ToursSection } from './tours-section'
+import { parseTourFilters } from '@/lib/tour-filters'
 import { ClimateSection, parseClimateNormals, climateHeading } from './climate-section'
 import { WeatherNowSection, WeatherForecastSection, forecastHeading } from './weather-now-section'
 import { WeatherOverviewSection, type WeatherOverviewItem } from './weather-overview-section'
@@ -39,6 +41,7 @@ import {
   fetchWeatherOverviewPlaces,
   fetchPlaceWeatherChild,
   fetchAccommodationMapData,
+  fetchTourOffers,
 } from '@/lib/payload'
 import { extractSeasonalityBlock, seasonFromClimate } from '@/lib/seasonality'
 import { TeamSection } from './team-section'
@@ -87,8 +90,23 @@ const exchangeRateCategories: PageCategory[] = [
   PageCategory.Prakticke_informace,
 ]
 
-export const Page = async ({ page }: { page: PayloadPage }) => {
+export const Page = async ({
+  page,
+  searchParams,
+}: {
+  page: PayloadPage
+  /** Parametry adresy — čte je jen podstránka „Zájezdy“ (filtry nabídek). */
+  searchParams?: Record<string, string | string[] | undefined>
+}) => {
   const pageChildren = page.children?.docs ?? []
+  // Podstránka „Zájezdy“: nabídky z kolekce tour-offers podle kódu země
+  // (záložka Zájezdy v adminu). Promise startuje hned, await až po hlavní
+  // vlně — čtení je cachované štítkem syncu, ne stránkou.
+  const isToursPage = page.category === PageCategory.Zajezdy
+  const tourCountryCode = isToursPage ? page.tours?.countryCode?.trim().toUpperCase() : null
+  const tourOffersPromise = tourCountryCode
+    ? fetchTourOffers(tourCountryCode)
+    : Promise.resolve([] as Awaited<ReturnType<typeof fetchTourOffers>>)
   // Sekce „Co vidět" — rekurzivně vyřešený seznam (místa i cíle, viz
   // resolvePlacesToVisitUncached), NE `pageChildren` (ty zůstávají pro menu/taby
   // s ostatními kategoriemi — Praktické informace, Doprava...).
@@ -448,6 +466,9 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
     panelWeatherPromise,
     accommodationMapPromise,
   ])
+  const tourOffers = await tourOffersPromise
+  const tourFilters = parseTourFilters(searchParams)
+
   // Kurz měny země pro kartu v panelu a blok „Aktuální měna" (Kč za jednotku).
   const exchangeRate = effectiveCurrencyCode
     ? (exchangeRates?.rates[effectiveCurrencyCode] ?? null)
@@ -874,6 +895,17 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
             k navštívení, NAD sekcí „Co vidět" (legacy parita s _highlights.gsp).
             Data plní denní sync /api/sync-affiliate-deals; místo bez vlastních
             dat dědí nabídky nejbližšího předka; jinak se sekce nezobrazí. */}
+        {/* Podstránka „Zájezdy“: nabídky cestovek pod úvodním textem (viz ToursSection). */}
+        {isToursPage && (
+          <ToursSection
+            offers={tourOffers}
+            filters={tourFilters}
+            basePath={page.fullSlug}
+            genitive={getGenitivePlace(contextPlace)}
+            placeTitle={contextPlace.title}
+          />
+        )}
+
         {dealsSection && <DealsSection {...dealsSection} />}
 
         {/* 3. PLACES TO VISIT SECTION */}
@@ -898,6 +930,8 @@ export const Page = async ({ page }: { page: PayloadPage }) => {
             genitive={getGenitivePlace(page)}
             affiliate={page.affiliate}
             practicalInfo={practicalInfo}
+            // Vlastní (nebo zděděná) podstránka Zájezdy má přednost před Invií.
+            toursPageHref={findInheritedChild(PageCategory.Zajezdy)?.child.fullSlug ?? null}
           />
         )}
 

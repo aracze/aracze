@@ -251,6 +251,7 @@ storage credentials, the following variables drive user-visible features:
 | `TURNSTILE_SITE_KEY`                                                                                   | Optional                   | Cloudflare Turnstile site key for the article comment form (anti-spam).                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `TURNSTILE_SECRET_KEY`                                                                                 | Optional                   | Cloudflare Turnstile secret key (server-side token verification).                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `KIWI_TEQUILA_API_KEY`                                                                                 | For Akční nabídky          | Server-side klíč Kiwi Tequila Search API pro denní sync `/api/sync-affiliate-deals` (sekce „Akční nabídky"). Účet je schválený partner z 2023 — od 5/2024 Tequila nové partnery nebere, klíč nerušit.                                                                                                                                                                                                                                                                                                         |
+| `CEDOK_SFTP_HOST`, `CEDOK_SFTP_USER`, `CEDOK_SFTP_PASSWORD`, `CEDOK_SFTP_PATH`                         | For Zájezdy                | SFTP přístup k feedu zájezdů Čedoku (formát Sdovolená.cz) pro denní sync `/api/sync-tour-offers` (podstránky „Zájezdy“). Další cestovky mají stejnou čtveřici s předponou podle `src/lib/tour-sources.ts` (`FISCHER_`, `EXIM_`, `TUI_`, `BLUESTYLE_`); zdroj bez hosta se přeskočí. Údaje přišly e-mailem od cestovky — jen do `.env` a serverového compose, nikdy do kódu.                                                                                                                                   |
 
 > `NEXT_PUBLIC_*` variables are inlined into the client bundle at build time and
 > are therefore public. Keep secrets (e.g. `OPENWEATHER_API_KEY`, `PAYLOAD_SECRET`)
@@ -575,6 +576,72 @@ bez klientského JS, pod grafem tabulka pro čtečky.
 # Hlavička jde do curlu STDINEM (`-H @-`), ne argumentem — viz sync-affiliate-deals výš.
 curl -X POST 'http://localhost:3000/api/sync-climate-normals?dryRun=1' \
   -H @- <<< "X-Sync-Secret: $ANALYTICS_SYNC_SECRET"
+```
+
+### `POST /api/sync-tour-offers`
+
+Denní obnova kolekce **`tour-offers`**, ze které se kreslí podstránky
+**„Zájezdy“** zemí (kategorie stránky `Zájezdy`, maketa varianta A ze 16. 10. 2026; viz `src/endpoints/syncTourOffers.ts`).
+
+- **Zdroje** = cestovky schválené v síti CJ (`src/lib/tour-sources.ts`: Čedok,
+  Fischer, Exim Tours, TUI, Blue Style). Každá dává nabídkový XML ve formátu
+  **Sdovolená.cz** na SFTP; přístup je v env `<PREFIX>_SFTP_*` a zdroj bez
+  hosta se přeskočí (zatím feed jen od Čedoku — ostatní ho dávají „na
+  vyžádání“ přes VIVnetworks). Číselníky formátu (strava 1–8, doprava, typ
+  zájezdu, hvězdy) drží `src/lib/sdovolena.ts`.
+- **Feed Čedoku má 3,4 GB** (každý termín nese dvě dlouhé URL), proto se
+  stahuje `fastGet` do dočasného souboru (paralelní bloky, ~8 MB/s; sekvenční
+  stream zvládal 0,5 MB/s) a z disku se čte proudem: `TourChunker` vyřezává
+  jednotlivé `<tour>…</tour>` a ty se parsují po jednom existujícím
+  fast-xml-parserem — v paměti je vždy jen jeden zájezd; odkazy termínů
+  (`availability`, `purchase_url`, ~80 % bajtů) se před parsováním odříznou.
+  Celý běh Čedoku: stažení ~5,5 min + parsování ~35 s (3 902 zájezdů →
+  ~5 000 řádků). Špička paměti je jen líný GC V8 (s limitem 160 MB heapu
+  běh projde beze změny) — produkce má 1,8 GB RAM a 3 GB swap, sledovat
+  `docker stats` po prvních bězích. Dočasný soubor se vždy smaže.
+- **Co se ukládá:** jeden řádek za každou kombinaci hotel × strava × odletová
+  místa (`term_group`) s **leteckou** dopravou a odletem z **českého letiště**
+  (Praha, Brno, Ostrava, Pardubice, Karlovy Vary — Vídeň/Bratislava/Krakov
+  se vyřazují, stejně jako u Invie), s nejlevnějším budoucím termínem,
+  původní cenou (sleva), počtem termínů, fotkou a odkazem na detail. Stránka
+  pak z řádků skládá karty: každý hotel jednou, nejlevnější varianta, která
+  projde filtry (`src/lib/tour-filters.ts`). Nabídky zdroje se nahrazují celé
+  v jedné transakci (přímé SQL, `jsonb_to_recordset` po 500 řádcích); zdroj,
+  jehož feed selhal nebo nedal žádnou nabídku, si nechá včerejší data.
+- **Provize:** odkazy ve feedech vedou na web cestovky bez provize. Karta
+  proto míří na `/go/zajezd/<id>` (`src/app/(frontend)/go/zajezd/`), který si
+  řádek přečte a přesměruje na **CJ click link cestovky s deep-linkem**
+  `?url=<adresa z feedu>` (`cjDeepLink`; adresa mimo doménu cestovky se
+  zahodí → obecný odkaz). Ověřeno 16. 10. 2026 u všech pěti cestovek: cíl
+  dorazí s `cjevent`. Deep-link musí vést na existující stránku — na 404
+  cestovka přesměruje bez parametrů a provize se ztratí.
+- **Stránka:** podstránka kategorie `Zájezdy` pod zemí (v adminu záložka
+  Zájezdy → kód země ISO alpha-3, např. `EGY`); v sekundárním menu stojí
+  hned za „Místy“. Filtry (`?typ=poznavaci&strava=6&noci=7&odlet=praha&hvezdy=4&ck=cedok&razeni=sleva&pocet=36`)
+  žijí v adrese — serverová komponenta, obyčejné odkazy, funguje bez JS;
+  výchozí hodnoty se do adresy nepíšou, kanonická adresa zůstává bez parametrů.
+- Spouští GitHub Actions cron denně ve 4:17 UTC
+  (`.github/workflows/sync-tour-offers.yml`, ruční běh přes _Run workflow_);
+  autentizace hlavičkou `X-Sync-Secret` = `ANALYTICS_SYNC_SECRET` nebo admin
+  session. Odpověď hned **202**, práce na pozadí (`after()`); souhrn v logu
+  `docker compose logs cms | grep sync-tour-offers`. Souběh → **409**.
+  `?dryRun=1` je synchronní a nic nezapisuje; `&maxTours=300` utne čtení po
+  N zájezdech (ladění), `&source=cedok` omezí běh na jeden zdroj.
+- Cache webu invaliduje štítek `tour-offers` (jen sync — publikace v adminu
+  s nabídkami nesouvisí).
+
+**Nasazení na produkci** (schéma se na prod nepushuje): před mergem spustit
+`scripts/zajezdy-prod-schema.sql` (enum kategorie `Zájezdy` pro `pages`
+i `_pages_v`, sloupec `tours_country_code`, tabulka `tour_offers` s indexy;
+idempotentní), čtveřici `CEDOK_SFTP_*` dát do `/opt/aracze/.env` **i** do
+compose na serveru, force-recreate `cms`, ručně spustit workflow „Sync tour
+offers“ a v adminu založit podstránku Zájezdy pod zemí (kategorie Zájezdy,
+kód země).
+
+```bash
+# Ladicí běh — prvních 300 zájezdů feedu, nic nezapisuje:
+curl -X POST 'http://localhost:3000/api/sync-tour-offers?dryRun=1&maxTours=300' \
+  -H "X-Sync-Secret: $ANALYTICS_SYNC_SECRET"
 ```
 
 ---
@@ -1278,6 +1345,14 @@ m.cloudinary_public_id = a.cloudinary_public_id` musí vrátit 0.
   - Interní účetní záznamy „pírek" (feather) přenesené z původního webu — čtení i správa jsou omezené pouze na administrátory.
   - Každý záznam nese kategorii (odměny za obsah, bonus, výběr), počet pírek v poli `amount` (**kladné = zisk, záporné = výběr**) a volitelnou vazbu `relatedTo` na stránku, článek nebo komentář.
   - Data přenesl jednorázový migrační doběh z legacy MySQL databáze; skript je odstraněný (viz poznámka o historickém obsahu v Quick Startu).
+
+- **TourOffers (Nabídky zájezdů)**:
+  - Řádky nabídek z feedů cestovek pro podstránky „Zájezdy“ — plní je denní sync
+    `/api/sync-tour-offers` (viz výše), v adminu jen pro adminy a jen ke čtení (ruční úpravy
+    přepíše další běh). Bez verzí a bez relace na stránky: stránka si nabídky dohledá podle
+    kódu země (`tours.countryCode` v záložce Zájezdy).
+  - `source`, `kind` a `board` jsou záměrně prostý text (ne `select`): sync zapisuje přímým
+    SQL a nová hodnota číselníku by jinak chtěla `ALTER TYPE` na produkci.
 
 ## Questions
 

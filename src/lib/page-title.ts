@@ -42,6 +42,8 @@ export function buildPageTitle(page: PayloadPage, rootPage?: PayloadPage): strin
       return `Cestování a cesta ${getGenitivePlace(contextualPage)}`
     case PageCategory.Ubytovani:
       return `Ubytování ${getLocativePlace(contextualPage)}`
+    case PageCategory.Zajezdy:
+      return `Zájezdy ${getGenitivePlace(contextualPage)}`
     case PageCategory.Prakticke_informace:
       // Matches legacy Grails wording: "Praktické informace do ..."
       return `Praktické informace ${getGenitivePlace(contextualPage)}`

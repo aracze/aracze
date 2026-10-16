@@ -27,6 +27,9 @@ import {
   HomepageTourDeal,
   PopularDestination,
 } from '@/types/payload'
+import type { TourOffer } from '@/types/payload'
+import { TOUR_OFFERS_CACHE_TAG } from '@/endpoints/syncTourOffers'
+import { isTourSourceId } from '@/lib/tour-sources'
 import { parseLatLng } from './geo'
 import { CONTRIBUTOR_FACES_LIMIT, NON_PERSON_USERNAMES, TEAM_USERNAMES } from './team'
 import { practicalInfoSectionCategories } from './practical-info'
@@ -170,6 +173,8 @@ const PAGE_SCALAR_SELECT = {
   // Klimatické normály pro sekci „Průměrné měsíční teploty a srážky" na
   // stránkách kategorie „Počasí" (plní /api/sync-climate-normals).
   climateNormals: true,
+  // Kód země pro výpis nabídek na podstránce „Zájezdy“ (fetchTourOffers).
+  tours: true,
   createdBy: true,
   // Bezpečný veřejný autor přes VIRTUÁLNÍ pole (afterRead hook čte uživatele s
   // overrideAccess: true). Stejný vzor jako u článků. Ruční dohled přes
@@ -3978,3 +3983,102 @@ export const fetchPopularDestinations = async (): Promise<PopularDestination[]> 
     return POPULAR_DESTINATIONS_FALLBACK
   }
 }
+
+// ─── Zájezdy (podstránka kategorie „Zájezdy“) ─────────────────────────────────
+
+/** Nabídek na stránku nejvýš tolik — pojistka proti feedu s tisíci řádky za zemi. */
+const TOUR_OFFERS_LIMIT = 2000
+
+/**
+ * Nabídky zájezdů jedné země z kolekce `tour-offers` (plní denní sync, viz
+ * src/endpoints/syncTourOffers.ts), seřazené od nejlevnější. Řádky se
+ * převádějí na veřejný tvar `TourOffer` — bez interních odkazů (provizní
+ * adresu skládá až /go/zajezd/<id>, který si řádek přečte znovu).
+ */
+async function fetchTourOffersUncached(countryCode: string): Promise<TourOffer[]> {
+  const payload = await getDb()
+  const res = await payload.find({
+    collection: 'tour-offers',
+    // Kolekce je v adminu jen pro adminy; web čte anonymně → override.
+    overrideAccess: true,
+    where: { countryCode: { equals: countryCode } },
+    sort: 'price',
+    limit: TOUR_OFFERS_LIMIT,
+    pagination: false,
+    depth: 0,
+    select: {
+      source: true,
+      kind: true,
+      title: true,
+      area: true,
+      place: true,
+      stars: true,
+      board: true,
+      departures: true,
+      termFrom: true,
+      nights: true,
+      price: true,
+      originalPrice: true,
+      termCount: true,
+      photoUrl: true,
+    },
+  })
+  const offers: TourOffer[] = []
+  for (const doc of res.docs) {
+    const kind = doc.kind === 'tour' ? 'tour' : doc.kind === 'stay' ? 'stay' : null
+    const termFrom = typeof doc.termFrom === 'string' ? doc.termFrom.slice(0, 10) : null
+    const departures = Array.isArray(doc.departures)
+      ? doc.departures.filter((d): d is string => typeof d === 'string' && d.length > 0)
+      : []
+    // Data píše stroj, ale přímým SQL — guard místo castu, ať jeden špatný
+    // řádek nepoloží celou stránku.
+    if (
+      !kind ||
+      !termFrom ||
+      !isTourSourceId(doc.source) ||
+      typeof doc.price !== 'number' ||
+      doc.price <= 0 ||
+      typeof doc.nights !== 'number' ||
+      departures.length === 0
+    ) {
+      continue
+    }
+    offers.push({
+      id: Number(doc.id),
+      source: doc.source,
+      kind,
+      title: doc.title,
+      area: doc.area ?? null,
+      place: doc.place ?? null,
+      stars: typeof doc.stars === 'number' ? doc.stars : null,
+      board: doc.board,
+      departures,
+      termFrom,
+      nights: doc.nights,
+      price: doc.price,
+      originalPrice:
+        typeof doc.originalPrice === 'number' && doc.originalPrice > doc.price
+          ? doc.originalPrice
+          : null,
+      termCount: typeof doc.termCount === 'number' ? doc.termCount : 0,
+      photoUrl: doc.photoUrl?.startsWith('https://') ? doc.photoUrl : null,
+    })
+  }
+  return offers
+}
+
+// Invaliduje jen sync (štítek TOUR_OFFERS_CACHE_TAG) — stránky s nabídkami
+// nijak nesouvisí s publikací v adminu.
+const fetchTourOffersCached = cached(fetchTourOffersUncached, 'tour-offers', () => [
+  TOUR_OFFERS_CACHE_TAG,
+])
+
+export const fetchTourOffers = cache(async (countryCode: string): Promise<TourOffer[]> => {
+  try {
+    return await fetchTourOffersCached(countryCode)
+  } catch (err) {
+    // Stránka země bez nabídek je lepší než chyba 500 kvůli vedlejší sekci.
+    console.error(`[tour-offers] načtení selhalo pro ${countryCode}:`, err)
+    return []
+  }
+})
