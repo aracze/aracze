@@ -17,6 +17,7 @@ import {
 import { DealsSection, parseAffiliateDeals } from './deals-section'
 import { ToursSection } from './tours-section'
 import { parseTourFilters } from '@/lib/tour-filters'
+import { pragueToday } from '@/lib/kiwi-deals'
 import { ClimateSection, parseClimateNormals, climateHeading } from './climate-section'
 import { WeatherNowSection, WeatherForecastSection, forecastHeading } from './weather-now-section'
 import { WeatherOverviewSection, type WeatherOverviewItem } from './weather-overview-section'
@@ -903,6 +904,7 @@ export const Page = async ({
             basePath={page.fullSlug}
             genitive={getGenitivePlace(contextPlace)}
             placeTitle={contextPlace.title}
+            today={pragueToday()}
           />
         )}
 

@@ -6,6 +6,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { safeRevalidate } from '@/hooks/revalidation'
+import { invalidateTourOffersCache } from '@/lib/tour-offers-cache'
 import { pragueToday } from '@/lib/kiwi-deals'
 import { parseSdovolenaTour, TourChunker, type TourOfferRow } from '@/lib/sdovolena'
 import { TOUR_SOURCES, tourFeedConfig, type TourSource } from '@/lib/tour-sources'
@@ -184,6 +185,7 @@ async function replaceSourceRows(db: DrizzleLike, source: TourSource, rows: Tour
         stars: r.stars,
         board: r.board,
         departures: r.departures,
+        terms: r.terms,
         // Půlnoc UTC explicitně: Payload čte `date` jako timestamptz a web
         // bere jen YYYY-MM-DD, takže se den nesmí posunout časovou zónou.
         term_from: `${r.termFrom}T00:00:00Z`,
@@ -202,17 +204,17 @@ async function replaceSourceRows(db: DrizzleLike, source: TourSource, rows: Tour
       await tx.execute(sql`
         INSERT INTO tour_offers (
           source, external_id, kind, title, country_code, area, place, stars, board,
-          departures, term_from, term_to, nights, term_count, price, original_price,
+          departures, terms, term_from, term_to, nights, term_count, price, original_price,
           photo_url, detail_url, lat, lng, created_at, updated_at
         )
         SELECT
           r.source, r.external_id, r.kind, r.title, r.country_code, r.area, r.place, r.stars,
-          r.board, r.departures, r.term_from::timestamptz, r.term_to::timestamptz, r.nights,
+          r.board, r.departures, r.terms, r.term_from::timestamptz, r.term_to::timestamptz, r.nights,
           r.term_count, r.price, r.original_price, r.photo_url, r.detail_url, r.lat, r.lng,
           now(), now()
         FROM jsonb_to_recordset(${JSON.stringify(chunk)}::jsonb) AS r(
           source text, external_id text, kind text, title text, country_code text,
-          area text, place text, stars numeric, board text, departures jsonb,
+          area text, place text, stars numeric, board text, departures jsonb, terms jsonb,
           term_from text, term_to text, nights numeric, term_count numeric, price numeric,
           original_price numeric, photo_url text, detail_url text, lat numeric, lng numeric
         )
@@ -317,7 +319,12 @@ export const syncTourOffersEndpoint: Endpoint = {
     after(async () => {
       try {
         const results = await runSync(db, sources, null)
-        if (results.some((r) => !r.error)) await safeRevalidate([TOUR_OFFERS_CACHE_TAG])
+        if (results.some((r) => !r.error)) {
+          // Nabídky drží paměťová cache (lib/payload.ts) — vyprázdnit po zápisu;
+          // štítek zůstává pro případné další čtení přes Next cache.
+          invalidateTourOffersCache()
+          await safeRevalidate([TOUR_OFFERS_CACHE_TAG])
+        }
         console.log('[sync-tour-offers] hotovo:', JSON.stringify(results))
       } catch (err) {
         console.error('[sync-tour-offers] selhal:', err)

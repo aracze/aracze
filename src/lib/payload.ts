@@ -28,8 +28,8 @@ import {
   PopularDestination,
 } from '@/types/payload'
 import type { TourOffer } from '@/types/payload'
-import { TOUR_OFFERS_CACHE_TAG } from '@/endpoints/syncTourOffers'
 import { isTourSourceId } from '@/lib/tour-sources'
+import { getCachedTourOffers, setCachedTourOffers } from '@/lib/tour-offers-cache'
 import { parseLatLng } from './geo'
 import { CONTRIBUTOR_FACES_LIMIT, NON_PERSON_USERNAMES, TEAM_USERNAMES } from './team'
 import { practicalInfoSectionCategories } from './practical-info'
@@ -4015,6 +4015,7 @@ async function fetchTourOffersUncached(countryCode: string): Promise<TourOffer[]
       stars: true,
       board: true,
       departures: true,
+      terms: true,
       termFrom: true,
       nights: true,
       price: true,
@@ -4043,6 +4044,21 @@ async function fetchTourOffersUncached(countryCode: string): Promise<TourOffer[]
     ) {
       continue
     }
+    // Termíny: jen dobře tvarované čtveřice; řádek bez nich dostane aspoň svůj
+    // nejlevnější termín, ať filtr podle data nemá prázdno.
+    const terms = (Array.isArray(doc.terms) ? doc.terms : [])
+      .filter(
+        (t): t is [string, number, number, number] =>
+          Array.isArray(t) &&
+          t.length === 4 &&
+          typeof t[0] === 'string' &&
+          /^\d{4}-\d{2}-\d{2}$/.test(t[0]) &&
+          typeof t[1] === 'number' &&
+          typeof t[2] === 'number' &&
+          t[2] > 0 &&
+          typeof t[3] === 'number',
+      )
+      .map((t) => [t[0], t[1], t[2], t[3]] as [string, number, number, number])
     offers.push({
       id: Number(doc.id),
       source: doc.source,
@@ -4053,6 +4069,19 @@ async function fetchTourOffersUncached(countryCode: string): Promise<TourOffer[]
       stars: typeof doc.stars === 'number' ? doc.stars : null,
       board: doc.board,
       departures,
+      terms:
+        terms.length > 0
+          ? terms
+          : [
+              [
+                termFrom,
+                doc.nights,
+                doc.price,
+                typeof doc.originalPrice === 'number' && doc.originalPrice > doc.price
+                  ? doc.originalPrice
+                  : 0,
+              ],
+            ],
       termFrom,
       nights: doc.nights,
       price: doc.price,
@@ -4067,15 +4096,20 @@ async function fetchTourOffersUncached(countryCode: string): Promise<TourOffer[]
   return offers
 }
 
-// Invaliduje jen sync (štítek TOUR_OFFERS_CACHE_TAG) — stránky s nabídkami
-// nijak nesouvisí s publikací v adminu.
-const fetchTourOffersCached = cached(fetchTourOffersUncached, 'tour-offers', () => [
-  TOUR_OFFERS_CACHE_TAG,
-])
+// Cache nabídek: paměť procesu (lib/tour-offers-cache.ts — proč ne Next cache
+// je v jeho hlavičce). V dev se necachuje (pravidlo projektu).
+async function fetchTourOffersMemo(countryCode: string): Promise<TourOffer[]> {
+  if (!isProduction()) return fetchTourOffersUncached(countryCode)
+  const hit = getCachedTourOffers(countryCode)
+  if (hit) return hit
+  const offers = await fetchTourOffersUncached(countryCode)
+  setCachedTourOffers(countryCode, offers)
+  return offers
+}
 
 export const fetchTourOffers = cache(async (countryCode: string): Promise<TourOffer[]> => {
   try {
-    return await fetchTourOffersCached(countryCode)
+    return await fetchTourOffersMemo(countryCode)
   } catch (err) {
     // Stránka země bez nabídek je lepší než chyba 500 kvůli vedlejší sekci.
     console.error(`[tour-offers] načtení selhalo pro ${countryCode}:`, err)

@@ -128,6 +128,15 @@ export const TourOffers: CollectionConfig = {
         },
       ],
     },
+    {
+      name: 'terms',
+      label: 'Termíny (odlet, nocí, cena, původní cena)',
+      type: 'json',
+      admin: {
+        description:
+          'Všechny budoucí termíny skupiny jako pole [YYYY-MM-DD, nocí, cena, původní cena nebo 0] — filtr podle měsíce a kalendář odletů.',
+      },
+    },
     { name: 'photoUrl', label: 'Fotka (URL)', type: 'text' },
     { name: 'detailUrl', label: 'Detail u cestovky (URL)', type: 'text', required: true },
     {

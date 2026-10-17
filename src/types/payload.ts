@@ -438,8 +438,10 @@ export interface TourOffer {
   stars: number | null
   /** Kód stravy 1–8 (popisek viz BOARD_LABELS). */
   board: string
-  /** Odletová města v ČR, Praha první. */
+  /** Odletová letiště (česká i okolní, viz TOUR_AIRPORTS), česká první. */
   departures: string[]
+  /** Všechny budoucí termíny: [odlet YYYY-MM-DD, nocí, cena, původní cena nebo 0]. */
+  terms: [string, number, number, number][]
   /** YYYY-MM-DD nejlevnějšího termínu. */
   termFrom: string
   nights: number

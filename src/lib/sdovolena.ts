@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser'
-import { CZECH_AIRPORTS } from './kiwi-deals'
+import { TOUR_AIRPORTS, airportRank } from './tour-airports'
 import type { TourSourceId } from './tour-sources'
 
 /**
@@ -13,12 +13,13 @@ import type { TourSourceId } from './tour-sources'
  *
  * Z každého zájezdu vzniknou ŘÁDKY nabídek: jeden za každou kombinaci
  * strava × doprava × odletová místa (`term_group`) s LETECKOU dopravou
- * a odletem z českého letiště, s nejlevnějším budoucím termínem. Díky tomu
- * fungují filtry stravy a odletu na stránce poctivě (hotel s all inclusive
- * i polopenzí má dva řádky, web ukáže ten, který projde filtrem).
- * Odlety z Vídně, Bratislavy či Krakova se vyřazují — inzerovat Čechům
- * „zájezd za X“ s odletem z Vídně by bylo zavádějící (stejné pravidlo jako
- * u Invie v syncAffiliateDeals).
+ * a odletem z českého NEBO okolního letiště (seznam TOUR_AIRPORTS; Vídeň,
+ * Bratislava, Krakov… — jiná se vyřazují), s nejlevnějším budoucím termínem
+ * a navíc se VŠEMI budoucími termíny (`terms`), ať web umí filtr podle měsíce
+ * či přesných dnů a kalendář s dny odletu. Díky řádkům po skupinách fungují
+ * filtry stravy a odletu na stránce poctivě (hotel s all inclusive i
+ * polopenzí má dva řádky, web ukáže ten, který projde filtrem). Okolní
+ * letiště jsou na webu jen na vyžádání a karta je značí — výchozí je Česko.
  */
 
 /** Číselník typu zájezdu — web rozlišuje jen pobyt a poznávací. */
@@ -52,7 +53,17 @@ export function starsFromClass(classId: string | number | null | undefined): num
 const TRANSPORT_FLIGHT = '2'
 const KIND_BY_TOUR_TYPE: Record<string, TourKind> = { '1': 'stay', '2': 'tour' }
 
-const CZECH_CITY_NAMES: readonly string[] = CZECH_AIRPORTS.map((a) => a.name)
+const AIRPORT_NAMES: readonly string[] = TOUR_AIRPORTS.map((a) => a.name)
+
+/**
+ * Kompaktní termín pro JSON: [odlet YYYY-MM-DD, nocí, cena, původní cena nebo 0].
+ * Pole místo objektu — u tisíců řádků × desítek termínů dělá název klíče rozdíl
+ * v megabajtech (limit 2 MB položky Next cache, viz lib/payload.ts).
+ */
+export type TourTerm = [string, number, number, number]
+
+/** Strop termínů na řádek — ochrana velikosti JSON (Čedok má u hotelu i 120 termínů). */
+export const MAX_TERMS_PER_ROW = 200
 
 /** Jeden řádek nabídky (viz hlavička) — tvar, který sync zapisuje do kolekce `tour-offers`. */
 export interface TourOfferRow {
@@ -65,8 +76,10 @@ export interface TourOfferRow {
   place: string | null
   stars: number | null
   board: string
-  /** Odletová města v ČR (jen ta z `CZECH_AIRPORTS`), Praha první. */
+  /** Odletová letiště (jen z TOUR_AIRPORTS), česká první. */
   departures: string[]
+  /** Všechny budoucí termíny skupiny podle data, nejvýš MAX_TERMS_PER_ROW. */
+  terms: TourTerm[]
   termFrom: string
   termTo: string | null
   nights: number
@@ -74,7 +87,7 @@ export interface TourOfferRow {
   price: number
   /** Původní cena téhož termínu, jen když je vyšší než `price` (sleva). */
   originalPrice: number | null
-  /** Počet budoucích termínů skupiny — „18 termínů“ na kartě. */
+  /** Počet budoucích termínů skupiny (i nad strop `terms`) — „18 termínů“ na kartě. */
   termCount: number
   photoUrl: string | null
   /** Odkaz na detail zájezdu u cestovky (bez provize — tu přidá /go/zajezd). */
@@ -201,9 +214,9 @@ export function parseSdovolenaTour(
     if (!BOARD_LABELS[board]) continue
     const departures = (group.dept_places?.place ?? [])
       .map(text)
-      .filter((p) => CZECH_CITY_NAMES.includes(p))
-      // Praha první (pořadí CZECH_AIRPORTS), ať je na kartě hlavní odlet stabilní.
-      .sort((a, b) => CZECH_CITY_NAMES.indexOf(a) - CZECH_CITY_NAMES.indexOf(b))
+      .filter((p) => AIRPORT_NAMES.includes(p))
+      // Česká letiště první (Praha, Brno…), ať je na kartě hlavní odlet stabilní.
+      .sort((a, b) => airportRank(a) - airportRank(b))
     const uniqueDepartures = [...new Set(departures)]
     if (uniqueDepartures.length === 0) continue
 
@@ -214,21 +227,22 @@ export function parseSdovolenaTour(
       to: string | null
       nights: number
     } | null = null
-    let termCount = 0
+    const terms: TourTerm[] = []
     for (const term of group.terms?.term ?? []) {
       const from = isoDate(term.start)
       if (!from || from < today) continue
       const adult = (term.prices?.price ?? []).find((p) => text(p.desc_id) === '1')
       const price = num(adult?.final_price ?? term.prices?.price?.[0]?.final_price)
       if (!price || price <= 0) continue
-      termCount++
       const nights = Math.round(num(term.night_count) ?? 0)
       if (nights <= 0) continue
+      const origRaw = num(term.prices?.price_orig)
+      const orig = origRaw && origRaw > price ? Math.round(origRaw) : 0
+      terms.push([from, nights, Math.round(price), orig])
       if (!best || price < best.price) {
-        const orig = num(term.prices?.price_orig)
         best = {
           price: Math.round(price),
-          orig: orig && orig > price ? Math.round(orig) : null,
+          orig: orig || null,
           from,
           to: isoDate(term.end),
           nights,
@@ -236,6 +250,8 @@ export function parseSdovolenaTour(
       }
     }
     if (!best) continue
+    terms.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[2] - b[2]))
+    const termCount = terms.length
 
     rows.push({
       source,
@@ -248,6 +264,7 @@ export function parseSdovolenaTour(
       stars,
       board,
       departures: uniqueDepartures,
+      terms: terms.slice(0, MAX_TERMS_PER_ROW),
       termFrom: best.from,
       termTo: best.to,
       nights: best.nights,

@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { parseSdovolenaTour, starsFromClass, TourChunker } from '@/lib/sdovolena'
 import {
+  DEFAULT_TOUR_FILTERS,
+  appliedFilterTags,
   buildResorts,
   buildTourCards,
+  dateSummary,
+  departureDays,
+  monthFacet,
   parseTourFilters,
+  resortFacet,
   tourFiltersHref,
-  DEFAULT_TOUR_FILTERS,
 } from '@/lib/tour-filters'
 import { cjDeepLink, TOUR_SOURCES } from '@/lib/tour-sources'
 import type { TourOffer } from '@/types/payload'
@@ -27,14 +32,14 @@ const tourXml = (
   <term_groups>${body}</term_groups></tour>`
 
 describe('parseSdovolenaTour', () => {
-  it('vrátí řádek za leteckou skupinu z ČR s nejlevnějším budoucím termínem', () => {
+  it('vrátí řádek za leteckou skupinu z našich letišť s nejlevnějším budoucím termínem a všemi termíny', () => {
     const xml = tourXml(`
       <term_group><board><id>6</id></board><transport><id>2</id></transport>
         <dept_places><place>Ostrava</place><place>Praha</place></dept_places>
         <terms>${term('2026-10-01', 7, 9000)}${term('2026-11-22', 7, 12990, 21490)}${term('2026-12-06', 7, 13990)}</terms>
       </term_group>
       <term_group><board><id>6</id></board><transport><id>2</id></transport>
-        <dept_places><place>Vídeň</place></dept_places>
+        <dept_places><place>Vídeň</place><place>Frankfurt nad Mohanem</place></dept_places>
         <terms>${term('2026-11-22', 7, 9990)}</terms>
       </term_group>
       <term_group><board><id>2</id></board><transport><id>1</id></transport>
@@ -42,8 +47,8 @@ describe('parseSdovolenaTour', () => {
         <terms>${term('2026-11-22', 7, 5000)}</terms>
       </term_group>`)
     const rows = parseSdovolenaTour(xml, 'cedok', '2026-10-16')
-    expect(rows).toHaveLength(1)
-    const row = rows[0]
+    expect(rows).toHaveLength(2)
+    const [row, vienna] = rows
     expect(row).toMatchObject({
       source: 'cedok',
       externalId: 'RMF2MLG',
@@ -55,6 +60,10 @@ describe('parseSdovolenaTour', () => {
       stars: 4,
       board: '6',
       departures: ['Praha', 'Ostrava'],
+      terms: [
+        ['2026-11-22', 7, 12990, 21490],
+        ['2026-12-06', 7, 13990, 0],
+      ],
       termFrom: '2026-11-22',
       nights: 7,
       price: 12990,
@@ -64,13 +73,15 @@ describe('parseSdovolenaTour', () => {
       lat: 25.5,
       lng: 34.6,
     })
+    // Okolní letiště zůstává (Vídeň), cizí se vyřadí (Frankfurt).
+    expect(vienna.departures).toEqual(['Vídeň'])
     // XML entity v adrese se dekódují (do deep-linku jde skutečný znak &).
     expect(row.detailUrl).toBe(
       'https://www.cedok.cz/redirect,RMF2MLG?id=abc&participants%5B0%5D%5Badults%5D=2',
     )
   })
 
-  it('poznávací zájezd má kind=tour; bez letecké skupiny z ČR nic', () => {
+  it('poznávací zájezd má kind=tour; bez letecké skupiny z našich letišť nic', () => {
     const tour = parseSdovolenaTour(
       tourXml(
         `<term_group><board><id>7</id></board><transport><id>2</id></transport><dept_places><place>Praha</place></dept_places><terms>${term('2027-01-07', 3, 16990, 25990)}</terms></term_group>`,
@@ -121,107 +132,173 @@ const offer = (o: Partial<TourOffer> & { id: number }): TourOffer => ({
   stars: 4,
   board: '6',
   departures: ['Praha'],
+  terms: [['2026-11-22', 7, 10000, 0]],
   termFrom: '2026-11-22',
   nights: 7,
   price: 10000,
   originalPrice: null,
-  termCount: 3,
+  termCount: 1,
   photoUrl: null,
   ...o,
 })
 
 describe('tour filters', () => {
-  it('parseTourFilters bere jen hodnoty z číselníku, jinak výchozí', () => {
+  it('parseTourFilters bere jen hodnoty z číselníku, jinak výchozí (týden, Česko, vše)', () => {
     expect(
       parseTourFilters({
         typ: 'poznavaci',
-        strava: '6',
-        noci: '7',
-        odlet: 'brno',
-        hvezdy: '4',
-        ck: 'cedok',
+        odlet: 'praha,bratislava,x',
+        mesice: '2026-12,2026-11,2026-13',
+        noci: '9-11',
+        strava: 'ai,zzz',
+        hvezdy: '5,2',
+        letovisko: 'hurghada',
+        ck: 'cedok,invia',
+        sleva: '1',
         razeni: 'sleva',
         pocet: '36',
       }),
     ).toEqual({
       typ: 'poznavaci',
-      strava: '6',
-      noci: '7',
-      odlet: 'brno',
-      hvezdy: 4,
-      ck: 'cedok',
+      odlet: ['praha', 'bratislava'],
+      mesice: ['2026-11', '2026-12'],
+      od: null,
+      do: null,
+      noci: [9, 11],
+      strava: ['ai'],
+      hvezdy: [5],
+      letovisko: ['hurghada'],
+      ck: ['cedok'],
+      sleva: true,
       razeni: 'sleva',
       pocet: 36,
     })
-    expect(
-      parseTourFilters({
-        typ: 'x',
-        strava: '99',
-        noci: 'y',
-        odlet: 'viden',
-        hvezdy: '2',
-        ck: 'invia',
-        razeni: 'z',
-        pocet: '-5',
-      }),
-    ).toEqual(DEFAULT_TOUR_FILTERS)
-    // Pobyty se srovnávají na týden, poznávací bez filtru délky.
-    expect(DEFAULT_TOUR_FILTERS.noci).toBe('7')
-    expect(parseTourFilters({ typ: 'poznavaci' }).noci).toBe('vse')
+    expect(DEFAULT_TOUR_FILTERS).toMatchObject({
+      typ: 'vse',
+      odlet: [],
+      noci: [6, 8],
+      razeni: 'doporucene',
+    })
+    expect(parseTourFilters({ noci: 'vse' }).noci).toBeNull()
+    expect(parseTourFilters({ od: '2026-12-10', do: '2026-12-01' }).do).toBeNull()
   })
 
   it('tourFiltersHref nepíše výchozí hodnoty a resetuje počet', () => {
     expect(tourFiltersHref('/egypt/zajezdy', DEFAULT_TOUR_FILTERS, {})).toBe('/egypt/zajezdy')
-    const f = { ...DEFAULT_TOUR_FILTERS, pocet: 36, strava: '6' }
-    expect(tourFiltersHref('/egypt/zajezdy', f, { odlet: 'praha' })).toBe(
-      '/egypt/zajezdy?strava=6&odlet=praha',
+    const f = { ...DEFAULT_TOUR_FILTERS, pocet: 36, strava: ['ai' as const] }
+    expect(tourFiltersHref('/egypt/zajezdy', f, { odlet: ['praha'] })).toBe(
+      '/egypt/zajezdy?odlet=praha&strava=ai',
     )
-    // Přepnutí na poznávací shodí výchozí týden; zpět na pobyty ho vrátí.
-    expect(tourFiltersHref('/egypt/zajezdy', DEFAULT_TOUR_FILTERS, { typ: 'poznavaci' })).toBe(
-      '/egypt/zajezdy?typ=poznavaci',
-    )
-    expect(
-      tourFiltersHref('/egypt/zajezdy', parseTourFilters({ typ: 'poznavaci' }), { typ: 'pobyt' }),
-    ).toBe('/egypt/zajezdy')
-    expect(tourFiltersHref('/egypt/zajezdy', DEFAULT_TOUR_FILTERS, { noci: 'vse' })).toBe(
+    expect(tourFiltersHref('/egypt/zajezdy', DEFAULT_TOUR_FILTERS, { noci: null })).toBe(
       '/egypt/zajezdy?noci=vse',
     )
+    // Přesné dny mají přednost před měsíci.
+    expect(
+      tourFiltersHref('/egypt/zajezdy', DEFAULT_TOUR_FILTERS, {
+        mesice: ['2026-11'],
+        od: '2026-11-20',
+        do: '2026-11-30',
+      }),
+    ).toBe('/egypt/zajezdy?od=2026-11-20&do=2026-11-30')
   })
 
-  it('buildTourCards: každý hotel jednou, filtr stravy a odletu, řazení podle slevy', () => {
+  it('buildTourCards: nejlevnější termín po filtru data/délky, každý hotel jednou, odlet z českých letišť', () => {
     const offers = [
-      offer({ id: 1, title: 'A', board: '6', price: 12000, originalPrice: 20000 }),
-      offer({ id: 2, title: 'A', board: '4', price: 11000 }),
-      offer({ id: 3, title: 'B', board: '6', price: 13000, departures: ['Ostrava'] }),
-      offer({ id: 4, title: 'C', kind: 'tour', price: 9000 }),
+      offer({
+        id: 1,
+        title: 'A',
+        terms: [
+          ['2026-11-22', 7, 12000, 20000],
+          ['2026-12-06', 7, 11000, 0],
+          ['2027-01-10', 3, 6000, 0],
+        ],
+      }),
+      offer({ id: 2, title: 'A', board: '4', terms: [['2026-11-22', 7, 11500, 0]] }),
+      offer({ id: 3, title: 'B', departures: ['Bratislava'], terms: [['2026-11-22', 7, 9000, 0]] }),
+      offer({ id: 4, title: 'C', kind: 'tour', board: '7', terms: [['2026-11-22', 7, 9500, 0]] }),
     ]
-    expect(buildTourCards(offers, DEFAULT_TOUR_FILTERS).map((o) => o.id)).toEqual([2, 3])
+    // Výchozí: Česko, týden, vše → A (11 000 z prosince), C; Bratislava mimo.
+    const cards = buildTourCards(offers, { ...DEFAULT_TOUR_FILTERS, razeni: 'cena' })
+    expect(cards.map((c) => [c.offer.title, c.price, c.date])).toEqual([
+      ['C', 9500, '2026-11-22'],
+      ['A', 11000, '2026-12-06'],
+    ])
+    // Listopad → A dostane listopadový termín se slevou.
+    const nov = buildTourCards(offers, {
+      ...DEFAULT_TOUR_FILTERS,
+      mesice: ['2026-11'],
+      razeni: 'cena',
+    })
+    expect(nov.find((c) => c.offer.title === 'A')).toMatchObject({
+      price: 11500,
+      date: '2026-11-22',
+    })
+    // Jen se slevou + AI → A za 12 000 (jediný termín se slevou).
+    const disc = buildTourCards(offers, { ...DEFAULT_TOUR_FILTERS, sleva: true, strava: ['ai'] })
+    expect(disc.map((c) => [c.offer.title, c.price])).toEqual([['A', 12000]])
+    // Víkend → jen třídenní termín A.
     expect(
-      buildTourCards(offers, { ...DEFAULT_TOUR_FILTERS, strava: '6' }).map((o) => o.id),
-    ).toEqual([1, 3])
+      buildTourCards(offers, { ...DEFAULT_TOUR_FILTERS, noci: [3, 5] }).map((c) => c.price),
+    ).toEqual([6000])
+    // Okolní letiště přidá B.
     expect(
-      buildTourCards(offers, { ...DEFAULT_TOUR_FILTERS, odlet: 'ostrava' }).map((o) => o.id),
-    ).toEqual([3])
+      buildTourCards(offers, {
+        ...DEFAULT_TOUR_FILTERS,
+        odlet: ['praha', 'bratislava'],
+        razeni: 'cena',
+      }).map((c) => c.offer.title),
+    ).toEqual(['B', 'C', 'A'])
+    // Doporučené: sleva −40 % posune A (12 000) před C (9 500)? 12000*(1-0.2)=9600 > 9500 → C první.
     expect(
-      buildTourCards(offers, { ...DEFAULT_TOUR_FILTERS, strava: '6', razeni: 'sleva' }).map(
-        (o) => o.id,
-      ),
-    ).toEqual([1, 3])
-    expect(
-      buildTourCards(offers, { ...DEFAULT_TOUR_FILTERS, typ: 'poznavaci' }).map((o) => o.id),
-    ).toEqual([4])
+      buildTourCards(offers, {
+        ...DEFAULT_TOUR_FILTERS,
+        mesice: ['2026-11'],
+        strava: ['ai', 'program'],
+      }).map((c) => c.offer.title),
+    ).toEqual(['C', 'A'])
   })
 
-  it('buildResorts: nejnižší cena za oblast jen z 6–8 nocí, poznávací se nepočítají', () => {
+  it('facety: měsíce s počty, letoviska, dny odletů, štítky použitých filtrů', () => {
     const offers = [
-      offer({ id: 1, area: 'Hurghada', price: 12579, nights: 3 }),
-      offer({ id: 2, area: 'Hurghada', price: 13769, photoUrl: 'https://x/a.jpg' }),
-      offer({ id: 3, area: 'Marsa Alam', price: 12990 }),
-      offer({ id: 4, area: null, place: null, kind: 'tour', price: 5000 }),
+      offer({
+        id: 1,
+        terms: [
+          ['2026-11-22', 7, 10000, 0],
+          ['2026-12-06', 7, 9000, 0],
+        ],
+      }),
+      offer({ id: 2, area: 'Marsa Alam', terms: [['2026-12-13', 7, 8000, 0]] }),
     ]
-    expect(buildResorts(offers)).toEqual([
-      { name: 'Marsa Alam', minPrice: 12990, photoUrl: null, hotels: 1 },
-      { name: 'Hurghada', minPrice: 13769, photoUrl: 'https://x/a.jpg', hotels: 1 },
+    const months = monthFacet(offers, DEFAULT_TOUR_FILTERS, '2026-10-16')
+    expect(months.slice(0, 3).map((m) => [m.value, m.count])).toEqual([
+      ['2026-10', 0],
+      ['2026-11', 1],
+      ['2026-12', 2],
+    ])
+    expect(
+      resortFacet(offers, DEFAULT_TOUR_FILTERS).map((r) => [r.value, r.label, r.count]),
+    ).toEqual([
+      ['hurghada', 'Hurghada', 1],
+      ['marsa-alam', 'Marsa Alam', 1],
+    ])
+    expect(departureDays(offers, { ...DEFAULT_TOUR_FILTERS, mesice: ['2026-11'] })).toEqual([
+      '2026-11-22',
+      '2026-12-06',
+      '2026-12-13',
+    ])
+    const f = parseTourFilters({
+      odlet: 'praha',
+      mesice: '2026-11,2026-12',
+      noci: 'vse',
+      letovisko: 'hurghada',
+    })
+    expect(
+      appliedFilterTags(f, (s) => (s === 'hurghada' ? 'Hurghada' : s)).map((t) => t.label),
+    ).toEqual(['Praha', 'listopad 2026', 'prosinec 2026', 'libovolná délka', 'Hurghada'])
+    expect(dateSummary(f)).toBe('listopad – prosinec 2026')
+    expect(buildResorts(buildTourCards(offers, DEFAULT_TOUR_FILTERS))).toEqual([
+      { name: 'Marsa Alam', slug: 'marsa-alam', minPrice: 8000, photoUrl: null, hotels: 1 },
+      { name: 'Hurghada', slug: 'hurghada', minPrice: 9000, photoUrl: null, hotels: 1 },
     ])
   })
 })

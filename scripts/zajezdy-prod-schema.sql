@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS tour_offers (
     stars numeric,
     board varchar NOT NULL,
     departures jsonb,
+    terms jsonb,
     term_from timestamp(3) with time zone NOT NULL,
     term_to timestamp(3) with time zone,
     nights numeric NOT NULL,
@@ -46,3 +47,5 @@ CREATE INDEX IF NOT EXISTS tour_offers_country_code_idx ON tour_offers USING btr
 CREATE INDEX IF NOT EXISTS tour_offers_created_at_idx ON tour_offers USING btree (created_at);
 CREATE INDEX IF NOT EXISTS tour_offers_source_idx ON tour_offers USING btree (source);
 CREATE INDEX IF NOT EXISTS tour_offers_updated_at_idx ON tour_offers USING btree (updated_at);
+-- Doplnění pro starší instalace tabulky (termíny přibyly 17. 10. 2026).
+ALTER TABLE tour_offers ADD COLUMN IF NOT EXISTS terms jsonb;

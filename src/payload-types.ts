@@ -632,6 +632,18 @@ export interface TourOffer {
   termCount?: number | null;
   price: number;
   originalPrice?: number | null;
+  /**
+   * Všechny budoucí termíny skupiny jako pole [YYYY-MM-DD, nocí, cena, původní cena nebo 0] — filtr podle měsíce a kalendář odletů.
+   */
+  terms?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   photoUrl?: string | null;
   detailUrl: string;
   lat?: number | null;
@@ -990,6 +1002,7 @@ export interface TourOffersSelect<T extends boolean = true> {
   termCount?: T;
   price?: T;
   originalPrice?: T;
+  terms?: T;
   photoUrl?: T;
   detailUrl?: T;
   lat?: T;

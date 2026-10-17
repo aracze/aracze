@@ -600,14 +600,17 @@ Denní obnova kolekce **`tour-offers`**, ze které se kreslí podstránky
   běh projde beze změny) — produkce má 1,8 GB RAM a 3 GB swap, sledovat
   `docker stats` po prvních bězích. Dočasný soubor se vždy smaže.
 - **Co se ukládá:** jeden řádek za každou kombinaci hotel × strava × odletová
-  místa (`term_group`) s **leteckou** dopravou a odletem z **českého letiště**
-  (Praha, Brno, Ostrava, Pardubice, Karlovy Vary — Vídeň/Bratislava/Krakov
-  se vyřazují, stejně jako u Invie), s nejlevnějším budoucím termínem,
-  původní cenou (sleva), počtem termínů, fotkou a odkazem na detail. Stránka
-  pak z řádků skládá karty: každý hotel jednou, nejlevnější varianta, která
-  projde filtry (`src/lib/tour-filters.ts`). Nabídky zdroje se nahrazují celé
-  v jedné transakci (přímé SQL, `jsonb_to_recordset` po 500 řádcích); zdroj,
-  jehož feed selhal nebo nedal žádnou nabídku, si nechá včerejší data.
+  místa (`term_group`) s **leteckou** dopravou a odletem z letiště ze seznamu
+  `src/lib/tour-airports.ts` — česká (Praha, Brno, Ostrava, Pardubice,
+  Karlovy Vary) **a okolní** (Bratislava, Vídeň, Budapešť, Krakov, Katovice,
+  Mnichov, Drážďany, Linz; jiná se vyřazují). Řádek nese nejlevnější budoucí
+  termín (cena, původní cena, odlet, nocí), počet termínů, fotku, odkaz a
+  **všechny budoucí termíny** jako kompaktní pole `terms`
+  `[YYYY-MM-DD, nocí, cena, původní cena nebo 0]` (strop 200 na řádek) —
+  z nich web počítá filtr podle měsíce či přesných dnů a tečky v kalendáři.
+  Nabídky zdroje se nahrazují celé v jedné transakci (přímé SQL,
+  `jsonb_to_recordset` po 500 řádcích); zdroj, jehož feed selhal nebo nedal
+  žádnou nabídku, si nechá včerejší data.
 - **Provize:** odkazy ve feedech vedou na web cestovky bez provize. Karta
   proto míří na `/go/zajezd/<id>` (`src/app/(frontend)/go/zajezd/`), který si
   řádek přečte a přesměruje na **CJ click link cestovky s deep-linkem**
@@ -617,9 +620,24 @@ Denní obnova kolekce **`tour-offers`**, ze které se kreslí podstránky
   cestovka přesměruje bez parametrů a provize se ztratí.
 - **Stránka:** podstránka kategorie `Zájezdy` pod zemí (v adminu záložka
   Zájezdy → kód země ISO alpha-3, např. `EGY`); v sekundárním menu stojí
-  hned za „Místy“. Filtry (`?typ=poznavaci&strava=6&noci=7&odlet=praha&hvezdy=4&ck=cedok&razeni=sleva&pocet=36`)
-  žijí v adrese — serverová komponenta, obyčejné odkazy, funguje bez JS;
-  výchozí hodnoty se do adresy nepíšou, kanonická adresa zůstává bez parametrů.
+  hned za „Místy“. **Filtry** (`src/lib/tour-filters.ts`, UI
+  `tours-section.tsx` + klientský dialog `tour-date-dialog.tsx`) žijí
+  v adrese a všechno kromě dialogu termínu jsou obyčejné odkazy (funguje bez
+  JS, každá kombinace má adresu; výchozí hodnoty se nepíšou, kanonická adresa
+  zůstává bez parametrů):
+  `?odlet=praha,bratislava` (prázdné = všechna česká; okolní letiště karta
+  značí štítkem), `mesice=2026-11,2026-12` nebo přesné dny `od=…&do=…`
+  (mají přednost), `noci=6-8` (výchozí týden; `vse` = libovolná — třídenní
+  víkend by jinak „vyhrával“ cenou), `typ=pobyt|poznavaci` (výchozí vše),
+  `strava=ai,polo,snidane,program` (4 skupiny místo 8 kódů), `hvezdy=5,4,3`
+  (3 = tři a méně vč. neuvedeno), `letovisko=hurghada`, `ck=cedok`, `sleva=1`
+  (po termínech — hotel se zlevněným dražším termínem se ukáže s ním),
+  `razeni=doporucene|cena|sleva|hvezdy|odlet` (doporučené = cena snížená
+  o polovinu procenta slevy), `pocet=36`. Karta = každý hotel jednou
+  s nejlevnějším termínem, který prošel filtrem data a délky; počty u voleb
+  (facety) se počítají při ostatních filtrech. Vedlejší filtry stojí v PRAVÉM
+  bočním panelu (jednotně s ostatními panely webu; rozhodnutí 17. 10. 2026
+  po porovnání s řadou chipů na živých datech).
 - Spouští GitHub Actions cron denně ve 4:17 UTC
   (`.github/workflows/sync-tour-offers.yml`, ruční běh přes _Run workflow_);
   autentizace hlavičkou `X-Sync-Secret` = `ANALYTICS_SYNC_SECRET` nebo admin
