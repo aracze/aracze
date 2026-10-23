@@ -543,6 +543,21 @@ bez klientského JS, pod grafem tabulka pro čtečky.
   (samá trvale selhávající místa). Endpoint vrací 200 i s chybami u míst
   (pole `errors`) — workflow je vypíše a **selže**, takže zelený běh znamená
   skutečně obnovená data (20. 8. 2026 byl běh „zelený" se 174× 429).
+- **Místo bez stanice není chyba.** Když Meteostat pro souřadnice nevrátí
+  žádná denní data nebo nemá teploty pro všech 12 měsíců (20. 10. 2026:
+  Arequipa, Kandy a pět zemí), zapíše sync místo dat značku
+  `{ "unavailable": true, "reason": …, "coords": "lat,lon", "updatedAt": … }`
+  (typ `ClimateNormalsUnavailable`), ohlásí ji v poli `noStation` a workflow
+  ji jen vypíše. Díky `updatedAt` se taková stránka řadí mezi „čerstvé" a
+  zkusí se znovu až po 330 dnech jako data (stanice může přibýt) — bez značky
+  by stála na začátku fronty a každý běh by za ni platil dva dotazy a končil
+  červeně. Když editor opraví souřadnice místa, značka přestane platit hned
+  (`coords` se liší; rozhoduje `needsRefresh` v `src/lib/climate-normals-state.ts`,
+  hlídá test).
+  Graf se bez dat nekreslí tak jako tak (`parseClimateNormals` vrací null).
+  Značku dostane jen stránka, která data nikdy neměla; stránka s daty si je
+  při neúspěšné obnově nechá a selhání se hlásí dál v `errors`. Ruční
+  opakování pokusu: `?force=1&slug=…`.
 - Parametry pro ruční běh: `?dryRun=1` (jen vypíše), `?force=1` (přepočítá
   i čerstvá data — nutné po změně metodiky), `?slug=/anglie/londyn/pocasi`
   (jediná stránka), `?maxPlaces=N` (jiný strop na běh).

@@ -37,12 +37,16 @@ jobs:
         # endpoint volá PO DÁVKÁCH `maxPlaces=10` (~50 s): každá dávka zapíše
         # svoje výsledky hned a smyčka pokračuje, dokud endpoint hlásí odložené
         # stránky (`deferred`) a dávka něco zapsala. Dávka bez zápisu
-        # (`updated: 0`) = samá trvale selhávající místa (vyčerpaná kvóta 429,
-        # chybějící souřadnice) → konec, ať se kvóta nepálí opakováním.
+        # (`updated: 0` a žádná nová značka) = samá trvale selhávající místa
+        # (vyčerpaná kvóta 429, chybějící souřadnice) → konec, ať se kvóta
+        # nepálí opakováním.
         #
         # Endpoint vrací 200 i s chybami u jednotlivých míst (pole `errors`),
         # takže samotné `curl -f` nestačí: 20. 8. 2026 byl běh „zelený", přitom
         # všech 174 míst skončilo na 429. Chyby proto job vypíše a SELŽE.
+        # Místa, pro která Meteostat stanici nemá (`noStation`), chybou NEJSOU:
+        # endpoint jim zapíše značku a příště je nedotazuje (20. 10. 2026 jich
+        # bylo 7 a shazovala by každý měsíční běh). Vypíší se jen pro přehled.
         #
         # ŽÁDNÉ `--retry`: plný běh spotřebuje ~348 z 500 dotazů měsíční kvóty
         # RapidAPI. Když běh selže, spustí se ručně přes „Run workflow" —
@@ -54,6 +58,7 @@ jobs:
           SYNC_SECRET: ${{ secrets.ANALYTICS_SYNC_SECRET }}
         run: |
           total_updated=0
+          total_no_station=0
           failed=0
           # Strop 40 dávek × 10 míst = 400 — víc než stránek počasí i než kvóta
           # dovolí; smyčka stejně skončí dřív na `deferred: 0`.
@@ -64,16 +69,19 @@ jobs:
             resp=$(curl -fsS -X POST "$SYNC_URL/api/sync-climate-normals?maxPlaces=10" \
               -H @- <<< "X-Sync-Secret: $SYNC_SECRET" \
               --connect-timeout 10 --max-time 95)
-            echo "Dávka $i: $(jq -c '{pages, updated, upToDate, deferred, skipped, errors: (.errors | length)}' <<< "$resp")"
+            echo "Dávka $i: $(jq -c '{pages, updated, upToDate, deferred, skipped, noStation: (.noStation | length), errors: (.errors | length)}' <<< "$resp")"
+            jq -r '.noStation[]?' <<< "$resp" | sed 's/^/  - bez stanice: /'
             jq -r '.errors[]?' <<< "$resp" | sed 's/^/  ! /'
             updated=$(jq -r '.updated // 0' <<< "$resp")
+            no_station=$(jq -r '.noStation | length' <<< "$resp")
             deferred=$(jq -r '.deferred // 0' <<< "$resp")
             errors=$(jq -r '.errors | length' <<< "$resp")
             total_updated=$((total_updated + updated))
+            total_no_station=$((total_no_station + no_station))
             if [ "$errors" -gt 0 ]; then failed=1; fi
-            if [ "$deferred" -eq 0 ] || [ "$updated" -eq 0 ]; then break; fi
+            if [ "$deferred" -eq 0 ] || [ $((updated + no_station)) -eq 0 ]; then break; fi
           done
-          echo "Celkem zapsáno míst: $total_updated"
+          echo "Celkem zapsáno míst: $total_updated, nově označeno bez stanice: $total_no_station"
           if [ "$failed" -eq 1 ]; then
             echo "::error::Některá místa se nepodařilo obnovit — viz řádky „!“ výše"
             exit 1
