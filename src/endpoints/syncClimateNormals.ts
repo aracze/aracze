@@ -3,7 +3,12 @@ import { APIError } from 'payload'
 import { sql } from '@payloadcms/db-postgres'
 import { timingSafeEqual } from 'node:crypto'
 import { safeRevalidate } from '@/hooks/revalidation'
-import { PageCategory, type ClimateNormalMonth, type ClimateNormals } from '@/types/payload'
+import {
+  PageCategory,
+  type ClimateNormalMonth,
+  type ClimateNormals,
+  type ClimateNormalsUnavailable,
+} from '@/types/payload'
 import { climateWindow, requestRanges } from '@/lib/climate-window'
 
 /**
@@ -35,6 +40,14 @@ import { climateWindow, requestRanges } from '@/lib/climate-window'
  *
  * Selhání jednoho místa NEMAŽE minulá data: stránka drží poslední úspěšně
  * stažené normály a chyba se jen vrátí v odpovědi.
+ *
+ * Výjimka: místo, pro které Meteostat stanici NEMÁ (NoStationDataError) a
+ * které žádná data nikdy nemělo, dostane místo dat trvalou značku
+ * `{ unavailable: true }` (ClimateNormalsUnavailable). Bez ní by taková
+ * stránka zůstala „bez dat", stála na začátku fronty a KAŽDÝ běh by za ni
+ * platil dva dotazy z kvóty — a workflow by měsíc co měsíc končilo červeně
+ * (20. 10. 2026: 7 takových míst). Značka má `updatedAt`, takže se pokus
+ * zopakuje až po REFRESH_AFTER_DAYS jako u dat; stanice může časem přibýt.
  *
  * Kvóta Meteostatu (RapidAPI Basic zdarma) je 500 dotazů/měsíc a jedno místo
  * stojí dva, takže běh je PŘÍRŮSTKOVÝ: bere jen stránky bez dat (nové
@@ -95,7 +108,12 @@ function daysInMonth(year: number, month: number): number {
  */
 class NoStationDataError extends Error {}
 
-/** Souřadnice, u kterých v nedávné době stanice nebyla — přeskakují se bez dotazu. */
+/**
+ * Souřadnice, u kterých v nedávné době stanice nebyla — přeskakují se bez
+ * dotazu. Trvalou značku do DB dostávají jen stránky bez dat (viz hlavička);
+ * stránka, která data má a jen je nedokázala obnovit, zůstává ve frontě, a tohle
+ * memo ji chrání před opakovaným dotazem v dalších dávkách téhož běhu.
+ */
 const noStationUntil = new Map<string, number>()
 const NO_STATION_MEMO_MS = 12 * 3_600_000
 
@@ -216,6 +234,11 @@ type ParentPlace = {
   detail?: { latitude?: string | null; longitude?: string | null } | null
 }
 
+/** Má stránka uložená skutečná data (ne značku „bez stanice" ani prázdno)? */
+function hasStoredMonths(stored: unknown): boolean {
+  return Array.isArray((stored as { months?: unknown } | null | undefined)?.months)
+}
+
 type DrizzleTx = { execute: (query: unknown) => Promise<unknown> }
 type DrizzleLike = DrizzleTx & {
   transaction: <T>(fn: (tx: DrizzleTx) => Promise<T>) => Promise<T>
@@ -308,7 +331,13 @@ async function runSync(
     const parentById = new Map((parentsRes.docs as unknown as ParentPlace[]).map((p) => [p.id, p]))
 
     const errors: string[] = []
-    const results: { id: number; fullSlug: string | null; normals: ClimateNormals }[] = []
+    const results: {
+      id: number
+      fullSlug: string | null
+      normals: ClimateNormals | ClimateNormalsUnavailable
+    }[] = []
+    /** Stránky, které v tomto běhu dostaly značku „bez stanice" (jen informativně, není to chyba). */
+    const noStation: string[] = []
     let skipped = 0
 
     // DÁVKOVÁNÍ: kvóta Meteostatu je 500 dotazů/měsíc a jedno místo stojí dva
@@ -393,11 +422,12 @@ async function runSync(
       if (!normalsCache.has(cacheKey)) {
         const memo = noStationUntil.get(cacheKey)
         if (memo !== undefined && memo > now.getTime()) {
-          // Nedávno bez stanice — nepálit kvótu, ale hlásit dál jako chybu,
-          // aby stránka nezmizela z přehledu selhání (viz NoStationDataError).
+          // Nedávno bez stanice — nepálit kvótu; stejná třída chyby, aby i
+          // takovou stránku potkalo totéž co při skutečném dotazu (značka,
+          // nebo hlášení chyby u stránky s daty).
           normalsCache.set(
             cacheKey,
-            new Error('bez stanice (přeskočeno, dřívější selhání v tomto běhu)'),
+            new NoStationDataError('bez stanice (přeskočeno, dřívější selhání v tomto běhu)'),
           )
         } else {
           try {
@@ -412,6 +442,17 @@ async function runSync(
         }
       }
       const cached = normalsCache.get(cacheKey)
+      if (cached instanceof NoStationDataError && !hasStoredMonths(page.climateNormals)) {
+        // Bez stanice a bez dat → trvalá značka, ať se místo nezkouší každý
+        // běh znovu (viz hlavička souboru). Není to chyba běhu.
+        noStation.push(`${page.fullSlug} meteostat(${cacheKey}): ${cached.message}`)
+        results.push({
+          id: page.id,
+          fullSlug: page.fullSlug ?? null,
+          normals: { unavailable: true, reason: cached.message, updatedAt: now.toISOString() },
+        })
+        continue
+      }
       if (!cached || cached instanceof Error) {
         // Selhání nemaže minulá data — stránka si nechá poslední úspěšný sync.
         skipped++
@@ -449,18 +490,24 @@ async function runSync(
     })
 
     // Zápis šel mimo hooky → invalidace cache stránek ručně (vzor revalidation.ts).
-    await safeRevalidate([
-      'pages',
-      ...results.filter((r) => r.fullSlug).map((r) => 'page_' + r.fullSlug),
-    ])
+    // Jen u skutečných dat: značka „bez stanice" na vzhledu stránky nic nemění
+    // (graf se bez dat nekreslí ani předtím), tak ať zbytečně neshazuje cache.
+    const withData = results.filter((r) => !('unavailable' in r.normals))
+    if (withData.length > 0) {
+      await safeRevalidate([
+        'pages',
+        ...withData.filter((r) => r.fullSlug).map((r) => 'page_' + r.fullSlug),
+      ])
+    }
 
     return Response.json({
       ok: true,
       pages: pages.length,
-      updated: results.length,
+      updated: withData.length,
       upToDate,
       deferred,
       skipped,
+      noStation,
       errors,
     })
   }

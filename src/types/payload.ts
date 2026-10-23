@@ -166,6 +166,22 @@ export interface ClimateNormals {
   updatedAt?: string
 }
 
+/**
+ * Značka „Meteostat pro tyhle souřadnice stanici nemá" — druhý možný obsah
+ * pole `climateNormals` (vedle ClimateNormals). Sync ji ukládá místo dat,
+ * aby stránku bez stanice nezkoušel v každém běhu znovu (každý pokus stojí
+ * dva dotazy z měsíční kvóty 500); díky `updatedAt` se pokus zopakuje až po
+ * stejné době jako obnova dat (~rok — stanice může přibýt). Frontend ji bere
+ * jako „bez dat" (parseClimateNormals vrací null, graf se nekreslí).
+ */
+export interface ClimateNormalsUnavailable {
+  unavailable: true
+  /** Proč — hláška Meteostatu/syncu, jen pro ladění. */
+  reason: string
+  /** ISO timestamp pokusu; stejná role jako u ClimateNormals.updatedAt. */
+  updatedAt: string
+}
+
 export interface SharedImageComponent {
   alternativeText: string
   url: string | URL
