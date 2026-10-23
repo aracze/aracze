@@ -176,8 +176,14 @@ export interface ClimateNormals {
  */
 export interface ClimateNormalsUnavailable {
   unavailable: true
-  /** Proč — hláška Meteostatu/syncu, jen pro ladění. */
+  /** Proč — hláška Meteostatu, jen pro ladění. */
   reason: string
+  /**
+   * Souřadnice („lat,lon" na 4 desetinná místa), pro které stanice nebyla.
+   * Když editor souřadnice místa opraví, značka přestane platit hned
+   * (needsRefresh v lib/climate-normals-state.ts), ne až po roce.
+   */
+  coords: string
   /** ISO timestamp pokusu; stejná role jako u ClimateNormals.updatedAt. */
   updatedAt: string
 }

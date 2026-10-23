@@ -10,6 +10,7 @@ import {
   type ClimateNormalsUnavailable,
 } from '@/types/payload'
 import { climateWindow, requestRanges } from '@/lib/climate-window'
+import { hasStoredMonths, needsRefresh, storedUpdatedAt } from '@/lib/climate-normals-state'
 
 /**
  * Sync dlouhodobých měsíčních průměrů počasí: pro publikované stránky kategorie
@@ -113,8 +114,9 @@ class NoStationDataError extends Error {}
  * dotazu. Trvalou značku do DB dostávají jen stránky bez dat (viz hlavička);
  * stránka, která data má a jen je nedokázala obnovit, zůstává ve frontě, a tohle
  * memo ji chrání před opakovaným dotazem v dalších dávkách téhož běhu.
+ * Nese i původní hlášku Meteostatu, aby ji dostala i značka zapsaná z mema.
  */
-const noStationUntil = new Map<string, number>()
+const noStationUntil = new Map<string, { until: number; message: string }>()
 const NO_STATION_MEMO_MS = 12 * 3_600_000
 
 async function fetchDailyRange(
@@ -234,11 +236,6 @@ type ParentPlace = {
   detail?: { latitude?: string | null; longitude?: string | null } | null
 }
 
-/** Má stránka uložená skutečná data (ne značku „bez stanice" ani prázdno)? */
-function hasStoredMonths(stored: unknown): boolean {
-  return Array.isArray((stored as { months?: unknown } | null | undefined)?.months)
-}
-
 type DrizzleTx = { execute: (query: unknown) => Promise<unknown> }
 type DrizzleLike = DrizzleTx & {
   transaction: <T>(fn: (tx: DrizzleTx) => Promise<T>) => Promise<T>
@@ -331,14 +328,20 @@ async function runSync(
     const parentById = new Map((parentsRes.docs as unknown as ParentPlace[]).map((p) => [p.id, p]))
 
     const errors: string[] = []
-    const results: {
-      id: number
-      fullSlug: string | null
-      normals: ClimateNormals | ClimateNormalsUnavailable
-    }[] = []
-    /** Stránky, které v tomto běhu dostaly značku „bez stanice" (jen informativně, není to chyba). */
-    const noStation: string[] = []
+    const results: { id: number; fullSlug: string | null; normals: ClimateNormals }[] = []
+    /** Značky „bez stanice" k zápisu — zvlášť od dat: nehlásí se jako chyba a neshazují cache. */
+    const markers: { id: number; fullSlug: string | null; marker: ClimateNormalsUnavailable }[] = []
     let skipped = 0
+
+    /** Souřadnice rodičovského místa jako klíč „lat,lon" (4 desetinná místa), nebo null. */
+    const coordsOf = (page: WeatherPage): { lat: number; lon: number; key: string } | null => {
+      const parentId = typeof page.parent === 'object' ? page.parent?.id : page.parent
+      const parent = typeof parentId === 'number' ? parentById.get(parentId) : undefined
+      const lat = Number.parseFloat(parent?.detail?.latitude ?? '')
+      const lon = Number.parseFloat(parent?.detail?.longitude ?? '')
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+      return { lat, lon, key: `${lat.toFixed(4)},${lon.toFixed(4)}` }
+    }
 
     // DÁVKOVÁNÍ: kvóta Meteostatu je 500 dotazů/měsíc a jedno místo stojí dva
     // (okno 20 let se nevejde do limitu 3 650 dní na dotaz). Jeden běh proto
@@ -359,16 +362,15 @@ async function runSync(
 
     // Nejdřív stránky BEZ dat (nová destinace), pak nejstarší — data starší než
     // rok se přepočítají (okno se posunulo), čerstvá se přeskočí zadarmo.
+    // Značka „bez stanice" stárne stejně, ale po změně souřadnic místa platit
+    // přestane hned (needsRefresh).
     const staleBefore = new Date(now.getTime() - REFRESH_AFTER_DAYS * 86_400_000)
     const candidates = pages
-      .map((page) => {
-        const stored = page.climateNormals as { updatedAt?: unknown } | null | undefined
-        const updatedAt =
-          stored && typeof stored.updatedAt === 'string' ? new Date(stored.updatedAt) : null
-        return { page, updatedAt }
-      })
+      .map((page) => ({ page, updatedAt: storedUpdatedAt(page.climateNormals) }))
       .filter(({ page }) => !slugFilter || page.fullSlug === slugFilter)
-      .filter(({ updatedAt }) => force || !updatedAt || updatedAt < staleBefore)
+      .filter(({ page }) =>
+        needsRefresh(page.climateNormals, coordsOf(page)?.key ?? null, staleBefore, force),
+      )
       .sort((a, b) => (a.updatedAt?.getTime() ?? 0) - (b.updatedAt?.getTime() ?? 0))
 
     const upToDate = pages.length - candidates.length
@@ -380,17 +382,7 @@ async function runSync(
     // běh přes celý web vyčerpal měsíční kvótu (500 dotazů) a vrátil samá 429.
     // Zkušební běh proto jen spočítá, co by se dělo, a nesáhne na API.
     if (dryRun) {
-      const plannedCoords = new Set(
-        queue.map(({ page }) => {
-          const parentId = typeof page.parent === 'object' ? page.parent?.id : page.parent
-          const parent = typeof parentId === 'number' ? parentById.get(parentId) : undefined
-          const lat = Number.parseFloat(parent?.detail?.latitude ?? '')
-          const lon = Number.parseFloat(parent?.detail?.longitude ?? '')
-          return Number.isFinite(lat) && Number.isFinite(lon)
-            ? `${lat.toFixed(4)},${lon.toFixed(4)}`
-            : null
-        }),
-      )
+      const plannedCoords = new Set(queue.map(({ page }) => coordsOf(page)?.key ?? null))
       plannedCoords.delete(null)
       return Response.json({
         ok: true,
@@ -408,36 +400,33 @@ async function runSync(
     // souřadnice, druhá se obslouží z cache — kvóta je jen 500 dotazů/měsíc.
     const normalsCache = new Map<string, ClimateNormals | Error>()
     for (const { page } of queue) {
-      const parentId = typeof page.parent === 'object' ? page.parent?.id : page.parent
-      const parent = typeof parentId === 'number' ? parentById.get(parentId) : undefined
-      const lat = Number.parseFloat(parent?.detail?.latitude ?? '')
-      const lon = Number.parseFloat(parent?.detail?.longitude ?? '')
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      const coords = coordsOf(page)
+      if (!coords) {
         skipped++
         errors.push(`${page.fullSlug}: rodičovské místo nemá souřadnice`)
         continue
       }
 
-      const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`
+      const { lat, lon, key: cacheKey } = coords
       if (!normalsCache.has(cacheKey)) {
         const memo = noStationUntil.get(cacheKey)
         // `?force=1` memo obchází: ruční opakování pokusu má Meteostat opravdu
         // zeptat, jinak by jen přepsalo značku čerstvým datem bez dotazu.
-        if (!force && memo !== undefined && memo > now.getTime()) {
-          // Nedávno bez stanice — nepálit kvótu; stejná třída chyby, aby i
-          // takovou stránku potkalo totéž co při skutečném dotazu (značka,
-          // nebo hlášení chyby u stránky s daty).
-          normalsCache.set(
-            cacheKey,
-            new NoStationDataError('bez stanice (přeskočeno, dřívější selhání v tomto běhu)'),
-          )
+        if (!force && memo !== undefined && memo.until > now.getTime()) {
+          // Nedávno bez stanice — nepálit kvótu; stejná třída chyby a původní
+          // hláška, aby i takovou stránku potkalo totéž co při skutečném
+          // dotazu (značka se skutečným důvodem, nebo chyba u stránky s daty).
+          normalsCache.set(cacheKey, new NoStationDataError(memo.message))
         } else {
           try {
             normalsCache.set(cacheKey, await fetchRollingAverages(lat, lon, now))
             noStationUntil.delete(cacheKey)
           } catch (err) {
             if (err instanceof NoStationDataError) {
-              noStationUntil.set(cacheKey, now.getTime() + NO_STATION_MEMO_MS)
+              noStationUntil.set(cacheKey, {
+                until: now.getTime() + NO_STATION_MEMO_MS,
+                message: err.message,
+              })
             }
             normalsCache.set(cacheKey, err instanceof Error ? err : new Error(String(err)))
           }
@@ -447,11 +436,15 @@ async function runSync(
       if (cached instanceof NoStationDataError && !hasStoredMonths(page.climateNormals)) {
         // Bez stanice a bez dat → trvalá značka, ať se místo nezkouší každý
         // běh znovu (viz hlavička souboru). Není to chyba běhu.
-        noStation.push(`${page.fullSlug} meteostat(${cacheKey}): ${cached.message}`)
-        results.push({
+        markers.push({
           id: page.id,
           fullSlug: page.fullSlug ?? null,
-          normals: { unavailable: true, reason: cached.message, updatedAt: now.toISOString() },
+          marker: {
+            unavailable: true,
+            reason: cached.message,
+            coords: cacheKey,
+            updatedAt: now.toISOString(),
+          },
         })
         continue
       }
@@ -476,8 +469,12 @@ async function runSync(
       if (!lockResult.rows[0]?.acquired) {
         throw new APIError('Sync už běží (souběžný požadavek) — zkus to za chvíli znovu', 409)
       }
-      for (const r of results) {
-        const payload = JSON.stringify(r.normals)
+      const writes = [
+        ...results.map((r) => ({ id: r.id, value: r.normals as unknown })),
+        ...markers.map((m) => ({ id: m.id, value: m.marker as unknown })),
+      ]
+      for (const r of writes) {
+        const payload = JSON.stringify(r.value)
         await tx.execute(
           sql`UPDATE pages SET climate_normals = ${payload}::jsonb WHERE id = ${r.id}`,
         )
@@ -494,22 +491,24 @@ async function runSync(
     // Zápis šel mimo hooky → invalidace cache stránek ručně (vzor revalidation.ts).
     // Jen u skutečných dat: značka „bez stanice" na vzhledu stránky nic nemění
     // (graf se bez dat nekreslí ani předtím), tak ať zbytečně neshazuje cache.
-    const withData = results.filter((r) => !('unavailable' in r.normals))
-    if (withData.length > 0) {
+    if (results.length > 0) {
       await safeRevalidate([
         'pages',
-        ...withData.filter((r) => r.fullSlug).map((r) => 'page_' + r.fullSlug),
+        ...results.filter((r) => r.fullSlug).map((r) => 'page_' + r.fullSlug),
       ])
     }
 
     return Response.json({
       ok: true,
       pages: pages.length,
-      updated: withData.length,
+      updated: results.length,
       upToDate,
       deferred,
       skipped,
-      noStation,
+      // Stránky, které v tomto běhu dostaly značku „bez stanice" — informace, ne chyba.
+      noStation: markers.map(
+        (m) => `${m.fullSlug} meteostat(${m.marker.coords}): ${m.marker.reason}`,
+      ),
       errors,
     })
   }
