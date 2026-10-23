@@ -3,6 +3,7 @@
 import { ChevronDown } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { loadMorePillClass, loadMorePillIconClass } from './load-more-pill'
 
 /**
  * Tlačítko „Zobrazit další…" — jeden vzor pro celý web (do 29. 8. 2026 tři
@@ -21,11 +22,8 @@ type Variant = 'pill' | 'text'
 // Obě podoby na jednom místě — tlačítko i šipka čtou stejný záznam, ať se
 // při úpravě jedné varianty nezapomene na druhou půlku.
 const VARIANT: Record<Variant, { button: string; icon: string }> = {
-  pill: {
-    button:
-      'inline-flex items-center gap-2 rounded-full border-2 border-brand/30 px-7 py-3 text-sm font-bold uppercase tracking-wider text-brand font-heading transition-all btn-halo hover:border-brand',
-    icon: 'h-4 w-4',
-  },
+  // Pilulku sdílí i odkaz „Načíst další nabídky“ u zájezdů (load-more-pill.ts).
+  pill: { button: loadMorePillClass, icon: loadMorePillIconClass },
   text: {
     // py-2: dotyková plocha ≥ 24 px (WCAG 2.5.8) i u holého textu.
     button:

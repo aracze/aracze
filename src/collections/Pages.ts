@@ -63,6 +63,7 @@ export const Pages: CollectionConfig = {
         { label: 'Jazyk a kultura', value: 'Jazyk a kultura' },
         { label: 'Jídlo a pití', value: 'Jídlo a pití' },
         { label: 'Ubytování', value: 'Ubytování' },
+        { label: 'Zájezdy', value: 'Zájezdy' },
         { label: 'Články', value: 'Články' },
         { label: 'Rubrika', value: 'Rubrika' },
         { label: 'Statická stránka', value: 'Statická stránka' },
@@ -264,6 +265,54 @@ export const Pages: CollectionConfig = {
               type: 'json',
               admin: {
                 disabled: true,
+              },
+            },
+          ],
+        },
+        {
+          name: 'tours',
+          label: 'Zájezdy',
+          admin: {
+            // Podstránka „Zájezdy“ země: web na ní vypíše nabídky z kolekce
+            // tour-offers (denní sync z feedů cestovek) podle kódu země.
+            condition: (data) => data?.category === 'Zájezdy',
+          },
+          fields: [
+            {
+              name: 'countryCode',
+              label: 'Země (ISO 3166-1 alpha-3)',
+              type: 'text',
+              validate: (value: string | null | undefined) =>
+                !value ||
+                /^[A-Z]{3}$/.test(value) ||
+                'Zadej třípísmenný kód země velkými písmeny (EGY, GRC, TUR) — stejný, jaký posílají feedy cestovek.',
+              admin: {
+                description:
+                  'Podle tohoto kódu se na stránce vybírají nabídky z feedů cestovek (EGY = Egypt, GRC = Řecko, TUR = Turecko). Bez kódu se žádné zájezdy nevypíší.',
+              },
+            },
+            {
+              name: 'inviaFeedUrls',
+              label: 'XML feedy Invie (jedna adresa na řádek)',
+              type: 'textarea',
+              validate: (value: string | null | undefined) => {
+                const bad = (value ?? '')
+                  .split(/\r?\n/)
+                  .map((l) => l.trim())
+                  .filter(Boolean)
+                  .find(
+                    (l) =>
+                      !/^https:\/\/affil\.invia\.cz\/direct\/core\/tool_xml-feed\/download\//.test(
+                        l,
+                      ),
+                  )
+                return bad
+                  ? `Adresa „${bad}“ není stažení XML feedu z affil.invia.cz (Nástroje → XML feed → Uložené XML feedy → odkaz Stáhnout).`
+                  : true
+              },
+              admin: {
+                description:
+                  'Feedy zájezdů Invie pro tuto zemi (portál dovolí max 150 položek na feed — klidně víc feedů po letoviscích). Denní sync z nich bere jen hotely, které nemáme od cestovek napřímo; u ostatních doplní odkaz „Recenze na Invii“.',
               },
             },
           ],

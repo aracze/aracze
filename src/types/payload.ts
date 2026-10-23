@@ -351,6 +351,11 @@ export interface Page {
    * /api/sync-climate-normals) — tvar ověří `parseClimateNormals`.
    */
   climateNormals?: GeneratedPage['climateNormals']
+  /**
+   * Podstránka „Zájezdy“: kód země (ISO alpha-3), podle kterého se vypisují
+   * nabídky z kolekce `tour-offers` (viz fetchTourOffers).
+   */
+  tours?: GeneratedPage['tours']
   createdBy?:
     | {
         username?: string | null
@@ -436,6 +441,45 @@ export interface ReviewPublic {
   avatarUrl: string | null
 }
 
+/**
+ * Nabídka zájezdu pro podstránku „Zájezdy“ — řádek kolekce `tour-offers`
+ * (plní denní sync /api/sync-tour-offers z feedů cestovek ve formátu
+ * Sdovolená.cz, viz src/lib/sdovolena.ts). Jeden řádek = hotel × strava ×
+ * odletová místa s nejlevnějším budoucím termínem; web z řádků skládá karty
+ * (každý hotel jednou) podle filtrů.
+ */
+export interface TourOffer {
+  id: number
+  /** Id cestovky (viz TOUR_SOURCES v src/lib/tour-sources.ts). */
+  source: string
+  /** `stay` = pobyt, `tour` = poznávací zájezd. */
+  kind: 'stay' | 'tour'
+  title: string
+  area: string | null
+  place: string | null
+  stars: number | null
+  /** Kód stravy 1–8 (popisek viz BOARD_LABELS). */
+  board: string
+  /** Odletová letiště (česká i okolní, viz TOUR_AIRPORTS), česká první. */
+  departures: string[]
+  /** Všechny budoucí termíny: [odlet YYYY-MM-DD, nocí, cena, původní cena nebo 0]. */
+  terms: [string, number, number, number][]
+  /** YYYY-MM-DD nejlevnějšího termínu. */
+  termFrom: string
+  nights: number
+  /** Cena za osobu v Kč. */
+  price: number
+  /** Původní cena, jen když je vyšší (sleva); jinak null. */
+  originalPrice: number | null
+  termCount: number
+  photoUrl: string | null
+  /** Souřadnice hotelu (pro mapu); null, když je feed neuvádí. */
+  lat: number | null
+  lng: number | null
+  /** Stránka hotelu u Invie (recenze), když se podařilo spárovat. */
+  inviaUrl: string | null
+}
+
 export enum PageCategory {
   Misto_k_navstiveni = 'Místo k navštívení',
   Turisticky_cil = 'Turistický cíl',
@@ -449,6 +493,7 @@ export enum PageCategory {
   Jazyk_a_kultura = 'Jazyk a kultura',
   Jidlo_a_pit = 'Jídlo a pití',
   Ubytovani = 'Ubytování',
+  Zajezdy = 'Zájezdy',
   Clanky = 'Články',
   Rubrika = 'Rubrika',
   Staticka_stranka = 'Statická stránka',

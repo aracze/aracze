@@ -74,6 +74,7 @@ export interface Config {
     articles: Article;
     comments: Comment;
     transactions: Transaction;
+    'tour-offers': TourOffer;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -98,6 +99,7 @@ export interface Config {
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
     transactions: TransactionsSelect<false> | TransactionsSelect<true>;
+    'tour-offers': TourOffersSelect<false> | TourOffersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -281,6 +283,7 @@ export interface Page {
     | 'Jazyk a kultura'
     | 'Jídlo a pití'
     | 'Ubytování'
+    | 'Zájezdy'
     | 'Články'
     | 'Rubrika'
     | 'Statická stránka';
@@ -349,6 +352,16 @@ export interface Page {
       | number
       | boolean
       | null;
+  };
+  tours?: {
+    /**
+     * Podle tohoto kódu se na stránce vybírají nabídky z feedů cestovek (EGY = Egypt, GRC = Řecko, TUR = Turecko). Bez kódu se žádné zájezdy nevypíší.
+     */
+    countryCode?: string | null;
+    /**
+     * Feedy zájezdů Invie pro tuto zemi (portál dovolí max 150 položek na feed — klidně víc feedů po letoviscích). Denní sync z nich bere jen hotely, které nemáme od cestovek napřímo; u ostatních doplní odkaz „Recenze na Invii“.
+     */
+    inviaFeedUrls?: string | null;
   };
   comments?: {
     docs?: (number | Comment)[];
@@ -592,6 +605,58 @@ export interface Transaction {
   createdAt: string;
 }
 /**
+ * Plní denní sync /api/sync-tour-offers z feedů cestovek — ruční úpravy přepíše další běh.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tour-offers".
+ */
+export interface TourOffer {
+  id: number;
+  source: string;
+  externalId: string;
+  kind: string;
+  title: string;
+  countryCode: string;
+  area?: string | null;
+  place?: string | null;
+  stars?: number | null;
+  board: string;
+  departures?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  termFrom: string;
+  termTo?: string | null;
+  nights: number;
+  termCount?: number | null;
+  price: number;
+  originalPrice?: number | null;
+  /**
+   * Všechny budoucí termíny skupiny jako pole [YYYY-MM-DD, nocí, cena, původní cena nebo 0] — filtr podle měsíce a kalendář odletů.
+   */
+  terms?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  photoUrl?: string | null;
+  detailUrl: string;
+  inviaUrl?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -642,6 +707,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'transactions';
         value: number | Transaction;
+      } | null)
+    | ({
+        relationTo: 'tour-offers';
+        value: number | TourOffer;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -817,6 +886,12 @@ export interface PagesSelect<T extends boolean = true> {
         inviaFeedUrl?: T;
         deals?: T;
       };
+  tours?:
+    | T
+    | {
+        countryCode?: T;
+        inviaFeedUrls?: T;
+      };
   comments?: T;
   climateNormals?: T;
   slug?: T;
@@ -909,6 +984,36 @@ export interface TransactionsSelect<T extends boolean = true> {
   note?: T;
   transactedAt?: T;
   legacyTransactionId?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tour-offers_select".
+ */
+export interface TourOffersSelect<T extends boolean = true> {
+  source?: T;
+  externalId?: T;
+  kind?: T;
+  title?: T;
+  countryCode?: T;
+  area?: T;
+  place?: T;
+  stars?: T;
+  board?: T;
+  departures?: T;
+  termFrom?: T;
+  termTo?: T;
+  nights?: T;
+  termCount?: T;
+  price?: T;
+  originalPrice?: T;
+  terms?: T;
+  photoUrl?: T;
+  detailUrl?: T;
+  inviaUrl?: T;
+  lat?: T;
+  lng?: T;
   updatedAt?: T;
   createdAt?: T;
 }

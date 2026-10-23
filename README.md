@@ -251,6 +251,9 @@ storage credentials, the following variables drive user-visible features:
 | `TURNSTILE_SITE_KEY`                                                                                   | Optional                   | Cloudflare Turnstile site key for the article comment form (anti-spam).                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `TURNSTILE_SECRET_KEY`                                                                                 | Optional                   | Cloudflare Turnstile secret key (server-side token verification).                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `KIWI_TEQUILA_API_KEY`                                                                                 | For Akční nabídky          | Server-side klíč Kiwi Tequila Search API pro denní sync `/api/sync-affiliate-deals` (sekce „Akční nabídky"). Účet je schválený partner z 2023 — od 5/2024 Tequila nové partnery nebere, klíč nerušit.                                                                                                                                                                                                                                                                                                         |
+| `CEDOK_SFTP_HOST`, `CEDOK_SFTP_USER`, `CEDOK_SFTP_PASSWORD`, `CEDOK_SFTP_PATH`                         | For Zájezdy                | SFTP přístup k feedu zájezdů Čedoku (formát Sdovolená.cz) pro denní sync `/api/sync-tour-offers` (podstránky „Zájezdy“). Další cestovky mají stejnou čtveřici s předponou podle `src/lib/tour-sources.ts` (`FISCHER_`, `EXIM_`, `TUI_`, `BLUESTYLE_`); zdroj bez hosta se přeskočí. Údaje přišly e-mailem od cestovky — jen do `.env` a serverového compose, nikdy do kódu.                                                                                                                                   |
+| `TUI_FEED_URL`, `BLUESTYLE_FEED_URL`                                                                   | For Zájezdy                | Https feedy zájezdů ve formátu Sdovolená.cz pro denní sync `/api/sync-tour-offers`: TUI veřejný (~5 MB), Blue Style s HTTP Basic auth v adrese `https://uzivatel:heslo@…` (~330 MB, schváleno přes VIVnetworks 23. 10. 2026; přihlášení jen do `.env` a serverového compose). `<PREFIX>_FEED_URL` má u zdroje přednost před SFTP proměnnými.                                                                                                                                                                  |
+| `CJ_API_TOKEN`, `CJ_COMPANY_ID`, `FISCHER_FEED`, `EXIM_FEED`                                           | For Zájezdy                | Produktový katalog sítě CJ (GraphQL `ads.api.cj.com`, typ TravelExperience) pro Fischer a Exim, které feed Sdovolená nedávají. Osobní token z developers.cj.com + Company ID (CID); `FISCHER_FEED=cj` / `EXIM_FEED=cj` zdroj zapínají. Z každého katalogu se bere jen vlastní značka (oba nesou tytéž hotely skupiny DER Touristik).                                                                                                                                                                          |
 
 > `NEXT_PUBLIC_*` variables are inlined into the client bundle at build time and
 > are therefore public. Keep secrets (e.g. `OPENWEATHER_API_KEY`, `PAYLOAD_SECRET`)
@@ -590,6 +593,162 @@ bez klientského JS, pod grafem tabulka pro čtečky.
 # Hlavička jde do curlu STDINEM (`-H @-`), ne argumentem — viz sync-affiliate-deals výš.
 curl -X POST 'http://localhost:3000/api/sync-climate-normals?dryRun=1' \
   -H @- <<< "X-Sync-Secret: $ANALYTICS_SYNC_SECRET"
+```
+
+### `POST /api/sync-tour-offers`
+
+Denní obnova kolekce **`tour-offers`**, ze které se kreslí podstránky
+**„Zájezdy“** zemí (kategorie stránky `Zájezdy`, maketa varianta A ze 16. 10. 2026; viz `src/endpoints/syncTourOffers.ts`).
+
+- **Zdroje** = cestovky schválené v síti CJ (`src/lib/tour-sources.ts`: Čedok,
+  Fischer, Exim Tours, TUI, Blue Style). Každá dává nabídkový XML ve formátu
+  **Sdovolená.cz**: Čedok na SFTP (`<PREFIX>_SFTP_*`), TUI veřejně přes https
+  (`<PREFIX>_FEED_URL`), Blue Style přes https s HTTP Basic auth v adrese
+  (schváleno přes VIVnetworks 23. 10. 2026; 330 MB, ~700 zájezdů). Stahování
+  po https jde přes `node:https`, ne `fetch` — Next ho obaluje a 330 MB tělo
+  po ~30 s utnul chybou „terminated“. Blue Style kóduje entity dvakrát
+  (`&amp;amp;`), parser proto dekóduje ještě jednou (`decodeEntities`). **Fischer a Exim** feed Sdovolená dávají
+  jen „VIP partnerům“ (rozhoduje cestovka, hranici VIVnetworks nezná) — berou se
+  z **produktového katalogu CJ** (`<PREFIX>_FEED=cj`, `src/lib/cj-travel.ts`:
+  GraphQL `products` typu TravelExperience, stránkování po 500). Katalog má
+  jeden produkt = jeden hotel s JEDINOU nabídkou (odlet `DD`, nocí `NN`
+  a strava `DI` z deep-linku, cena za osobu), bez původní ceny; oba katalogy
+  jsou společná nabídka skupiny (značky FISCHER / EXIM TOURS / KARTAGO
+  TOURS), proto se z každého bere jen vlastní značka (`cjBrands`), jinak by
+  se karty zdvojily. Zdroj bez nastavení se přeskočí (Blue Style zatím). Feedy se liší
+  v drobnostech a parser je sjednocuje: TUI píše tagy velkými písmeny, u „All
+  inclusive plus“ posílá prázdné `board/id` a jen popis (→ kód 8), letiště
+  jako „Brno-Tuřany“ (→ Brno, `normalizeAirportName`). Číselníky formátu (strava 1–8, doprava, typ
+  zájezdu, hvězdy) drží `src/lib/sdovolena.ts`.
+- **Feed Čedoku má 3,4 GB** (každý termín nese dvě dlouhé URL), proto se
+  stahuje `fastGet` do dočasného souboru (paralelní bloky, ~8 MB/s; sekvenční
+  stream zvládal 0,5 MB/s) a z disku se čte proudem: `TourChunker` vyřezává
+  jednotlivé `<tour>…</tour>` a ty se parsují po jednom existujícím
+  fast-xml-parserem — v paměti je vždy jen jeden zájezd; odkazy termínů
+  (`availability`, `purchase_url`, ~80 % bajtů) se před parsováním odříznou.
+  Celý běh Čedoku: stažení ~5,5 min + parsování ~35 s (3 902 zájezdů →
+  ~5 000 řádků). Špička paměti je jen líný GC V8 (s limitem 160 MB heapu
+  běh projde beze změny) — produkce má 1,8 GB RAM a 3 GB swap, sledovat
+  `docker stats` po prvních bězích. Dočasný soubor se vždy smaže.
+- **Co se ukládá:** jeden řádek za každou kombinaci hotel × strava × odletová
+  místa (`term_group`) s **leteckou** dopravou a odletem z letiště ze seznamu
+  `src/lib/tour-airports.ts` — česká (Praha, Brno, Ostrava, Pardubice,
+  Karlovy Vary) **a okolní** (Bratislava, Vídeň, Budapešť, Krakov, Katovice,
+  Mnichov, Drážďany, Linz; jiná se vyřazují). Řádek nese nejlevnější budoucí
+  termín (cena, původní cena, odlet, nocí), počet termínů, fotku, odkaz a
+  **všechny budoucí termíny** jako kompaktní pole `terms`
+  `[YYYY-MM-DD, nocí, cena, původní cena nebo 0]` (strop 200 na řádek) —
+  z nich web počítá filtr podle měsíce či přesných dnů a tečky v kalendáři.
+  Nabídky zdroje se nahrazují celé v jedné transakci (přímé SQL,
+  `jsonb_to_recordset` po 500 řádcích); zdroj, jehož feed selhal nebo nedal
+  žádnou nabídku, si nechá včerejší data.
+- **Provize:** odkazy ve feedech vedou na web cestovky bez provize. Karta
+  proto míří na `/go/zajezd/<id>` (`src/app/(frontend)/go/zajezd/`), který si
+  řádek přečte a přesměruje na **CJ click link cestovky s deep-linkem**
+  `?url=<adresa z feedu>` (`cjDeepLink`; adresa mimo doménu cestovky se
+  zahodí → obecný odkaz). Ověřeno 16. 10. 2026 u všech pěti cestovek: cíl
+  dorazí s `cjevent`. Deep-link musí vést na existující stránku — na 404
+  cestovka přesměruje bez parametrů a provize se ztratí.
+- **Stránka:** podstránka kategorie `Zájezdy` pod zemí (v adminu záložka
+  Zájezdy → kód země ISO alpha-3, např. `EGY`); v sekundárním menu stojí
+  hned za „Místy“. **Filtry** (`src/lib/tour-filters.ts`, UI
+  `tours-section.tsx` + klientský dialog `tour-date-dialog.tsx`) žijí
+  v adrese a všechno kromě dialogu termínu jsou obyčejné odkazy (funguje bez
+  JS, každá kombinace má adresu; výchozí hodnoty se nepíšou, kanonická adresa
+  zůstává bez parametrů):
+  `?odlet=praha,bratislava` (prázdné = všechna česká; okolní letiště karta
+  značí štítkem), `mesice=2026-11,2026-12` nebo přesné dny `od=…&do=…`
+  (mají přednost), `noci=6-8` (výchozí týden; `vse` = libovolná — třídenní
+  víkend by jinak „vyhrával“ cenou), `typ=pobyt|poznavaci` (výchozí vše),
+  `strava=ai,polo,snidane,program` (4 skupiny místo 8 kódů), `hvezdy=5,4,3,0`
+  (3 = tři a méně, 0 = kategorie neuvedena; každý řádek ikony + text), `letovisko=hurghada`, `ck=cedok`, `sleva=1`
+  (po termínech — hotel se zlevněným dražším termínem se ukáže s ním),
+  `razeni=doporucene|cena|sleva|odlet` (doporučené = cena snížená o polovinu
+  procenta slevy; „podle hvězd“ vypuštěno — zastane ho filtr Hotel), `pocet=36`. Karta = každý hotel jednou
+  s nejlevnějším termínem, který prošel filtrem data a délky; počty u voleb
+  (facety) se počítají při ostatních filtrech. Vedlejší filtry stojí v PRAVÉM
+  bočním panelu (jednotně s ostatními panely webu; rozhodnutí 17. 10. 2026
+  po porovnání s řadou chipů na živých datech).
+- **Karta a rozbalení termínů** (`tour-row.tsx`, klientská komponenta,
+  makety E5 + A/B z 23. 10. 2026): řádek „kde“ (letovisko · Na mapě), řádek
+  „co“ (strava · noci · odlet), krátká linka a chipy recenzí (Tripadvisor
+  a Google Mapy vždy — hledání podle názvu přes oficiální Maps URLs, bez
+  klíče —, Invia u spárovaného hotelu; šedé, barevné při najetí). U ceny
+  „nejlevnější z N termínů“ rozbalí pod kartu tabulku termínů hotelu
+  (`hotelTerms` v `tour-filters.ts`: řádky téhož hotelu sloučené přes
+  skupiny letišť, klíč odlet + délka, nejnižší cena, letiště dohromady);
+  přepínač „podle filtru / všechny“, nad 12 termínů nejdřív měsíce s cenou
+  od, nejvýš 40 řádků najednou (Blue Style vypisuje odlety denně v délkách
+  3–14 nocí → stovky kombinací). Řádek vede na stránku hotelu u cestovky
+  (/go/zajezd); odkaz na konkrétní termín feedy nesou, ale neukládá se
+  (80 % objemu feedu). Pruh log cestovek stojí nad hledáním s popiskem
+  „Hledáme nejlepší nabídky od“.
+- **Mapa hotelů** (`tour-map.tsx`, maketa B z 23. 10. 2026): nahoře v pravém
+  panelu neinteraktivní náhled se shluky (na mobilu tlačítko „Mapa“ vedle
+  „Další filtry“), po kliku celoobrazovkový překryv — vlevo MapLibre mapa
+  (shluky z GeoJSON zdroje, jednotlivé hotely jako HTML piny s cenou),
+  vpravo seznam hotelů **ve výřezu** mapy (posun mapy ho přepočítá; prázdný
+  výřez nabídne „Zobrazit všechny hotely“). Překryv dostává tentýž výběr jako
+  seznam stránky (po filtru, všechny stránky, ne jen načtených 12), otevírá
+  se i odkazem `#hotel-<id>` z karty („Na mapě“) vycentrovaný na hotel
+  a `#mapa`; renderuje se portálem do `body`, protože panel je pod `lg`
+  skrytý (`display: none` by fixed překryv neukázal). Hotely bez souřadnic na
+  mapě nejsou — Čedok u části hotelů posílá `0/0` (ostrov Null u Guineje),
+  `validCoords` v `sdovolena.ts` to bere jako chybějící (dev data opravena
+  SQL 23. 10. 2026, prod opraví první sync). Piny u Rudého moře stojí často
+  pár set metrů „v moři“ — souřadnice se u všech tří cestovek shodují na
+  metry, jen OSM kreslí útesové mělčiny před plážemi jako vodu.
+- **Recenze** (`src/lib/tour-reviews.ts`): karta, kartička na mapě i seznam
+  v překryvu mají odkaz „Recenze na Tripadvisoru“ = vyhledávání podle názvu
+  hotelu a letoviska (krok 1, bez API a bez ukládání; Tripadvisor dovoluje
+  uchovat jen Location ID — přímé odkazy přes ID jsou krok 2, zdarma do
+  1 000 položek, Egypt má ~370 hotelů, všechny země ~5 900). Invia zatím
+  není: veřejné hledání hotelu podle názvu nemá a odhad adresy
+  `/hotel/egypt/<letovisko>/<hotel>/` selhal u 10 z 16 hotelů — místo toho
+  odkaz „Recenze na Invii“ z párování s feedem Invie (níže).
+- **Invia** (`src/lib/invia-tours.ts`, rozhodnutí 23. 10. 2026): agentura
+  nabízí zájezdy týchž cestovek, jaké máme napřímo (provize 1 % proti 3–4 %),
+  a zkouška na Egyptě (feed 150 položek = 105 hotelů) ukázala 101 hotelů už
+  pokrytých. Proto z jejího feedu jdou **do nabídky jen hotely, které přímí
+  partneři nemají** (zdroj `invia`, deep-link z feedu nese `aid`, /go/zajezd
+  na něj míří rovnou), a u spárovaných hotelů (normalizovaný název nebo do
+  600 m) se doplní `invia_url` → odkaz „Recenze na Invii“ (stránka hotelu
+  s `aid`, kotva `#recenze-hotelu`). Feedy se zadávají v adminu na
+  podstránce Zájezdy (pole „XML feedy Invie“, jedna adresa na řádek; portál
+  affil.invia.cz dovolí max 150 položek na feed, u větších zemí tedy víc
+  feedů po letoviscích; Egypt má 5: celá země + Hurghada, Marsa Alam, Sahl
+  Hasheesh, Sharm el Sheikh, založené 23. 10. 2026). Portál feed generuje až
+  při stažení — první bajt přijde po 1–2 minutách, proto má stahování
+  nečinnost 5 minut; jeden nedostupný feed ostatní neshodí (`warnings`
+  ve výsledku). Invia běží v syncu jako poslední, aby párovala proti
+  čerstvým řádkům; výsledek nese `matched` = počet spárovaných řádků.
+- Spouští GitHub Actions cron denně v 5:40 UTC — až po zveřejnění nového feedu
+  TUI (~4:35 UTC) a přegenerování katalogů CJ; zdroje se samy obnovují zhruba
+  jednou denně, častější běh by nic nového nepřinesl
+  (`.github/workflows/sync-tour-offers.yml`, ruční běh přes _Run workflow_);
+  autentizace hlavičkou `X-Sync-Secret` = `ANALYTICS_SYNC_SECRET` nebo admin
+  session. Odpověď hned **202**, práce na pozadí (`after()`); souhrn v logu
+  `docker compose logs cms | grep sync-tour-offers`. Souběh → **409**.
+  `?dryRun=1` je synchronní a nic nezapisuje; `&maxTours=300` utne čtení po
+  N zájezdech (ladění), `&source=cedok` omezí běh na jeden zdroj — za něj se
+  automaticky přidá Invia, protože přepsané řádky zdroje ztratí `invia_url`
+  a párování je obnoví.
+- Nabídky drží jen paměťová cache procesu (`src/lib/tour-offers-cache.ts`,
+  Next cache je kvůli limitu 2 MB neunese); sync ji po zápisu vyprázdní (publikace v adminu
+  s nabídkami nesouvisí).
+
+**Nasazení na produkci** (schéma se na prod nepushuje): před mergem spustit
+`scripts/zajezdy-prod-schema.sql` (enum kategorie `Zájezdy` pro `pages`
+i `_pages_v`, sloupec `tours_country_code`, tabulka `tour_offers` s indexy;
+idempotentní), čtveřici `CEDOK_SFTP_*` dát do `/opt/aracze/.env` **i** do
+compose na serveru, force-recreate `cms`, ručně spustit workflow „Sync tour
+offers“ a v adminu založit podstránku Zájezdy pod zemí (kategorie Zájezdy,
+kód země).
+
+```bash
+# Ladicí běh — prvních 300 zájezdů feedu, nic nezapisuje:
+curl -X POST 'http://localhost:3000/api/sync-tour-offers?dryRun=1&maxTours=300' \
+  -H "X-Sync-Secret: $ANALYTICS_SYNC_SECRET"
 ```
 
 ---
@@ -1293,6 +1452,14 @@ m.cloudinary_public_id = a.cloudinary_public_id` musí vrátit 0.
   - Interní účetní záznamy „pírek" (feather) přenesené z původního webu — čtení i správa jsou omezené pouze na administrátory.
   - Každý záznam nese kategorii (odměny za obsah, bonus, výběr), počet pírek v poli `amount` (**kladné = zisk, záporné = výběr**) a volitelnou vazbu `relatedTo` na stránku, článek nebo komentář.
   - Data přenesl jednorázový migrační doběh z legacy MySQL databáze; skript je odstraněný (viz poznámka o historickém obsahu v Quick Startu).
+
+- **TourOffers (Nabídky zájezdů)**:
+  - Řádky nabídek z feedů cestovek pro podstránky „Zájezdy“ — plní je denní sync
+    `/api/sync-tour-offers` (viz výše), v adminu jen pro adminy a jen ke čtení (ruční úpravy
+    přepíše další běh). Bez verzí a bez relace na stránky: stránka si nabídky dohledá podle
+    kódu země (`tours.countryCode` v záložce Zájezdy).
+  - `source`, `kind` a `board` jsou záměrně prostý text (ne `select`): sync zapisuje přímým
+    SQL a nová hodnota číselníku by jinak chtěla `ALTER TYPE` na produkci.
 
 ## Questions
 

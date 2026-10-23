@@ -69,6 +69,25 @@ services:
       # do kontejneru NEDOSTANE (compose proměnné vyjmenovává) a sync tiše
       # vynechá letenky — ověřeno při nasazení 14. 8. 2026.
       KIWI_TEQUILA_API_KEY: ${KIWI_TEQUILA_API_KEY}
+      # Feedy zájezdů (formát Sdovolená.cz) pro denní sync /api/sync-tour-offers —
+      # SFTP přístup od každé cestovky zvlášť (zatím jen Čedok; Fischer, Exim,
+      # TUI a Blue Style přibudou po schválení feedu u VIVnetworks, předpony
+      # FISCHER_, EXIM_, TUI_, BLUESTYLE_). Stejná past jako u Kiwi: bez řádku
+      # zde se hodnota z /opt/aracze/.env do kontejneru nedostane a zdroj se
+      # v syncu tiše přeskočí.
+      CEDOK_SFTP_HOST: ${CEDOK_SFTP_HOST}
+      CEDOK_SFTP_USER: ${CEDOK_SFTP_USER}
+      CEDOK_SFTP_PASSWORD: ${CEDOK_SFTP_PASSWORD}
+      CEDOK_SFTP_PATH: ${CEDOK_SFTP_PATH}
+      # TUI: veřejný https feed, jen adresa (`<PREFIX>_FEED_URL` má přednost před SFTP).
+      TUI_FEED_URL: ${TUI_FEED_URL}
+      BLUESTYLE_FEED_URL: ${BLUESTYLE_FEED_URL}
+      # Fischer + Exim: produktový katalog CJ (GraphQL) — token a CID z /opt/aracze/.env,
+      # zdroje se zapínají `<PREFIX>_FEED=cj`.
+      CJ_API_TOKEN: ${CJ_API_TOKEN}
+      CJ_COMPANY_ID: ${CJ_COMPANY_ID}
+      FISCHER_FEED: ${FISCHER_FEED}
+      EXIM_FEED: ${EXIM_FEED}
       # Počasí na stránkách Počasí: Meteostat (měsíční sync klimatických normálů
       # /api/sync-climate-normals) a OpenWeather One Call 3.0 (aktuální stav
       # a předpověď při renderu). Platí stejná past jako u Kiwi výš — bez těchto

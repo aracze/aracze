@@ -29,6 +29,12 @@ interface PreparationSectionProps {
   affiliate: Page['affiliate']
   /** Odkaz na Praktické informace nejbližšího místa (stejný zdroj jako karta v panelu). */
   practicalInfo: PreparationPracticalInfo | null
+  /**
+   * Vlastní podstránka „Zájezdy“ místa (nebo nejbližšího předka) — má-li ji,
+   * karta Zájezdy vede na ni (interní odkaz) místo na Invii: nabídky pěti
+   * cestovek na našem webu jsou pro čtenáře víc než skok ven.
+   */
+  toursPageHref?: string | null
 }
 
 /**
@@ -166,6 +172,7 @@ export function PreparationSection({
   genitive,
   affiliate,
   practicalInfo,
+  toursPageHref,
 }: PreparationSectionProps) {
   return (
     <section className="w-full bg-white py-16">
@@ -180,7 +187,11 @@ export function PreparationSection({
             Zařiď si vše potřebné na cestu z jednoho místa.
           </p>
         </div>
-        <PreparationCards affiliate={affiliate} practicalInfo={practicalInfo} />
+        <PreparationCards
+          affiliate={affiliate}
+          practicalInfo={practicalInfo}
+          toursPageHref={toursPageHref}
+        />
       </div>
     </section>
   )
@@ -194,9 +205,12 @@ export function PreparationSection({
 export function PreparationCards({
   affiliate,
   practicalInfo,
+  toursPageHref = null,
 }: {
   affiliate: Page['affiliate'] | null
   practicalInfo: PreparationPracticalInfo | null
+  /** Viz PreparationSectionProps — homepage ho nemá (obecné karty). */
+  toursPageHref?: string | null
 }) {
   const ownerGenitive = practicalInfo
     ? practicalInfo.ownerGenitive || `do ${practicalInfo.ownerTitle}`
@@ -222,7 +236,8 @@ export function PreparationCards({
           <br />• široká nabídka a nejlepší ceny
         </>
       ),
-      href: toursHref(affiliate?.toursUrl),
+      href: toursPageHref ?? toursHref(affiliate?.toursUrl),
+      internal: Boolean(toursPageHref),
       icon: <TravelIcon height={44} />,
     },
     {
@@ -255,21 +270,38 @@ export function PreparationCards({
     <div
       className={`grid grid-cols-2 gap-5 ${practicalInfo ? 'md:grid-cols-3 lg:grid-cols-5' : 'md:grid-cols-2 lg:grid-cols-4'}`}
     >
-      {partnerItems.map((item) => (
-        <a
-          key={item.title}
-          href={item.href}
-          target="_blank"
-          rel="nofollow sponsored noopener"
-          className="group block rounded-lg border border-line bg-white px-4 pt-[30px] pb-6 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]"
-        >
-          <span className="flex h-12 items-center justify-center text-brand-deep">{item.icon}</span>
-          <h3 className="mt-[18px] mb-2 text-lead font-bold text-brand-deep transition-colors group-hover:text-brand">
-            {item.title}
-          </h3>
-          <p className="text-small leading-normal text-ink-3">{item.description}</p>
-        </a>
-      ))}
+      {partnerItems.map((item) => {
+        const inner = (
+          <>
+            <span className="flex h-12 items-center justify-center text-brand-deep">
+              {item.icon}
+            </span>
+            <h3 className="mt-[18px] mb-2 text-lead font-bold text-brand-deep transition-colors group-hover:text-brand">
+              {item.title}
+            </h3>
+            <p className="text-small leading-normal text-ink-3">{item.description}</p>
+          </>
+        )
+        const className =
+          'group block rounded-lg border border-line bg-white px-4 pt-[30px] pb-6 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(26,63,108,0.12)]'
+        // Interní cíl (podstránka Zájezdy) = běžný odkaz ve stejném okně bez
+        // nofollow; partnerské karty otevírají nové okno a nesou sponsored.
+        return item.internal ? (
+          <Link key={item.title} href={item.href} className={className}>
+            {inner}
+          </Link>
+        ) : (
+          <a
+            key={item.title}
+            href={item.href}
+            target="_blank"
+            rel="nofollow sponsored noopener"
+            className={className}
+          >
+            {inner}
+          </a>
+        )
+      })}
       {practicalInfo && (
         <Link
           href={practicalInfo.fullSlug}

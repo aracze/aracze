@@ -126,6 +126,48 @@
    SubnavReveal — bez lišty je 0 a chová se jako `top-5`. Bez animace: `top`
    u sticky prvku se animuje přes layout (mapa, reklama, obsah by se 300 ms
    přepočítávaly) a u obsahu stránky by se navíc rozešel s `max-h`. */
+/* Dvojitý posuvník nocí (dialog Termín a délka u zájezdů): dva <input type=range>
+   přes sebe — dráha průhledná (kreslí ji div pod nimi), vidět jsou jen palce. */
+@utility range-thumb {
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+  &::-webkit-slider-runnable-track {
+    background: transparent;
+  }
+  &::-moz-range-track {
+    background: transparent;
+  }
+  &::-webkit-slider-thumb {
+    appearance: none;
+    pointer-events: auto;
+    width: 20px;
+    height: 20px;
+    margin-top: 4px;
+    border-radius: 9999px;
+    background: var(--color-paper);
+    border: 2px solid var(--color-brand);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
+    cursor: pointer;
+  }
+  &::-moz-range-thumb {
+    pointer-events: auto;
+    width: 16px;
+    height: 16px;
+    border-radius: 9999px;
+    background: var(--color-paper);
+    border: 2px solid var(--color-brand);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
+    cursor: pointer;
+  }
+  &:focus-visible {
+    outline: none;
+  }
+  &:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px rgb(34 67 134 / 0.25);
+  }
+}
+
 @utility top-pod-listou {
   top: calc(var(--subnav-offset, 0px) + 1.25rem);
 }

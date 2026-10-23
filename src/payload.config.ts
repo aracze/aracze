@@ -29,6 +29,7 @@ import { Pages } from './collections/Pages'
 import { Articles } from './collections/Articles'
 import { Comments } from './collections/Comments'
 import { Transactions } from './collections/Transactions'
+import { TourOffers } from './collections/TourOffers'
 import { ContentImage } from './blocks/ContentImage'
 import { MapBlock } from './blocks/Map'
 import { SeasonalityBlock } from './blocks/Seasonality'
@@ -44,6 +45,7 @@ import { dbImportEndpoint } from './endpoints/dbImport'
 import { syncAnalyticsEndpoint } from './endpoints/syncAnalytics'
 import { syncAffiliateDealsEndpoint } from './endpoints/syncAffiliateDeals'
 import { syncClimateNormalsEndpoint } from './endpoints/syncClimateNormals'
+import { syncTourOffersEndpoint } from './endpoints/syncTourOffers'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -72,7 +74,7 @@ export default buildConfig({
       afterNavLinks: ['/components/DatabaseNav#DatabaseNav'],
     },
   },
-  collections: [Users, Media, Avatars, Pages, Articles, Comments, Transactions],
+  collections: [Users, Media, Avatars, Pages, Articles, Comments, Transactions, TourOffers],
   globals: [Homepage, Header, Footer],
   editor: lexicalEditor({
     features: ({ defaultFeatures }) => [
@@ -164,6 +166,7 @@ export default buildConfig({
     syncAnalyticsEndpoint,
     syncAffiliateDealsEndpoint,
     syncClimateNormalsEndpoint,
+    syncTourOffersEndpoint,
   ],
   plugins: [
     nestedDocsPlugin({

@@ -22,6 +22,8 @@ export const dynamic = 'force-dynamic'
 
 type Props = {
   params: Promise<{ slug: string[] }>
+  /** Filtry podstránky „Zájezdy“ (?typ=&strava=…) — jinde se nečtou. */
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -74,7 +76,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   notFound()
 }
 
-export default async function PageRoute({ params }: Props) {
+export default async function PageRoute({ params, searchParams }: Props) {
   const { slug } = await params
   const fullSlug = slug.join('/')
 
@@ -111,7 +113,12 @@ export default async function PageRoute({ params }: Props) {
   if (resolution.kind === 'page')
     return (
       <>
-        <Page page={resolution.page} />
+        <Page
+          page={resolution.page}
+          searchParams={
+            resolution.page.category === PageCategory.Zajezdy ? await searchParams : undefined
+          }
+        />
         {resolution.page.category !== PageCategory.Staticka_stranka && <BottomAdStrip />}
       </>
     )

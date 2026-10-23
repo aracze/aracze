@@ -6,6 +6,9 @@ import { SubnavReveal } from '@/components/layout/page/subnav-reveal'
 const hiddenCategories: string[] = [PageCategory.Misto_k_navstiveni, PageCategory.Turisticky_cil]
 
 const legacyMenuOrder: PageCategory[] = [
+  // Zájezdy hned za kotvou „Místa“ (rozhodnutí uživatele 16. 10. 2026 nad
+  // maketou) — podstránka nabídek, ne praktická informace jako zbytek.
+  PageCategory.Zajezdy,
   PageCategory.Vstupni_podminky,
   PageCategory.Cesta,
   PageCategory.Pocasi,

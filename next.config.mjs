@@ -20,6 +20,9 @@ const nextConfig = {
     // GA4 sync endpoint (gRPC/protobuf) — zabalené bundlerem stejně extrémně
     // pomalé/zamrzávající jako jsdom výše.
     '@google-analytics/data',
+    // SFTP klient syncu zájezdů (/api/sync-tour-offers) — má volitelné nativní
+    // doplňky a dynamické require, bundler by ho zbytečně balil.
+    'ssh2',
   ],
   experimental: {
     serverActions: {
