@@ -7,7 +7,10 @@ Frontend na proxy přepisuje adresy přes `toMediaProxy`
 
 ## Zdroj fotek (`MEDIA_SOURCE`)
 
-- `backup` (**aktuální stav od 2. 10. 2026**): fotky jdou ze zálohy v R2
+- `cloudinary` (**aktuální stav od 23. 10. 2026**, výchozí): původní chování
+  níže. Účet je od 23. 10. 2026 na Free (41 kreditů/měsíc); díky stropu
+  originálů, robots.txt a 403 pro scrapery odhad ~25 kreditů.
+- `backup` (pauza 2.–23. 10. 2026): fotky jdou ze zálohy v R2
   zmenšené přes Cloudflare Image Transformations, s dlouhou keší jako u
   Cloudinary. Cloudinary se vůbec nevolá — kredity čerpá jen úložiště, takže
   klouzavá 30denní spotřeba klesne a půjde downgrade na Free. Náklad: Image
@@ -21,7 +24,9 @@ Frontend na proxy přepisuje adresy přes `toMediaProxy`
   výměna fotky pod stejným jménem by jinak rok ukazovala starou), chyby se
   kešují jen krátce (`cacheTtlByStatus`: 404 minutu, 5xx vůbec). `q_auto`
   se mapuje na `quality: 80` (Cloudflare výchozí 85 = větší soubory).
-- `cloudinary` (výchozí, když proměnná chybí): původní chování níže.
+  Poučení z pauzy: po vyčerpání 5 000 zmenšení/měsíc se Image Transformations
+  bez platební metody vypnou a Worker podává surové originály (krátká keš) —
+  pauza delší než pár dní chce platební metodu, nebo předgenerované zmenšeniny.
 
 Přepnutí = změna hodnoty ve `wrangler.jsonc` + deploy (nebo jednorázově
 `npx wrangler deploy --var MEDIA_SOURCE:cloudinary`).
