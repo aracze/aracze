@@ -13,10 +13,11 @@
     "CLOUDINARY_ORIGIN": "https://res.cloudinary.com/ara",
     // Custom doména R2 bucketu se zálohou — zdroj pro Image Transformations.
     "BACKUP_HOST": "media-backup.ara.cz",
-    // PAUZA CLOUDINARY (od 2. 10. 2026): fotky jdou ze zálohy v R2 zmenšené přes
-    // Image Transformations, Cloudinary se nevolá (kredity: jen úložiště).
-    // Návrat = "cloudinary" + deploy. Viz README „Zdroj fotek“.
-    "MEDIA_SOURCE": "backup",
+    // Zdroj fotek: "cloudinary" (normál) | "backup" (R2 + Image Transformations,
+    // Cloudinary se nevolá — pauza 2.–23. 10. 2026 kvůli downgradu na Free).
+    // Pozor: Image Transformations mají 5 000 zmenšení/měsíc zdarma a bez
+    // platební metody se pak VYPNOU → Worker podává surové originály.
+    "MEDIA_SOURCE": "cloudinary",
   },
   "r2_buckets": [{ "binding": "BACKUP", "bucket_name": "aracze" }],
   // Měření provozu (kdo chce jaké varianty, co jde na Cloudinary) — viz README
