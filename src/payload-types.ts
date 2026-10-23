@@ -358,6 +358,10 @@ export interface Page {
      * Podle tohoto kódu se na stránce vybírají nabídky z feedů cestovek (EGY = Egypt, GRC = Řecko, TUR = Turecko). Bez kódu se žádné zájezdy nevypíší.
      */
     countryCode?: string | null;
+    /**
+     * Feedy zájezdů Invie pro tuto zemi (portál dovolí max 150 položek na feed — klidně víc feedů po letoviscích). Denní sync z nich bere jen hotely, které nemáme od cestovek napřímo; u ostatních doplní odkaz „Recenze na Invii“.
+     */
+    inviaFeedUrls?: string | null;
   };
   comments?: {
     docs?: (number | Comment)[];
@@ -646,6 +650,7 @@ export interface TourOffer {
     | null;
   photoUrl?: string | null;
   detailUrl: string;
+  inviaUrl?: string | null;
   lat?: number | null;
   lng?: number | null;
   updatedAt: string;
@@ -885,6 +890,7 @@ export interface PagesSelect<T extends boolean = true> {
     | T
     | {
         countryCode?: T;
+        inviaFeedUrls?: T;
       };
   comments?: T;
   climateNormals?: T;
@@ -1005,6 +1011,7 @@ export interface TourOffersSelect<T extends boolean = true> {
   terms?: T;
   photoUrl?: T;
   detailUrl?: T;
+  inviaUrl?: T;
   lat?: T;
   lng?: T;
   updatedAt?: T;

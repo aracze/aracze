@@ -49,3 +49,9 @@ CREATE INDEX IF NOT EXISTS tour_offers_source_idx ON tour_offers USING btree (so
 CREATE INDEX IF NOT EXISTS tour_offers_updated_at_idx ON tour_offers USING btree (updated_at);
 -- Doplnění pro starší instalace tabulky (termíny přibyly 17. 10. 2026).
 ALTER TABLE tour_offers ADD COLUMN IF NOT EXISTS terms jsonb;
+
+-- 4) Invia (23. 10. 2026): odkaz na stránku hotelu u Invie (recenze) a feedy
+--    Invie po zemích na podstránce Zájezdy (textarea, jedna adresa na řádek).
+ALTER TABLE tour_offers ADD COLUMN IF NOT EXISTS invia_url varchar;
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS tours_invia_feed_urls varchar;
+ALTER TABLE _pages_v ADD COLUMN IF NOT EXISTS version_tours_invia_feed_urls varchar;

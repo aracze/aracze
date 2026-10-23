@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { boardCode, parseSdovolenaTour, starsFromClass, TourChunker } from '@/lib/sdovolena'
+import {
+  boardCode,
+  parseSdovolenaTour,
+  starsFromClass,
+  TourChunker,
+  validCoords,
+  decodeEntities,
+} from '@/lib/sdovolena'
+import { googleMapsSearchUrl, inviaHotelReviewsUrl, tripadvisorSearchUrl } from '@/lib/tour-reviews'
+import { matchInviaRows, normalizeHotelName, parseInviaFeed } from '@/lib/invia-tours'
 import { normalizeAirportName } from '@/lib/tour-airports'
 import { mapCjProduct, pragueDay, type CjTravelProduct } from '@/lib/cj-travel'
 import {
@@ -13,6 +22,7 @@ import {
   parseTourFilters,
   resortFacet,
   tourFiltersHref,
+  hotelTerms,
 } from '@/lib/tour-filters'
 import { cjDeepLink, TOUR_SOURCES } from '@/lib/tour-sources'
 import type { TourOffer } from '@/types/payload'
@@ -239,6 +249,10 @@ describe('mapCjProduct — produktový katalog CJ (Fischer, Exim)', () => {
       terms: [['2027-01-07', 3, 18390, 0]],
     })
     expect(pragueDay('2027-01-06T23:00:00Z')).toBe('2027-01-07')
+    expect(
+      mapCjProduct(product({ destinationName: 'Marsa Matruh – El Alamein' }), fischer, '2026-10-23')
+        ?.area,
+    ).toBe('Marsa Matrouh')
     expect(pragueDay('2027-06-30T22:00:00Z')).toBe('2027-07-01')
     // Poznávací podle stravy „dle programu“; cizí měna, minulý termín a neznámé letiště = nic.
     expect(
@@ -283,6 +297,9 @@ const offer = (o: Partial<TourOffer> & { id: number }): TourOffer => ({
   originalPrice: null,
   termCount: 1,
   photoUrl: null,
+  lat: null,
+  lng: null,
+  inviaUrl: null,
   ...o,
 })
 
@@ -297,7 +314,7 @@ describe('tour filters', () => {
         strava: 'ai,zzz',
         hvezdy: '5,2',
         letovisko: 'hurghada',
-        ck: 'cedok,invia',
+        ck: 'cedok,neznama',
         sleva: '1',
         razeni: 'sleva',
         pocet: '36',
@@ -440,6 +457,21 @@ describe('tour filters', () => {
       appliedFilterTags(f, (s) => (s === 'hurghada' ? 'Hurghada' : s)).map((t) => t.label),
     ).toEqual(['Praha', 'listopad 2026', 'prosinec 2026', 'libovolná délka', 'Hurghada'])
     expect(dateSummary(f)).toBe('listopad – prosinec 2026')
+    // Stejné letovisko psané jinak se v pásu slije.
+    const mixed = [
+      ...offers,
+      offer({ id: 9, area: 'HURGHADA', terms: [['2026-12-20', 7, 7000, 0]] }),
+    ]
+    expect(
+      buildResorts(buildTourCards(mixed, DEFAULT_TOUR_FILTERS)).map((r) => [
+        r.slug,
+        r.hotels,
+        r.minPrice,
+      ]),
+    ).toEqual([
+      ['hurghada', 2, 7000],
+      ['marsa-alam', 1, 8000],
+    ])
     expect(buildResorts(buildTourCards(offers, DEFAULT_TOUR_FILTERS))).toEqual([
       { name: 'Marsa Alam', slug: 'marsa-alam', minPrice: 8000, photoUrl: null, hotels: 1 },
       { name: 'Hurghada', slug: 'hurghada', minPrice: 9000, photoUrl: null, hotels: 1 },
@@ -456,5 +488,172 @@ describe('cjDeepLink', () => {
     expect(cjDeepLink(cedok, 'https://evil.example/cedok.cz')).toBe(cedok.cjClickUrl)
     expect(cjDeepLink(cedok, 'http://www.cedok.cz/x')).toBe(cedok.cjClickUrl)
     expect(cjDeepLink(cedok, null)).toBe(cedok.cjClickUrl)
+  })
+})
+
+describe('validCoords', () => {
+  it('0/0 a hodnoty mimo rozsah bere jako chybějící souřadnice', () => {
+    expect(validCoords(0, 0)).toEqual([null, null])
+    expect(validCoords(27.2, null)).toEqual([null, null])
+    expect(validCoords(95, 30)).toEqual([null, null])
+    expect(validCoords(27.2579, 33.8116)).toEqual([27.2579, 33.8116])
+  })
+})
+
+describe('tripadvisorSearchUrl', () => {
+  it('hledá podle názvu a letoviska, bez letoviska jen podle názvu', () => {
+    expect(tripadvisorSearchUrl('Hotel Alexander the Great Resort', 'Marsa Alam')).toBe(
+      'https://www.tripadvisor.cz/Search?q=Hotel%20Alexander%20the%20Great%20Resort%20Marsa%20Alam',
+    )
+    expect(tripadvisorSearchUrl('Lazuli ', null)).toBe('https://www.tripadvisor.cz/Search?q=Lazuli')
+    expect(googleMapsSearchUrl('Lazuli', 'Marsa Alam')).toBe(
+      'https://www.google.com/maps/search/?api=1&query=Lazuli%20Marsa%20Alam',
+    )
+  })
+})
+
+const INVIA_XML = `<?xml version="1.0" encoding="utf-8"?>
+<offers>
+  <offer>
+    <image width="450" height="300">https://dcontent.inviacdn.net/x/1.jpg</image>
+    <destination><country>Egypt</country><locality>Sahl Hasheesh</locality></destination>
+    <hotel>Pickalbatros Citadel Resort</hotel>
+    <term><from>2027-02-26</from><to>2027-03-06</to><length>9</length></term>
+    <price currency="CZK">37980</price><totalprice currency="CZK">37980</totalprice>
+    <discount>0</discount><food>All Inclusive</food><transportation>Letecky</transportation>
+    <airports><airport>Praha</airport><airport>Košice</airport></airports>
+    <url>https://www.invia.cz/hotel/egypt/sahl-hasheesh/pickalbatros-citadel-resort/zajezd/?s_offer_id=abc&amp;aid=4745582</url>
+    <tourtypes><type>Pobytové</type></tourtypes>
+    <hotelinfo><id>74896</id><stars>4.5</stars><coords><lat>27.0</lat><lng>33.9</lng></coords></hotelinfo>
+  </offer>
+  <offer>
+    <hotel>Pickalbatros Citadel Resort</hotel>
+    <destination><country>Egypt</country><locality>Sahl Hasheesh</locality></destination>
+    <term><from>2027-03-05</from><to>2027-03-12</to><length>8</length></term>
+    <totalprice currency="CZK">29990</totalprice><discount>10</discount>
+    <food>Ultra All inclusive</food><transportation>Letecky</transportation>
+    <airports><airport>Brno</airport></airports>
+    <url>https://www.invia.cz/hotel/egypt/sahl-hasheesh/pickalbatros-citadel-resort/zajezd/?s_offer_id=def&amp;aid=4745582</url>
+    <hotelinfo><id>74896</id><coords><lat>27.0</lat><lng>33.9</lng></coords></hotelinfo>
+    <stars>4</stars>
+  </offer>
+  <offer>
+    <hotel>Dive Inn</hotel>
+    <destination><country>Egypt</country><locality>Sharm El Sheikh</locality></destination>
+    <term><from>2026-01-01</from><to>2026-01-08</to><length>8</length></term>
+    <totalprice currency="CZK">9990</totalprice><food>Snídaně</food><transportation>Letecky</transportation>
+    <airports><airport>Praha</airport></airports>
+    <url>https://www.invia.cz/hotel/egypt/sharm-el-sheikh/dive-inn/zajezd/?aid=4745582</url>
+    <hotelinfo><id>1</id></hotelinfo>
+  </offer>
+</offers>`
+
+describe('Invia feed', () => {
+  it('skládá termíny po hotelu, bere jen naše letiště a vynechá propadlé termíny', () => {
+    const rows = parseInviaFeed(INVIA_XML, 'EGY', '2026-10-23')
+    expect(rows).toHaveLength(1)
+    const [row] = rows
+    expect(row.source).toBe('invia')
+    expect(row.externalId).toBe('74896')
+    expect(row.departures).toEqual(['Praha', 'Brno'])
+    expect(row.terms).toEqual([
+      ['2027-02-26', 8, 37980, 0],
+      ['2027-03-05', 7, 29990, 33322],
+    ])
+    expect(row.price).toBe(29990)
+    expect(row.originalPrice).toBe(33322)
+    expect(row.nights).toBe(7)
+    expect(row.board).toBe('6')
+    expect(row.stars).toBe(4)
+    expect(row.area).toBe('Sahl Hasheesh')
+    expect(row.lat).toBe(27)
+    expect(row.detailUrl).toContain('s_offer_id=def')
+  })
+
+  it('páruje s hotely přímých partnerů podle názvu nebo vzdálenosti', () => {
+    const rows = parseInviaFeed(INVIA_XML, 'EGY', '2026-10-23')
+    const { matched, unmatched } = matchInviaRows(rows, [
+      { id: 1, title: 'Hotel Pickalbatros Citadel Resort', lat: null, lng: null },
+      // tatáž budova (20 m), jiné jméno → shoda
+      { id: 2, title: 'Citadel Azur', lat: 27.0001, lng: 33.9001 },
+      // 150 m vedle, polovina slov společná → shoda
+      { id: 3, title: 'Pickalbatros Citadel Azur Resort', lat: 27.0012, lng: 33.9005 },
+      // 150 m vedle, jen jedno společné slovo z tří → ne
+      { id: 4, title: 'Citadel Palace Royal', lat: 27.0012, lng: 33.9005 },
+      // jednoslovný název 150 m daleko → ne (jen do 120 m)
+      { id: 5, title: 'Citadel', lat: 27.0012, lng: 33.9005 },
+      { id: 6, title: 'Jiný hotel', lat: 25.2, lng: 34.8 },
+    ])
+    expect(matched).toHaveLength(1)
+    expect(matched[0].ids.sort()).toEqual([1, 2, 3])
+    expect(unmatched).toHaveLength(0)
+    expect(matchInviaRows(rows, []).unmatched).toHaveLength(1)
+  })
+
+  it('normalizuje názvy a staví odkaz na recenze hotelu', () => {
+    expect(normalizeHotelName('Hotel Steigenberger Ras Soma Beach Resort & Spa')).toBe(
+      'steigenberger ras soma',
+    )
+    expect(normalizeHotelName('Jaz Grand Marsa (Ex. Grand Resta)')).toBe('jaz grand marsa')
+    expect(
+      inviaHotelReviewsUrl(
+        'https://www.invia.cz/hotel/egypt/sahl-hasheesh/pickalbatros-citadel-resort/zajezd/?s_offer_id=abc&aid=4745582',
+        '4745582',
+      ),
+    ).toBe(
+      'https://www.invia.cz/hotel/egypt/sahl-hasheesh/pickalbatros-citadel-resort/?aid=4745582#recenze-hotelu',
+    )
+    expect(inviaHotelReviewsUrl('https://www.cedok.cz/hotel/x/', '1')).toBeNull()
+  })
+})
+
+describe('decodeEntities', () => {
+  it('dekóduje dvakrát zakódované entity Blue Style a jinak text nemění', () => {
+    expect(decodeEntities('Hotel Seher Kumk&#xF6;y Star Resort &amp; Spa')).toBe(
+      'Hotel Seher Kumköy Star Resort & Spa',
+    )
+    expect(decodeEntities('Fort Arabesque Beach Resort & SPA')).toBe(
+      'Fort Arabesque Beach Resort & SPA',
+    )
+    expect(decodeEntities('A &unknown; B &#99999999;')).toBe('A &unknown; B &#99999999;')
+  })
+})
+
+describe('hotelTerms', () => {
+  it('slučuje termíny hotelu přes skupiny letišť a rozlišuje filtr', () => {
+    const a = offer({
+      id: 1,
+      title: 'Hotel X',
+      departures: ['Praha'],
+      terms: [
+        ['2026-11-07', 7, 14290, 0],
+        ['2026-12-26', 7, 24990, 0],
+      ],
+    })
+    const b = offer({
+      id: 2,
+      title: 'Hotel X',
+      departures: ['Brno'],
+      terms: [
+        ['2026-11-07', 7, 13990, 0],
+        ['2026-10-31', 7, 13590, 32290],
+      ],
+    })
+    const other = offer({
+      id: 3,
+      title: 'Hotel Y',
+      departures: ['Praha'],
+      terms: [['2026-11-07', 7, 9990, 0]],
+    })
+    const f = parseTourFilters({ mesice: '2026-11' })
+    const card = { offer: b, date: '2026-10-31', nights: 7, price: 13590, originalPrice: 32290 }
+    const { all, filtered } = hotelTerms([a, b, other], card, f)
+    expect(all.map((t) => [t.date, t.price, t.airports])).toEqual([
+      ['2026-10-31', 13590, ['Brno']],
+      ['2026-11-07', 13990, ['Praha', 'Brno']],
+      ['2026-12-26', 24990, ['Praha']],
+    ])
+    expect(all[0].originalPrice).toBe(32290)
+    expect(filtered.map((t) => t.date)).toEqual(['2026-11-07'])
   })
 })

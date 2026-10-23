@@ -1,4 +1,5 @@
-import { boardCode, type TourOfferRow } from './sdovolena'
+import { boardCode, type TourOfferRow, validCoords } from './sdovolena'
+import { pragueToday } from './kiwi-deals'
 import { airportRank } from './tour-airports'
 import { isSourceHost, type TourSource } from './tour-sources'
 
@@ -191,18 +192,25 @@ const DI_TO_BOARD: Record<string, string> = {
   IT: '7', // dle programu (poznávací)
 }
 
+/**
+ * Letoviska, která katalog DER pojmenovává jinak než Čedok/TUI — stejné
+ * jméno = jedna položka v pásu „Kam do …“ a ve filtru letovisek. Jen
+ * známé odchylky; nový případ se pozná jako zdvojené letovisko na stránce.
+ */
+const RESORT_ALIASES: Record<string, string> = {
+  'Sharm El Sheikh': 'Sharm el Sheikh',
+  'Marsa Matruh – El Alamein': 'Marsa Matrouh',
+  'Marsa Matruh': 'Marsa Matrouh',
+}
+
+export function normalizeResortName(name: string): string {
+  return RESORT_ALIASES[name] ?? name
+}
+
 /** „2027-01-06T23:00:00Z“ → pražský den „2027-01-07“. */
 export function pragueDay(instant: string): string | null {
   const d = new Date(instant)
-  if (Number.isNaN(d.getTime())) return null
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Prague',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(d)
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
-  return `${get('year')}-${get('month')}-${get('day')}`
+  return Number.isNaN(d.getTime()) ? null : pragueToday(d)
 }
 
 /**
@@ -247,10 +255,17 @@ export function mapCjProduct(
   if (!airport) return null
   const starsRaw = Number(product.starRating)
   const stars = Number.isFinite(starsRaw) && starsRaw >= 1 ? Math.floor(starsRaw) : null
-  const lat = Number(product.destinationLatitude)
-  const lng = Number(product.destinationLongitude)
+  // Number(null) je 0 → chybějící zeměpisná šířka by dala bod na rovníku.
+  const coord = (v: unknown): number | null =>
+    v === null || v === undefined || v === '' ? null : Number(v)
+  const latRaw = coord(product.destinationLatitude)
+  const lngRaw = coord(product.destinationLongitude)
+  const [lat, lng] = validCoords(
+    latRaw !== null && Number.isFinite(latRaw) ? latRaw : null,
+    lngRaw !== null && Number.isFinite(lngRaw) ? lngRaw : null,
+  )
   const photo = (product.imageLink ?? '').trim()
-  const area = (product.destinationName ?? '').trim() || null
+  const area = normalizeResortName((product.destinationName ?? '').trim()) || null
 
   return {
     source: source.id,
@@ -272,7 +287,7 @@ export function mapCjProduct(
     termCount: 1,
     photoUrl: photo.startsWith('https://') ? photo : null,
     detailUrl,
-    lat: Number.isFinite(lat) ? lat : null,
-    lng: Number.isFinite(lng) ? lng : null,
+    lat,
+    lng,
   }
 }

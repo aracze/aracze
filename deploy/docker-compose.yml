@@ -81,6 +81,7 @@ services:
       CEDOK_SFTP_PATH: ${CEDOK_SFTP_PATH}
       # TUI: veřejný https feed, jen adresa (`<PREFIX>_FEED_URL` má přednost před SFTP).
       TUI_FEED_URL: ${TUI_FEED_URL}
+      BLUESTYLE_FEED_URL: ${BLUESTYLE_FEED_URL}
       # Fischer + Exim: produktový katalog CJ (GraphQL) — token a CID z /opt/aracze/.env,
       # zdroje se zapínají `<PREFIX>_FEED=cj`.
       CJ_API_TOKEN: ${CJ_API_TOKEN}

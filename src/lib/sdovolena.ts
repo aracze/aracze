@@ -94,6 +94,8 @@ export interface TourOfferRow {
   detailUrl: string
   lat: number | null
   lng: number | null
+  /** Stránka hotelu u Invie (recenze) — plní jen zdroj invia (src/lib/invia-tours.ts). */
+  inviaUrl?: string | null
 }
 
 type Loc = { country_id?: unknown; area_title?: unknown; place_title?: unknown }
@@ -169,14 +171,51 @@ export function boardCode(id: unknown, desc: unknown): string | null {
  * (stovky kB) až do konce syncu (ověřeno: špička 600 MB RSS). Průchod přes
  * Buffer vytvoří samostatnou kopii.
  */
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: '\u00a0',
+}
+/**
+ * Druhé kolo dekódování entit: Blue Style posílá názvy zakódované dvakrát
+ * („Resort &amp;amp; Spa“, „Kumk&amp;#xF6;y“), takže po parseru zůstane
+ * `&amp;` a `&#xF6;` v textu (23. 10. 2026). U správně kódovaných feedů
+ * se nic nezmění (po parseru už entity nejsou).
+ */
+export function decodeEntities(s: string): string {
+  if (!s.includes('&')) return s
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, body: string) => {
+    if (body[0] === '#') {
+      const code =
+        body[1].toLowerCase() === 'x' ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10)
+      return Number.isFinite(code) && code > 0 && code < 0x110000 ? String.fromCodePoint(code) : m
+    }
+    return NAMED_ENTITIES[body.toLowerCase()] ?? m
+  })
+}
+
 const text = (v: unknown): string => {
   const raw = (v == null ? '' : String(v)).trim()
-  return raw.length === 0 ? '' : Buffer.from(raw, 'utf8').toString('utf8')
+  return raw.length === 0 ? '' : decodeEntities(Buffer.from(raw, 'utf8').toString('utf8'))
 }
 const isoDate = (v: unknown): string | null => {
   const m = /^(\d{4}-\d{2}-\d{2})/.exec(text(v))
   return m ? m[1] : null
 }
+/** Souřadnice jen v platném rozsahu a ne 0/0 (chybějící hodnota ve feedech). */
+export function validCoords(
+  lat: number | null,
+  lng: number | null,
+): [number | null, number | null] {
+  if (lat === null || lng === null) return [null, null]
+  if (lat === 0 && lng === 0) return [null, null]
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return [null, null]
+  return [lat, lng]
+}
+
 const num = (v: unknown): number | null => {
   const n = Number(text(v).replace(',', '.'))
   return Number.isFinite(n) ? n : null
@@ -228,8 +267,11 @@ export function parseSdovolenaTour(
     (a, b) => (num(a.order) ?? 0) - (num(b.order) ?? 0),
   )
   const photoUrl = photos.map((p) => text(p.url)).find((u) => u.startsWith('https://')) ?? null
-  const lat = num(tour.accommodation?.gps?.lat)
-  const lng = num(tour.accommodation?.gps?.lon)
+  // Čedok u části hotelů posílá 0/0 („Null Island“) — bereme jako chybějící.
+  const [lat, lng] = validCoords(
+    num(tour.accommodation?.gps?.lat),
+    num(tour.accommodation?.gps?.lon),
+  )
 
   const rows: TourOfferRow[] = []
   for (const group of tour.term_groups?.term_group ?? []) {

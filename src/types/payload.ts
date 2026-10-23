@@ -451,6 +451,11 @@ export interface TourOffer {
   originalPrice: number | null
   termCount: number
   photoUrl: string | null
+  /** Souřadnice hotelu (pro mapu); null, když je feed neuvádí. */
+  lat: number | null
+  lng: number | null
+  /** Stránka hotelu u Invie (recenze), když se podařilo spárovat. */
+  inviaUrl: string | null
 }
 
 export enum PageCategory {

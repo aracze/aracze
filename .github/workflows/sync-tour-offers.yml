@@ -7,7 +7,7 @@ name: Sync tour offers
 # sync-affiliate-deals — autentizovaný HTTP požadavek na běžící produkci.
 on:
   schedule:
-    - cron: '17 4 * * *' # denně ve 4:17 UTC, po syncu akčních nabídek a mimo špičku
+    - cron: '40 5 * * *' # denně v 5:40 UTC — až po novém feedu TUI (~4:35 UTC) a přegenerování katalogů CJ; dřív by se bral včerejšek
   workflow_dispatch: {} # umožní ruční spuštění z webu GitHubu
 
 concurrency:

@@ -1,5 +1,11 @@
 import type { TourOffer } from '@/types/payload'
-import { TOUR_AIRPORTS, CZ_AIRPORT_NAMES, airportBySlug } from './tour-airports'
+import {
+  TOUR_AIRPORTS,
+  CZ_AIRPORT_NAMES,
+  airportBySlug,
+  airportByName,
+  airportRank,
+} from './tour-airports'
 import { TOUR_SOURCES, isTourSourceId, type TourSourceId } from './tour-sources'
 
 /**
@@ -23,10 +29,11 @@ import { TOUR_SOURCES, isTourSourceId, type TourSourceId } from './tour-sources'
  */
 
 export type TourKindFilter = 'vse' | 'pobyt' | 'poznavaci'
-export type SortFilter = 'doporucene' | 'cena' | 'sleva' | 'hvezdy' | 'odlet'
+export type SortFilter = 'doporucene' | 'cena' | 'sleva' | 'odlet'
 export type BoardGroupId = 'ai' | 'polo' | 'snidane' | 'program'
 /** Hvězdy jako skupiny: 5, 4, 3 = tři a méně nebo neuvedeno. */
-export type StarsGroup = 5 | 4 | 3
+/** Skupiny hvězd ve filtru Hotel; 0 = kategorie neuvedena (poznávací zájezdy, hotely bez třídy). */
+export type StarsGroup = 5 | 4 | 3 | 0
 
 export interface TourFilters {
   typ: TourKindFilter
@@ -69,11 +76,15 @@ export const STARS_GROUPS: { id: StarsGroup; label: string }[] = [
   { id: 5, label: '5 hvězd' },
   { id: 4, label: '4 hvězdy' },
   { id: 3, label: '3 hvězdy a méně' },
+  // Vlastní volba (23. 10. 2026): dřív se schovávala do „3 a méně“, ale tvořila
+  // většinu skupiny (poznávací zájezdy Čedoku, hotely bez třídy).
+  { id: 0, label: 'bez kategorie' },
 ]
 
 export function starsGroupOf(stars: number | null): StarsGroup {
-  if (stars !== null && stars >= 5) return 5
-  if (stars !== null && stars >= 4) return 4
+  if (stars === null || stars < 1) return 0
+  if (stars >= 5) return 5
+  if (stars >= 4) return 4
   return 3
 }
 
@@ -91,7 +102,6 @@ export const SORT_OPTIONS: { value: SortFilter; label: string }[] = [
   { value: 'doporucene', label: 'doporučené' },
   { value: 'cena', label: 'nejlevnější' },
   { value: 'sleva', label: 'největší sleva' },
-  { value: 'hvezdy', label: 'nejvíc hvězd' },
   { value: 'odlet', label: 'nejbližší odlet' },
 ]
 
@@ -162,7 +172,7 @@ export function parseTourFilters(params: SearchParams | undefined): TourFilters 
       ...new Set(
         list(p.hvezdy)
           .map(Number)
-          .filter((n): n is StarsGroup => n === 5 || n === 4 || n === 3),
+          .filter((n): n is StarsGroup => n === 5 || n === 4 || n === 3 || n === 0),
       ),
     ],
     letovisko: [...new Set(list(p.letovisko).filter((s) => /^[a-z0-9-]{1,60}$/.test(s)))],
@@ -265,7 +275,7 @@ export function selectedAirportNames(f: TourFilters): string[] {
   return f.odlet.map((s) => airportBySlug(s)?.name).filter((n): n is string => !!n)
 }
 
-function termMatches(term: TourOffer['terms'][number], f: TourFilters): boolean {
+export function termMatches(term: TourOffer['terms'][number], f: TourFilters): boolean {
   const [date, nights, price, orig] = term
   if (f.noci && (nights < f.noci[0] || nights > f.noci[1])) return false
   // „Jen se slevou“ se vyhodnocuje po termínech: hotel může mít nezlevněný
@@ -354,9 +364,6 @@ export function buildTourCards(offers: TourOffer[], f: TourFilters): TourCard[] 
     case 'sleva':
       cards.sort((a, b) => discountPercent(b) - discountPercent(a) || a.price - b.price)
       break
-    case 'hvezdy':
-      cards.sort((a, b) => (b.offer.stars ?? 0) - (a.offer.stars ?? 0) || a.price - b.price)
-      break
     case 'odlet':
       cards.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.price - b.price))
       break
@@ -364,6 +371,85 @@ export function buildTourCards(offers: TourOffer[], f: TourFilters): TourCard[] 
       cards.sort((a, b) => recommendedScore(a) - recommendedScore(b))
   }
   return cards
+}
+
+/**
+ * Odlet pro kartu: z letišť řádku to nejbližší vybranému (česká první);
+ * okolní letiště dostane štítek, ať je z karty jasné, odkud se letí.
+ */
+export function cardDeparture(card: TourCard, f: TourFilters): { label: string; near: boolean } {
+  const selected = selectedAirportNames(f)
+  const name = card.offer.departures.find((d) => selected.includes(d)) ?? card.offer.departures[0]
+  const airport = airportByName(name)
+  return { label: airport?.from ?? `z ${name}`, near: airport?.group === 'near' }
+}
+
+/** Jeden termín hotelu pro rozbalení v kartě (sloučeno přes řádky = skupiny letišť). */
+export interface HotelTerm {
+  date: string
+  nights: number
+  price: number
+  /** Původní cena, jen když je vyšší; jinak null. */
+  originalPrice: number | null
+  /** Letiště skupiny (česká první), názvy jako v TOUR_AIRPORTS. */
+  airports: string[]
+}
+
+/**
+ * Všechny termíny hotelu z karty (rozbalení „nejlevnější z N termínů“,
+ * rozhodnutí uživatele 23. 10. 2026): `filtered` = termíny, které prošly
+ * aktuálním filtrem (odlet, datum, délka, sleva), `all` = všechny budoucí
+ * termíny hotelu u téže cestovky bez ohledu na filtr. Řádky téhož hotelu
+ * (různé skupiny letišť) se slučují; stejný odlet a délka ve více skupinách
+ * je jeden řádek s nejnižší cenou a všemi letišti. Řazeno podle data.
+ */
+export function hotelTerms(
+  offers: TourOffer[],
+  card: TourCard,
+  f: TourFilters,
+): { all: HotelTerm[]; filtered: HotelTerm[] } {
+  const key = hotelKey(card.offer)
+  const rows = offers.filter((o) => hotelKey(o) === key)
+  const merge = (pick: (o: TourOffer, t: TourOffer['terms'][number]) => boolean): HotelTerm[] => {
+    const byTerm = new Map<string, HotelTerm>()
+    for (const o of rows) {
+      for (const t of o.terms) {
+        if (!pick(o, t)) continue
+        // Klíč = odlet + délka: tentýž termín z více letišť (různé ceny, Blue
+        // Style má na jedno datum i 5 skupin) je jeden řádek s nejnižší cenou
+        // a všemi letišti — jinak by hotel měl „938 termínů“.
+        const k = `${t[0]}|${t[1]}`
+        const cur = byTerm.get(k)
+        if (cur) {
+          for (const a of o.departures) if (!cur.airports.includes(a)) cur.airports.push(a)
+          if (t[2] < cur.price) {
+            cur.price = t[2]
+            cur.originalPrice = t[3] > t[2] ? t[3] : null
+          }
+        } else {
+          byTerm.set(k, {
+            date: t[0],
+            nights: t[1],
+            price: t[2],
+            originalPrice: t[3] > t[2] ? t[3] : null,
+            airports: [...o.departures],
+          })
+        }
+      }
+    }
+    for (const t of byTerm.values()) t.airports.sort((a, b) => airportRank(a) - airportRank(b))
+    return [...byTerm.values()].sort((a, b) =>
+      a.date < b.date ? -1 : a.date > b.date ? 1 : a.price - b.price,
+    )
+  }
+  const selected = selectedAirportNames(f)
+  return {
+    all: merge(() => true),
+    filtered: merge(
+      (o, t) =>
+        rowMatches(o, f) && termMatches(t, f) && o.departures.some((d) => selected.includes(d)),
+    ),
+  }
 }
 
 // ─── Počty u voleb (facety) ──────────────────────────────────────────────────
@@ -509,16 +595,19 @@ export interface ResortSummary {
 
 /** Letoviska s nejnižší cenou z karet (po filtrech), fotka = nejlevnější hotel. */
 export function buildResorts(cards: TourCard[], limit = 6): ResortSummary[] {
+  // Klíč = slug, ne název: cestovky píšou totéž letovisko různě („Sharm el
+  // Sheikh“ vs „Sharm El Sheikh“) a jedno letovisko by bylo v pásu dvakrát.
   const byArea = new Map<string, ResortSummary>()
   for (const c of cards) {
     if (c.offer.kind !== 'stay') continue
     const name = resortName(c.offer)
     if (!name) continue
-    const entry = byArea.get(name)
+    const slug = resortSlug(name)
+    const entry = byArea.get(slug)
     if (!entry) {
-      byArea.set(name, {
+      byArea.set(slug, {
         name,
-        slug: resortSlug(name),
+        slug,
         minPrice: c.price,
         photoUrl: c.offer.photoUrl,
         hotels: 1,

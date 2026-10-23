@@ -140,6 +140,14 @@ export const TourOffers: CollectionConfig = {
     { name: 'photoUrl', label: 'Fotka (URL)', type: 'text' },
     { name: 'detailUrl', label: 'Detail u cestovky (URL)', type: 'text', required: true },
     {
+      // Stránka téhož hotelu u Invie (s aid) — „Recenze na Invii“; plní sync
+      // párováním podle názvu/souřadnic (src/lib/invia-tours.ts), u řádků
+      // zdroje invia je to jejich vlastní hotel.
+      name: 'inviaUrl',
+      label: 'Hotel u Invie (URL, recenze)',
+      type: 'text',
+    },
+    {
       type: 'row',
       fields: [
         { name: 'lat', label: 'Zeměpisná šířka', type: 'number', admin: { width: '50%' } },

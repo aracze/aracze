@@ -291,6 +291,30 @@ export const Pages: CollectionConfig = {
                   'Podle tohoto kódu se na stránce vybírají nabídky z feedů cestovek (EGY = Egypt, GRC = Řecko, TUR = Turecko). Bez kódu se žádné zájezdy nevypíší.',
               },
             },
+            {
+              name: 'inviaFeedUrls',
+              label: 'XML feedy Invie (jedna adresa na řádek)',
+              type: 'textarea',
+              validate: (value: string | null | undefined) => {
+                const bad = (value ?? '')
+                  .split(/\r?\n/)
+                  .map((l) => l.trim())
+                  .filter(Boolean)
+                  .find(
+                    (l) =>
+                      !/^https:\/\/affil\.invia\.cz\/direct\/core\/tool_xml-feed\/download\//.test(
+                        l,
+                      ),
+                  )
+                return bad
+                  ? `Adresa „${bad}“ není stažení XML feedu z affil.invia.cz (Nástroje → XML feed → Uložené XML feedy → odkaz Stáhnout).`
+                  : true
+              },
+              admin: {
+                description:
+                  'Feedy zájezdů Invie pro tuto zemi (portál dovolí max 150 položek na feed — klidně víc feedů po letoviscích). Denní sync z nich bere jen hotely, které nemáme od cestovek napřímo; u ostatních doplní odkaz „Recenze na Invii“.',
+              },
+            },
           ],
         },
         {

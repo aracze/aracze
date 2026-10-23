@@ -5,14 +5,15 @@ import { timingSafeEqual } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
-import { safeRevalidate } from '@/hooks/revalidation'
 import { invalidateTourOffersCache } from '@/lib/tour-offers-cache'
 import { pragueToday } from '@/lib/kiwi-deals'
 import { parseSdovolenaTour, TourChunker, type TourOfferRow } from '@/lib/sdovolena'
 import { fetchCjTravelProducts, mapCjProduct } from '@/lib/cj-travel'
+import { matchInviaRows, parseInviaFeed, type ExistingOffer } from '@/lib/invia-tours'
+import { inviaHotelReviewsUrl } from '@/lib/tour-reviews'
 import {
+  INVIA_AID,
   TOUR_SOURCES,
   tourFeedConfig,
   type TourFeedConfig,
@@ -40,8 +41,6 @@ import {
  * se zapíší normálně.
  */
 
-export const TOUR_OFFERS_CACHE_TAG = 'tour-offers'
-
 function safeEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a)
   const bufB = Buffer.from(b)
@@ -60,6 +59,10 @@ type SourceResult = {
   rows: number
   countries: Record<string, number>
   error: string | null
+  /** Jen Invia: řádky přímých partnerů spárované s hotelem Invie (dostaly odkaz na recenze). */
+  matched?: number
+  /** Jen Invia: feedy, které se nepodařilo stáhnout (ostatní se zpracovaly). */
+  warnings?: string[]
 }
 
 /**
@@ -99,18 +102,46 @@ async function fetchSourceRows(
 
 async function downloadFeed(config: TourFeedConfig, targetFile: string): Promise<void> {
   if (config.kind === 'https') {
-    // Veřejný feed (TUI, 5 MB): obyčejný fetch proudem do souboru; strop
-    // 10 minut kryje i gigabytový feed na pomalé lince.
-    const res = await fetch(config.url, {
-      signal: AbortSignal.timeout(10 * 60 * 1000),
-      redirect: 'error',
-      headers: { 'user-agent': 'ara.cz tour-offers sync' },
+    // Feed po https (TUI veřejný 5 MB, Blue Style 330 MB s HTTP Basic auth)
+    // proudem do souboru přes node:https — Next obaluje globální `fetch`
+    // (logování/cache) a u 330 MB těla přenos po ~30 s utnul chybou
+    // „terminated“ (zkoušeno 23. 10. 2026), mimo Next tentýž fetch prošel.
+    // Přihlášení v adrese (`https://user:heslo@host/…`) jde do hlavičky
+    // Authorization. Přesměrování se nenásleduje (feed má pevnou adresu).
+    const url = new URL(config.url)
+    const headers: Record<string, string> = { 'user-agent': 'ara.cz tour-offers sync' }
+    if (url.username || url.password) {
+      const user = decodeURIComponent(url.username)
+      const password = decodeURIComponent(url.password)
+      headers.authorization = `Basic ${Buffer.from(`${user}:${password}`).toString('base64')}`
+      url.username = ''
+      url.password = ''
+    }
+    const { get } = await import('node:https')
+    const res = await new Promise<import('node:http').IncomingMessage>((resolve, reject) => {
+      // Invia generuje feed až při stažení a první bajt může přijít po minutách
+      // (23. 10. 2026 padlo na 60 s), proto nečinnost až 5 minut; celkový strop níže.
+      const req = get(url, { headers, timeout: 5 * 60_000 }, resolve)
+      req.on('timeout', () => req.destroy(new Error('feed: spojení bez odpovědi 5 min')))
+      req.on('error', reject)
     })
-    if (!res.ok || !res.body) throw new Error(`feed ${res.status}`)
-    await pipeline(Readable.fromWeb(res.body as never), fs.createWriteStream(targetFile))
+    if (res.statusCode !== 200) {
+      res.resume()
+      throw new Error(`feed ${res.statusCode}`)
+    }
+    // Strop 10 minut na celý přenos kryje i gigabytový feed na pomalé lince.
+    const stop = setTimeout(
+      () => res.destroy(new Error('feed: stahování přes 10 minut')),
+      10 * 60 * 1000,
+    )
+    try {
+      await pipeline(res, fs.createWriteStream(targetFile))
+    } finally {
+      clearTimeout(stop)
+    }
     return
   }
-  if (config.kind !== 'sftp') throw new Error('katalog CJ se nestahuje do souboru')
+  if (config.kind !== 'sftp') throw new Error('tento zdroj se nestahuje do souboru')
   // ssh2 se importuje líně — mimo sync (web, CLI, generování typů) se vůbec
   // nenačte. Pure-JS implementace stačí (nativní doplňky se nebuildí).
   const { Client } = await import('ssh2')
@@ -194,7 +225,13 @@ type DrizzleLike = DrizzleTx & {
 }
 
 /** Nahrazení nabídek jednoho zdroje v transakci (smazat staré, vložit nové po dávkách). */
-async function replaceSourceRows(db: DrizzleLike, source: TourSource, rows: TourOfferRow[]) {
+async function replaceSourceRows(
+  db: DrizzleLike,
+  source: TourSource,
+  rows: TourOfferRow[],
+  /** Jen tyto země (Invia: země, jejichž feed se stáhl); bez omezení = celý zdroj. */
+  onlyCountries?: string[],
+) {
   await db.transaction(async (tx) => {
     const lock = (await tx.execute(
       sql`SELECT pg_try_advisory_xact_lock(hashtext(${'aracze:sync-tour-offers:' + source.id})) AS acquired`,
@@ -202,7 +239,13 @@ async function replaceSourceRows(db: DrizzleLike, source: TourSource, rows: Tour
     if (!lock.rows[0]?.acquired) {
       throw new Error('Sync tohoto zdroje už běží (souběžný požadavek)')
     }
-    await tx.execute(sql`DELETE FROM tour_offers WHERE source = ${source.id}`)
+    if (onlyCountries) {
+      await tx.execute(
+        sql`DELETE FROM tour_offers WHERE source = ${source.id} AND country_code = ANY(${onlyCountries}::text[])`,
+      )
+    } else {
+      await tx.execute(sql`DELETE FROM tour_offers WHERE source = ${source.id}`)
+    }
     for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
       const chunk = rows.slice(i, i + INSERT_CHUNK).map((r) => ({
         source: r.source,
@@ -228,6 +271,7 @@ async function replaceSourceRows(db: DrizzleLike, source: TourSource, rows: Tour
         detail_url: r.detailUrl,
         lat: r.lat,
         lng: r.lng,
+        invia_url: r.inviaUrl ?? null,
       }))
       // Jedna dávka = jeden parametr (JSON) → žádné limity na počet
       // parametrů dotazu a žádné ruční skládání VALUES.
@@ -235,18 +279,19 @@ async function replaceSourceRows(db: DrizzleLike, source: TourSource, rows: Tour
         INSERT INTO tour_offers (
           source, external_id, kind, title, country_code, area, place, stars, board,
           departures, terms, term_from, term_to, nights, term_count, price, original_price,
-          photo_url, detail_url, lat, lng, created_at, updated_at
+          photo_url, detail_url, lat, lng, invia_url, created_at, updated_at
         )
         SELECT
           r.source, r.external_id, r.kind, r.title, r.country_code, r.area, r.place, r.stars,
           r.board, r.departures, r.terms, r.term_from::timestamptz, r.term_to::timestamptz, r.nights,
           r.term_count, r.price, r.original_price, r.photo_url, r.detail_url, r.lat, r.lng,
-          now(), now()
+          r.invia_url, now(), now()
         FROM jsonb_to_recordset(${JSON.stringify(chunk)}::jsonb) AS r(
           source text, external_id text, kind text, title text, country_code text,
           area text, place text, stars numeric, board text, departures jsonb, terms jsonb,
           term_from text, term_to text, nights numeric, term_count numeric, price numeric,
-          original_price numeric, photo_url text, detail_url text, lat numeric, lng numeric
+          original_price numeric, photo_url text, detail_url text, lat numeric, lng numeric,
+          invia_url text
         )
       `)
     }
@@ -270,8 +315,136 @@ function countByCountry(rows: TourOfferRow[]): Record<string, number> {
   return out
 }
 
+/** Jen https feed přímo z affil.invia.cz (adresa je z adminu → bez toho by to byl SSRF vektor). */
+function isInviaFeedUrl(value: string): boolean {
+  try {
+    const u = new URL(value)
+    return (
+      u.protocol === 'https:' &&
+      u.hostname === 'affil.invia.cz' &&
+      u.pathname.startsWith('/direct/core/tool_xml-feed/download/')
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Invia (src/lib/invia-tours.ts): feedy po zemích z publikovaných stránek
+ * Zájezdy, hotely se spárují s řádky přímých partnerů — spárované dostanou
+ * `invia_url` (recenze), nespárované jdou do nabídky jako zdroj `invia`.
+ * Běží jako poslední zdroj, aby párovala proti čerstvým řádkům.
+ */
+async function syncInvia(
+  db: DrizzleLike,
+  write: boolean,
+  source: TourSource,
+  today: string,
+  maxTours: number | null,
+): Promise<SourceResult> {
+  const pages = (await db.execute(sql`
+    SELECT tours_country_code AS code, tours_invia_feed_urls AS urls
+    FROM pages
+    WHERE category = 'Zájezdy' AND _status = 'published'
+      AND tours_country_code IS NOT NULL AND tours_invia_feed_urls IS NOT NULL
+  `)) as { rows: { code: string; urls: string }[] }
+  const feeds = pages.rows.flatMap((p) =>
+    p.urls
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l && isInviaFeedUrl(l))
+      .map((url) => ({ code: p.code, url })),
+  )
+  if (feeds.length === 0) throw new Error('žádná publikovaná stránka Zájezdy nemá feed Invie')
+
+  let offers = 0
+  let okFeeds = 0
+  const warnings: string[] = []
+  const byCountry = new Map<string, Map<string, TourOfferRow>>()
+  for (const feed of feeds) {
+    const tmpFile = path.join(os.tmpdir(), `aracze-tour-feed-invia-${process.pid}.xml`)
+    try {
+      await downloadFeed({ kind: 'https', url: feed.url }, tmpFile)
+      const xml = await fs.promises.readFile(tmpFile, 'utf8')
+      offers += (xml.match(/<offer>/g) ?? []).length
+      const rows = parseInviaFeed(xml, feed.code, today)
+      const map = byCountry.get(feed.code) ?? new Map<string, TourOfferRow>()
+      for (const row of rows) if (!map.has(row.externalId)) map.set(row.externalId, row)
+      byCountry.set(feed.code, map)
+      okFeeds++
+    } catch (err) {
+      // Jeden nedostupný feed nesmí shodit ostatní (země mají feedů víc);
+      // teprve bez jediného staženého feedu se nic nepřepisuje.
+      warnings.push(
+        `${feed.code} ${feed.url.slice(-20)}: ${err instanceof Error ? err.message : String(err)}`,
+      )
+    } finally {
+      await fs.promises.rm(tmpFile, { force: true })
+    }
+  }
+  if (okFeeds === 0) throw new Error(`žádný feed Invie se nestáhl: ${warnings.join('; ')}`)
+
+  const unmatchedAll: TourOfferRow[] = []
+  const matchedIds = new Set<number>()
+  for (const [code, map] of byCountry) {
+    let rows = [...map.values()]
+    if (maxTours !== null) rows = rows.slice(0, maxTours)
+    for (const row of rows) row.inviaUrl = inviaHotelReviewsUrl(row.detailUrl, INVIA_AID)
+    const existing = (await db.execute(sql`
+      SELECT id, title, lat, lng FROM tour_offers
+      WHERE country_code = ${code} AND source <> 'invia'
+    `)) as { rows: ExistingOffer[] }
+    const { matched, unmatched } = matchInviaRows(
+      rows,
+      existing.rows.map((e) => ({
+        id: Number(e.id),
+        title: e.title,
+        lat: e.lat === null ? null : Number(e.lat),
+        lng: e.lng === null ? null : Number(e.lng),
+      })),
+    )
+    const pairs: { id: number; url: string }[] = []
+    for (const m of matched) {
+      if (!m.row.inviaUrl) continue
+      for (const id of m.ids) {
+        pairs.push({ id, url: m.row.inviaUrl })
+        matchedIds.add(id)
+      }
+    }
+    unmatchedAll.push(...unmatched)
+    if (write) {
+      await db.transaction(async (tx) => {
+        await tx.execute(
+          sql`UPDATE tour_offers SET invia_url = NULL WHERE country_code = ${code} AND source <> 'invia'`,
+        )
+        if (pairs.length > 0) {
+          await tx.execute(sql`
+            UPDATE tour_offers t SET invia_url = m.url, updated_at = now()
+            FROM jsonb_to_recordset(${JSON.stringify(pairs)}::jsonb) AS m(id int, url text)
+            WHERE t.id = m.id
+          `)
+        }
+      })
+    }
+  }
+  // Prázdný seznam je u Invie v pořádku (vše spárováno) — smaže jen včerejší
+  // řádky, a jen v zemích, jejichž feed se dnes stáhl; země s nedostupným
+  // feedem si nechají včerejší hotely.
+  if (write) await replaceSourceRows(db, source, unmatchedAll, [...byCountry.keys()])
+  return {
+    source: source.id,
+    tours: offers,
+    rows: unmatchedAll.length,
+    countries: countByCountry(unmatchedAll),
+    error: null,
+    matched: matchedIds.size,
+    ...(warnings.length > 0 ? { warnings } : {}),
+  }
+}
+
 async function runSync(
-  db: DrizzleLike | null,
+  db: DrizzleLike,
+  write: boolean,
   sources: TourSource[],
   maxTours: number | null,
 ): Promise<SourceResult[]> {
@@ -281,10 +454,14 @@ async function runSync(
   // pásmo i paměť navzájem.
   for (const source of sources) {
     try {
+      if (source.id === 'invia') {
+        results.push(await syncInvia(db, write, source, today, maxTours))
+        continue
+      }
       const { rows, tours } = await fetchSourceRows(source, today, maxTours)
       if (rows.length === 0)
         throw new Error(`feed nedal žádnou leteckou nabídku z ČR (${tours} zájezdů)`)
-      if (db) await replaceSourceRows(db, source, rows)
+      if (write) await replaceSourceRows(db, source, rows)
       results.push({
         source: source.id,
         tours,
@@ -327,6 +504,10 @@ export const syncTourOffersEndpoint: Endpoint = {
     const sources = TOUR_SOURCES.filter(
       (s) => tourFeedConfig(s) !== null && (!onlySource || s.id === onlySource),
     )
+    // Ruční běh jednoho zdroje přepíše jeho řádky bez `invia_url`; Invia se
+    // proto přidá vždy za něj, aby odkazy na recenze nezmizely do dalšího rána.
+    const invia = TOUR_SOURCES.find((s) => s.id === 'invia')
+    if (onlySource && onlySource !== 'invia' && invia && tourFeedConfig(invia)) sources.push(invia)
     if (sources.length === 0) {
       throw new APIError(
         'Žádný zdroj zájezdů nemá nastavený feed (env *_FEED, *_FEED_URL nebo *_SFTP_*)',
@@ -338,25 +519,24 @@ export const syncTourOffersEndpoint: Endpoint = {
       throw new APIError('Sync už běží — zkus to za chvíli znovu', 409)
     }
 
+    const db = (req.payload.db as unknown as { drizzle: DrizzleLike }).drizzle
     if (dryRun) {
       try {
-        const results = await runSync(null, sources, maxTours)
+        const results = await runSync(db, false, sources, maxTours)
         return Response.json({ ok: true, dryRun: true, results })
       } finally {
         syncStartedAt = null
       }
     }
 
-    const db = (req.payload.db as unknown as { drizzle: DrizzleLike }).drizzle
     const { after } = await import('next/server.js')
     after(async () => {
       try {
-        const results = await runSync(db, sources, null)
+        const results = await runSync(db, true, sources, null)
         if (results.some((r) => !r.error)) {
-          // Nabídky drží paměťová cache (lib/payload.ts) — vyprázdnit po zápisu;
-          // štítek zůstává pro případné další čtení přes Next cache.
+          // Nabídky drží jen paměťová cache procesu (lib/tour-offers-cache.ts,
+          // Next cache je neunese kvůli limitu 2 MB) — po zápisu vyprázdnit.
           invalidateTourOffersCache()
-          await safeRevalidate([TOUR_OFFERS_CACHE_TAG])
         }
         console.log('[sync-tour-offers] hotovo:', JSON.stringify(results))
       } catch (err) {

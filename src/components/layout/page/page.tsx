@@ -63,7 +63,7 @@ import { resolvePageSeo } from '@/lib/page-seo'
 import { breadcrumbsFromSlug, fetchAncestorChain } from '@/lib/page-ancestors'
 import { getCurrentUser } from '@/lib/auth'
 import { parseLatLng } from '@/lib/geo'
-import { getPayloadURL, getSiteURL, websiteHref } from '@/lib/utils'
+import { getPayloadURL, getSiteURL, richTextToPlainText, websiteHref } from '@/lib/utils'
 import { DEFAULT_COVER_BLUR, DEFAULT_COVER_POSITION, DEFAULT_COVER_URL } from '@/lib/default-cover'
 import type { ReviewPublic } from '@/types/payload'
 
@@ -772,105 +772,109 @@ export const Page = async ({
         )}
 
         {/* 2. CONTENT AREA */}
-        <MainContent
-          text={mainText}
-          pageCategory={page.category}
-          timezone={effectiveTimezone}
-          currencyCode={effectiveCurrencyCode}
-          exchangeRate={exchangeRate}
-          exchangeRates={exchangeRates}
-          // Země (místo s dalšími místy uvnitř) kartu Praktických informací
-          // v panelu nemá — vede na tutéž stránku, kterou má hned vedle
-          // v sekundárním menu. U konkrétních míst zůstává.
-          practicalInfo={isPlacePage && hasSubPlaces ? null : practicalInfo}
-          seasonPanel={seasonPanel}
-          // Teplota do panelu jen u konkrétních míst (viz seasonPanel výš) —
-          // a jen když má místo vlastní stránku počasí, kam se dá prokliknout.
-          panelWeather={
-            panelWeather && seasonSource
-              ? {
-                  temp: panelWeather.current.temp,
-                  condition: panelWeather.current.condition,
-                  icon: panelWeather.current.icon,
-                  href: seasonSource.fullSlug,
-                }
-              : null
-          }
-          createdByPublic={page.createdByPublic}
-          touristPointInfo={touristPointInfo}
-          // Pořadí bloků (rozhodnutí uživatele): aktuální počasí, dlouhodobé
-          // průměry po měsících, text z adminu („Kdy jet do…"), který to
-          // komentuje, a úplně nakonec předpověď na týden. Čtenář jde od toho,
-          // co je teď, k tomu, co bývá; předpověď zavírá stránku jako praktický
-          // dovětek a podpis autora patří až za ni (viz contributorAtEnd).
-          aboveText={
-            overviewItems.length > 0 ? (
-              <WeatherOverviewSection items={overviewItems} locative={climateLocative} />
-            ) : placeWeather || climateNormals ? (
-              <>
-                {placeWeather && (
-                  <WeatherNowSection weather={placeWeather} locative={climateLocative} />
-                )}
-                {climateNormals && (
-                  <ClimateSection
-                    normals={climateNormals}
-                    locative={climateLocative}
-                    genitive={climateGenitive}
-                  />
-                )}
-              </>
-            ) : null
-          }
-          // Předpověď na týden je ÚPLNĚ POSLEDNÍ blok stránky, až za textem
-          // z adminu (rozhodnutí uživatele). Nad textem tak zůstane jen to,
-          // co text komentuje — aktuální stav a dlouhodobé průměry; krátkodobá
-          // předpověď je praktický dovětek, ne úvod.
-          // Mapa se štítkem ubytování jde MEZI text — za první nadpis a jeho
-          // odstavec (čtenář si zorientuje ostrov dřív, než čte o jednotlivých
-          // letoviscích; výzvu vidí i kdo nedočte). Text bez nadpisu ji dostane
-          // až za sebe.
-          midText={accommodationSection}
-          belowText={
-            teamSection ? (
-              <TeamSection {...teamSection} />
-            ) : placeWeather && placeWeather.days.length > 0 ? (
-              <div className="mt-10">
-                <WeatherForecastSection weather={placeWeather} locative={climateLocative} />
-              </div>
-            ) : null
-          }
-          // Obsah v pravém sloupci kopíruje pořadí bloků: aktuální počasí
-          // a graf klimatu nad textem, předpověď pod ním (extraHeadings).
-          preHeadings={[
-            ...(placeWeather || overviewItems.length > 0
-              ? [{ id: 'aktualni-pocasi', text: `Aktuální počasí ${climateLocative}`, level: 2 }]
-              : []),
-            ...(climateNormals
-              ? [
-                  {
-                    id: 'prumerne-teploty-a-srazky',
-                    text: climateHeading(climateGenitive),
-                    level: 2,
-                  },
-                ]
-              : []),
-          ]}
-          extraHeadings={
-            placeWeather && placeWeather.days.length > 0
-              ? [
-                  {
-                    id: 'predpoved-pocasi',
-                    text: forecastHeading(placeWeather, climateLocative),
-                    level: 2,
-                  },
-                ]
-              : []
-          }
-          // Na stránkách počasí patří podpis autora až za předpověď (rozhodnutí
-          // uživatele) — mezi textem a grafy by rozdělil související sekce.
-          contributorAtEnd={page.category === PageCategory.Pocasi}
-          centerColumn={isStaticPage}
-        />
+        {/* Podstránka Zájezdy bez úvodního textu: čtecí sloupec by byl prázdný
+            a nechal nad filtry jen díru — rovnou nabídky. */}
+        {(!isToursPage || richTextToPlainText(page.text).trim().length > 0) && (
+          <MainContent
+            text={mainText}
+            pageCategory={page.category}
+            timezone={effectiveTimezone}
+            currencyCode={effectiveCurrencyCode}
+            exchangeRate={exchangeRate}
+            exchangeRates={exchangeRates}
+            // Země (místo s dalšími místy uvnitř) kartu Praktických informací
+            // v panelu nemá — vede na tutéž stránku, kterou má hned vedle
+            // v sekundárním menu. U konkrétních míst zůstává.
+            practicalInfo={isPlacePage && hasSubPlaces ? null : practicalInfo}
+            seasonPanel={seasonPanel}
+            // Teplota do panelu jen u konkrétních míst (viz seasonPanel výš) —
+            // a jen když má místo vlastní stránku počasí, kam se dá prokliknout.
+            panelWeather={
+              panelWeather && seasonSource
+                ? {
+                    temp: panelWeather.current.temp,
+                    condition: panelWeather.current.condition,
+                    icon: panelWeather.current.icon,
+                    href: seasonSource.fullSlug,
+                  }
+                : null
+            }
+            createdByPublic={page.createdByPublic}
+            touristPointInfo={touristPointInfo}
+            // Pořadí bloků (rozhodnutí uživatele): aktuální počasí, dlouhodobé
+            // průměry po měsících, text z adminu („Kdy jet do…"), který to
+            // komentuje, a úplně nakonec předpověď na týden. Čtenář jde od toho,
+            // co je teď, k tomu, co bývá; předpověď zavírá stránku jako praktický
+            // dovětek a podpis autora patří až za ni (viz contributorAtEnd).
+            aboveText={
+              overviewItems.length > 0 ? (
+                <WeatherOverviewSection items={overviewItems} locative={climateLocative} />
+              ) : placeWeather || climateNormals ? (
+                <>
+                  {placeWeather && (
+                    <WeatherNowSection weather={placeWeather} locative={climateLocative} />
+                  )}
+                  {climateNormals && (
+                    <ClimateSection
+                      normals={climateNormals}
+                      locative={climateLocative}
+                      genitive={climateGenitive}
+                    />
+                  )}
+                </>
+              ) : null
+            }
+            // Předpověď na týden je ÚPLNĚ POSLEDNÍ blok stránky, až za textem
+            // z adminu (rozhodnutí uživatele). Nad textem tak zůstane jen to,
+            // co text komentuje — aktuální stav a dlouhodobé průměry; krátkodobá
+            // předpověď je praktický dovětek, ne úvod.
+            // Mapa se štítkem ubytování jde MEZI text — za první nadpis a jeho
+            // odstavec (čtenář si zorientuje ostrov dřív, než čte o jednotlivých
+            // letoviscích; výzvu vidí i kdo nedočte). Text bez nadpisu ji dostane
+            // až za sebe.
+            midText={accommodationSection}
+            belowText={
+              teamSection ? (
+                <TeamSection {...teamSection} />
+              ) : placeWeather && placeWeather.days.length > 0 ? (
+                <div className="mt-10">
+                  <WeatherForecastSection weather={placeWeather} locative={climateLocative} />
+                </div>
+              ) : null
+            }
+            // Obsah v pravém sloupci kopíruje pořadí bloků: aktuální počasí
+            // a graf klimatu nad textem, předpověď pod ním (extraHeadings).
+            preHeadings={[
+              ...(placeWeather || overviewItems.length > 0
+                ? [{ id: 'aktualni-pocasi', text: `Aktuální počasí ${climateLocative}`, level: 2 }]
+                : []),
+              ...(climateNormals
+                ? [
+                    {
+                      id: 'prumerne-teploty-a-srazky',
+                      text: climateHeading(climateGenitive),
+                      level: 2,
+                    },
+                  ]
+                : []),
+            ]}
+            extraHeadings={
+              placeWeather && placeWeather.days.length > 0
+                ? [
+                    {
+                      id: 'predpoved-pocasi',
+                      text: forecastHeading(placeWeather, climateLocative),
+                      level: 2,
+                    },
+                  ]
+                : []
+            }
+            // Na stránkách počasí patří podpis autora až za předpověď (rozhodnutí
+            // uživatele) — mezi textem a grafy by rozdělil související sekce.
+            contributorAtEnd={page.category === PageCategory.Pocasi}
+            centerColumn={isStaticPage}
+          />
+        )}
 
         {/* Recenze — jen turistické cíle (parita s legacy webem) */}
         {reviewsData && (
@@ -903,7 +907,6 @@ export const Page = async ({
             filters={tourFilters}
             basePath={page.fullSlug}
             genitive={getGenitivePlace(contextPlace)}
-            placeTitle={contextPlace.title}
             today={pragueToday()}
           />
         )}

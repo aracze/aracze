@@ -3986,8 +3986,13 @@ export const fetchPopularDestinations = async (): Promise<PopularDestination[]> 
 
 // ─── Zájezdy (podstránka kategorie „Zájezdy“) ─────────────────────────────────
 
-/** Nabídek na stránku nejvýš tolik — pojistka proti feedu s tisíci řádky za zemi. */
-const TOUR_OFFERS_LIMIT = 2000
+/**
+ * Strop řádků na zemi — jen pojistka proti rozbitému feedu. Španělsko má
+ * v DB 3 850 řádků, Řecko 2 900 (6 zdrojů × skupiny letišť), dřívější strop
+ * 2 000 tiše ořezával nejdražší hotely (řazení podle ceny) i facety; při
+ * dosažení stropu se loguje varování.
+ */
+const TOUR_OFFERS_LIMIT = 10000
 
 /**
  * Nabídky zájezdů jedné země z kolekce `tour-offers` (plní denní sync, viz
@@ -4022,6 +4027,9 @@ async function fetchTourOffersUncached(countryCode: string): Promise<TourOffer[]
       originalPrice: true,
       termCount: true,
       photoUrl: true,
+      lat: true,
+      lng: true,
+      inviaUrl: true,
     },
   })
   const offers: TourOffer[] = []
@@ -4091,7 +4099,15 @@ async function fetchTourOffersUncached(countryCode: string): Promise<TourOffer[]
           : null,
       termCount: typeof doc.termCount === 'number' ? doc.termCount : 0,
       photoUrl: doc.photoUrl?.startsWith('https://') ? doc.photoUrl : null,
+      lat: typeof doc.lat === 'number' ? doc.lat : null,
+      lng: typeof doc.lng === 'number' ? doc.lng : null,
+      inviaUrl: doc.inviaUrl?.startsWith('https://www.invia.cz/') ? doc.inviaUrl : null,
     })
+  }
+  if (res.docs.length >= TOUR_OFFERS_LIMIT) {
+    console.warn(
+      `[tour-offers] ${countryCode}: dosažen strop ${TOUR_OFFERS_LIMIT} řádků, nabídky jsou ořezané`,
+    )
   }
   return offers
 }

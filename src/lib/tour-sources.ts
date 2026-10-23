@@ -16,7 +16,9 @@
  * Přístupové údaje k feedům jsou naopak jen v env (viz `feedEnvPrefix`).
  */
 
-export type TourSourceId = 'cedok' | 'fischer' | 'exim' | 'tui' | 'bluestyle'
+import { AFFILIATE_FALLBACKS } from './affiliate-defaults'
+
+export type TourSourceId = 'cedok' | 'fischer' | 'exim' | 'tui' | 'bluestyle' | 'invia'
 
 export interface TourSource {
   id: TourSourceId
@@ -24,10 +26,24 @@ export interface TourSource {
   label: string
   /** Doména webu cestovky — kontrola, že deep-link z feedu vede k ní. */
   hosts: string[]
-  /** CJ click link (publisher 101533587). */
+  /** CJ click link (publisher 101533587); u přímého partnera (Invia) obecný odkaz s `aid`. */
   cjClickUrl: string
-  /** Id inzerenta v CJ — pro produktový katalog (`<PREFIX>_FEED=cj`). */
+  /** Id inzerenta v CJ — pro produktový katalog (`<PREFIX>_FEED=cj`); prázdné u přímého partnera. */
   cjPartnerId: string
+  /**
+   * Přímý partner mimo CJ: deep-link z feedu už nese partnerský parametr,
+   * /go/zajezd na něj přesměruje rovnou (Invia, `aid` v adrese).
+   */
+  direct?: boolean
+  /**
+   * Logo pro pruh „Zájezdy od“ nad filtry (public/assets/partners, SVG
+   * z webu cestovky; v pruhu šedé, barevné až při najetí). Bez loga se
+   * cestovka v pruhu vypíše jménem. `logoHeight` = Tailwind výška v pruhu —
+   * loga mají různě „těžký“ kresbu (čistě textové Fischer/Exim jsou při stejné
+   * výšce opticky větší než Čedok nebo TUI s grafikou).
+   */
+  logo?: string
+  logoHeight?: string
   /**
    * Značky, které se z CJ katalogu berou (velkými písmeny). Katalogy Fischeru
    * a Eximu nesou tytéž hotely obou značek (jedna skupina) — bez filtru by se
@@ -50,6 +66,8 @@ export const TOUR_SOURCES: readonly TourSource[] = [
     hosts: ['cedok.cz'],
     cjClickUrl: 'https://www.anrdoezrs.net/click-101533587-15686662',
     cjPartnerId: '6179554',
+    logo: '/assets/partners/cedok.svg',
+    logoHeight: 'h-7',
     feedEnvPrefix: 'CEDOK',
   },
   {
@@ -59,6 +77,8 @@ export const TOUR_SOURCES: readonly TourSource[] = [
     cjClickUrl: 'https://www.tkqlhce.com/click-101533587-15041940',
     cjPartnerId: '5905992',
     cjBrands: ['FISCHER'],
+    logo: '/assets/partners/fischer.svg',
+    logoHeight: 'h-[17px]',
     feedEnvPrefix: 'FISCHER',
   },
   {
@@ -68,6 +88,8 @@ export const TOUR_SOURCES: readonly TourSource[] = [
     cjClickUrl: 'https://www.kqzyfj.com/click-101533587-15043859',
     cjPartnerId: '5906045',
     cjBrands: ['EXIM TOURS', 'KARTAGO TOURS'],
+    logo: '/assets/partners/exim.svg',
+    logoHeight: 'h-[19px]',
     feedEnvPrefix: 'EXIM',
   },
   {
@@ -76,6 +98,8 @@ export const TOUR_SOURCES: readonly TourSource[] = [
     hosts: ['tui.cz'],
     cjClickUrl: 'https://www.jdoqocy.com/click-101533587-15704921',
     cjPartnerId: '6785595',
+    logo: '/assets/partners/tui.svg',
+    logoHeight: 'h-8',
     feedEnvPrefix: 'TUI',
   },
   {
@@ -84,9 +108,29 @@ export const TOUR_SOURCES: readonly TourSource[] = [
     hosts: ['blue-style.cz'],
     cjClickUrl: 'https://www.jdoqocy.com/click-101533587-14358779',
     cjPartnerId: '5605390',
+    logo: '/assets/partners/bluestyle.svg',
+    logoHeight: 'h-[22px]',
     feedEnvPrefix: 'BLUESTYLE',
   },
+  {
+    // Agentura, ne cestovka: do nabídky jen hotely, které přímí partneři
+    // nemají, jinak odkaz na recenze (src/lib/invia-tours.ts). Poslední
+    // v pořadí schválně — sync ji pouští až po ostatních, aby párovala
+    // proti čerstvým řádkům. Feedy se nastavují v adminu na stránce Zájezdy.
+    id: 'invia',
+    label: 'Invia',
+    hosts: ['invia.cz'],
+    cjClickUrl: AFFILIATE_FALLBACKS.toursUrl,
+    cjPartnerId: '',
+    direct: true,
+    logo: '/assets/partners/invia.svg',
+    logoHeight: 'h-[23px]',
+    feedEnvPrefix: 'INVIA',
+  },
 ]
+
+/** Partnerské `aid` Invie (z obecného odkazu) — do odkazů na stránky hotelů. */
+export const INVIA_AID = new URL(AFFILIATE_FALLBACKS.toursUrl).searchParams.get('aid') ?? ''
 
 export const TOUR_SOURCE_IDS = TOUR_SOURCES.map((s) => s.id) as [TourSourceId, ...TourSourceId[]]
 
@@ -117,6 +161,7 @@ export function cjDeepLink(source: TourSource, targetUrl: string | null | undefi
   if (!targetUrl || !/^https:\/\//i.test(targetUrl) || !isSourceHost(source, targetUrl)) {
     return source.cjClickUrl
   }
+  if (source.direct) return targetUrl
   return `${source.cjClickUrl}?url=${encodeURIComponent(targetUrl)}`
 }
 
@@ -124,6 +169,8 @@ export type TourFeedConfig =
   | { kind: 'sftp'; host: string; port: number; user: string; password: string; path: string }
   | { kind: 'https'; url: string }
   | { kind: 'cj'; partnerId: string; token: string; companyId: string }
+  /** Invia: feedy po zemích z adminu (pole `tours.inviaFeedUrls` stránek Zájezdy). */
+  | { kind: 'invia' }
 
 /**
  * Odkud brát feed zdroje: `<PREFIX>_FEED_URL` (veřejný https, např. TUI) má
@@ -135,6 +182,7 @@ export function tourFeedConfig(
   source: TourSource,
   env: NodeJS.ProcessEnv = process.env,
 ): TourFeedConfig | null {
+  if (source.direct) return { kind: 'invia' }
   const p = source.feedEnvPrefix
   // `<PREFIX>_FEED=cj` = produktový katalog CJ (Fischer, Exim); potřebuje
   // sdílený CJ_API_TOKEN (osobní token z developers.cj.com) a CJ_COMPANY_ID.
