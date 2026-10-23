@@ -421,7 +421,9 @@ async function runSync(
       const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`
       if (!normalsCache.has(cacheKey)) {
         const memo = noStationUntil.get(cacheKey)
-        if (memo !== undefined && memo > now.getTime()) {
+        // `?force=1` memo obchází: ruční opakování pokusu má Meteostat opravdu
+        // zeptat, jinak by jen přepsalo značku čerstvým datem bez dotazu.
+        if (!force && memo !== undefined && memo > now.getTime()) {
           // Nedávno bez stanice — nepálit kvótu; stejná třída chyby, aby i
           // takovou stránku potkalo totéž co při skutečném dotazu (značka,
           // nebo hlášení chyby u stránky s daty).
