@@ -26,11 +26,19 @@ export interface TourSource {
   hosts: string[]
   /** CJ click link (publisher 101533587). */
   cjClickUrl: string
+  /** Id inzerenta v CJ — pro produktový katalog (`<PREFIX>_FEED=cj`). */
+  cjPartnerId: string
   /**
-   * Předpona env proměnných s přístupem k feedu: `<PREFIX>_SFTP_HOST`,
-   * `<PREFIX>_SFTP_USER`, `<PREFIX>_SFTP_PASSWORD`, `<PREFIX>_SFTP_PATH`.
-   * Bez vyplněného hosta se zdroj v syncu přeskočí (zatím feed jen od Čedoku;
-   * ostatní cestovky ho dávají „na vyžádání“ přes VIVnetworks).
+   * Značky, které se z CJ katalogu berou (velkými písmeny). Katalogy Fischeru
+   * a Eximu nesou tytéž hotely obou značek (jedna skupina) — bez filtru by se
+   * karty zdvojily. Bez pole se bere celý katalog.
+   */
+  cjBrands?: string[]
+  /**
+   * Předpona env proměnných s přístupem k feedu: `<PREFIX>_FEED=cj`
+   * (produktový katalog CJ — Fischer, Exim), `<PREFIX>_FEED_URL` (veřejný
+   * https feed Sdovolená — TUI), nebo `<PREFIX>_SFTP_HOST/USER/PASSWORD/PATH`
+   * (Čedok). Bez toho se zdroj v syncu přeskočí (Blue Style zatím bez feedu).
    */
   feedEnvPrefix: string
 }
@@ -41,6 +49,7 @@ export const TOUR_SOURCES: readonly TourSource[] = [
     label: 'Čedok',
     hosts: ['cedok.cz'],
     cjClickUrl: 'https://www.anrdoezrs.net/click-101533587-15686662',
+    cjPartnerId: '6179554',
     feedEnvPrefix: 'CEDOK',
   },
   {
@@ -48,6 +57,8 @@ export const TOUR_SOURCES: readonly TourSource[] = [
     label: 'Fischer',
     hosts: ['fischer.cz'],
     cjClickUrl: 'https://www.tkqlhce.com/click-101533587-15041940',
+    cjPartnerId: '5905992',
+    cjBrands: ['FISCHER'],
     feedEnvPrefix: 'FISCHER',
   },
   {
@@ -55,6 +66,8 @@ export const TOUR_SOURCES: readonly TourSource[] = [
     label: 'Exim Tours',
     hosts: ['eximtours.cz'],
     cjClickUrl: 'https://www.kqzyfj.com/click-101533587-15043859',
+    cjPartnerId: '5906045',
+    cjBrands: ['EXIM TOURS', 'KARTAGO TOURS'],
     feedEnvPrefix: 'EXIM',
   },
   {
@@ -62,6 +75,7 @@ export const TOUR_SOURCES: readonly TourSource[] = [
     label: 'TUI',
     hosts: ['tui.cz'],
     cjClickUrl: 'https://www.jdoqocy.com/click-101533587-15704921',
+    cjPartnerId: '6785595',
     feedEnvPrefix: 'TUI',
   },
   {
@@ -69,6 +83,7 @@ export const TOUR_SOURCES: readonly TourSource[] = [
     label: 'Blue Style',
     hosts: ['blue-style.cz'],
     cjClickUrl: 'https://www.jdoqocy.com/click-101533587-14358779',
+    cjPartnerId: '5605390',
     feedEnvPrefix: 'BLUESTYLE',
   },
 ]
@@ -105,17 +120,38 @@ export function cjDeepLink(source: TourSource, targetUrl: string | null | undefi
   return `${source.cjClickUrl}?url=${encodeURIComponent(targetUrl)}`
 }
 
-/** Přístup k SFTP feedu zdroje z env; null = zdroj nemá feed nastavený. */
+export type TourFeedConfig =
+  | { kind: 'sftp'; host: string; port: number; user: string; password: string; path: string }
+  | { kind: 'https'; url: string }
+  | { kind: 'cj'; partnerId: string; token: string; companyId: string }
+
+/**
+ * Odkud brát feed zdroje: `<PREFIX>_FEED_URL` (veřejný https, např. TUI) má
+ * přednost, jinak SFTP (`<PREFIX>_SFTP_*`, Čedok). null = zdroj feed nemá
+ * a sync ho přeskočí. Adresa se bere z env (ne z adminu), takže tu není
+ * riziko SSRF přes editovatelný text; https se přesto vyžaduje.
+ */
 export function tourFeedConfig(
   source: TourSource,
   env: NodeJS.ProcessEnv = process.env,
-): { host: string; port: number; user: string; password: string; path: string } | null {
+): TourFeedConfig | null {
   const p = source.feedEnvPrefix
+  // `<PREFIX>_FEED=cj` = produktový katalog CJ (Fischer, Exim); potřebuje
+  // sdílený CJ_API_TOKEN (osobní token z developers.cj.com) a CJ_COMPANY_ID.
+  if (env[`${p}_FEED`]?.trim().toLowerCase() === 'cj') {
+    const token = env.CJ_API_TOKEN?.trim()
+    const companyId = env.CJ_COMPANY_ID?.trim()
+    return token && companyId
+      ? { kind: 'cj', partnerId: source.cjPartnerId, token, companyId }
+      : null
+  }
+  const url = env[`${p}_FEED_URL`]?.trim()
+  if (url) return url.startsWith('https://') ? { kind: 'https', url } : null
   const host = env[`${p}_SFTP_HOST`]?.trim()
   const user = env[`${p}_SFTP_USER`]?.trim()
   const password = env[`${p}_SFTP_PASSWORD`]
   const path = env[`${p}_SFTP_PATH`]?.trim()
   if (!host || !user || !password || !path) return null
   const port = Number(env[`${p}_SFTP_PORT`] ?? 22) || 22
-  return { host, port, user, password, path }
+  return { kind: 'sftp', host, port, user, password, path }
 }

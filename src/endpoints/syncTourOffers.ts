@@ -5,17 +5,26 @@ import { timingSafeEqual } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import { safeRevalidate } from '@/hooks/revalidation'
 import { invalidateTourOffersCache } from '@/lib/tour-offers-cache'
 import { pragueToday } from '@/lib/kiwi-deals'
 import { parseSdovolenaTour, TourChunker, type TourOfferRow } from '@/lib/sdovolena'
-import { TOUR_SOURCES, tourFeedConfig, type TourSource } from '@/lib/tour-sources'
+import { fetchCjTravelProducts, mapCjProduct } from '@/lib/cj-travel'
+import {
+  TOUR_SOURCES,
+  tourFeedConfig,
+  type TourFeedConfig,
+  type TourSource,
+} from '@/lib/tour-sources'
 
 /**
  * Denní sync kolekce `tour-offers` (podstránky „Zájezdy“): pro každou
  * cestovku s nastaveným feedem (env `<PREFIX>_SFTP_*`, viz tour-sources.ts)
- * stáhne přes SFTP nabídkový XML ve formátu Sdovolená.cz do dočasného
- * souboru, PROUDEM ho rozřeže na jednotlivé zájezdy (feed Čedoku má 3,4 GB —
+ * stáhne nabídkový XML ve formátu Sdovolená.cz (SFTP u Čedoku, https u TUI)
+ * do dočasného souboru — nebo u Fischeru a Eximu přečte produktový katalog
+ * CJ přes GraphQL (src/lib/cj-travel.ts) —, PROUDEM ho rozřeže na jednotlivé zájezdy (feed Čedoku má 3,4 GB —
  * do paměti se nikdy nevejde celý) a z každého udělá řádky nabídek (viz
  * `parseSdovolenaTour`). Nabídky
  * zdroje se pak v jedné transakci celé nahradí.
@@ -66,7 +75,18 @@ async function fetchSourceRows(
   maxTours: number | null,
 ): Promise<{ rows: TourOfferRow[]; tours: number }> {
   const config = tourFeedConfig(source)
-  if (!config) throw new Error('feed není nastavený (env SFTP)')
+  if (!config) throw new Error('feed není nastavený (env *_FEED / *_FEED_URL / *_SFTP_*)')
+  if (config.kind === 'cj') {
+    // Produktový katalog CJ (GraphQL, pár tisíc položek) — bez souboru.
+    const products = await fetchCjTravelProducts(config.partnerId, config.token, config.companyId)
+    const limited = maxTours !== null ? products.slice(0, maxTours) : products
+    const rows: TourOfferRow[] = []
+    for (const product of limited) {
+      const row = mapCjProduct(product, source, today)
+      if (row) rows.push(row)
+    }
+    return { rows, tours: limited.length }
+  }
 
   const tmpFile = path.join(os.tmpdir(), `aracze-tour-feed-${source.id}-${process.pid}.xml`)
   try {
@@ -77,10 +97,20 @@ async function fetchSourceRows(
   }
 }
 
-async function downloadFeed(
-  config: NonNullable<ReturnType<typeof tourFeedConfig>>,
-  targetFile: string,
-): Promise<void> {
+async function downloadFeed(config: TourFeedConfig, targetFile: string): Promise<void> {
+  if (config.kind === 'https') {
+    // Veřejný feed (TUI, 5 MB): obyčejný fetch proudem do souboru; strop
+    // 10 minut kryje i gigabytový feed na pomalé lince.
+    const res = await fetch(config.url, {
+      signal: AbortSignal.timeout(10 * 60 * 1000),
+      redirect: 'error',
+      headers: { 'user-agent': 'ara.cz tour-offers sync' },
+    })
+    if (!res.ok || !res.body) throw new Error(`feed ${res.status}`)
+    await pipeline(Readable.fromWeb(res.body as never), fs.createWriteStream(targetFile))
+    return
+  }
+  if (config.kind !== 'sftp') throw new Error('katalog CJ se nestahuje do souboru')
   // ssh2 se importuje líně — mimo sync (web, CLI, generování typů) se vůbec
   // nenačte. Pure-JS implementace stačí (nativní doplňky se nebuildí).
   const { Client } = await import('ssh2')
@@ -298,7 +328,10 @@ export const syncTourOffersEndpoint: Endpoint = {
       (s) => tourFeedConfig(s) !== null && (!onlySource || s.id === onlySource),
     )
     if (sources.length === 0) {
-      throw new APIError('Žádný zdroj zájezdů nemá nastavený feed (env *_SFTP_*)', 400)
+      throw new APIError(
+        'Žádný zdroj zájezdů nemá nastavený feed (env *_FEED, *_FEED_URL nebo *_SFTP_*)',
+        400,
+      )
     }
 
     if (!reserveSyncRun()) {

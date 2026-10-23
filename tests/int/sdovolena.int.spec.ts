@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { parseSdovolenaTour, starsFromClass, TourChunker } from '@/lib/sdovolena'
+import { boardCode, parseSdovolenaTour, starsFromClass, TourChunker } from '@/lib/sdovolena'
+import { normalizeAirportName } from '@/lib/tour-airports'
+import { mapCjProduct, pragueDay, type CjTravelProduct } from '@/lib/cj-travel'
 import {
   DEFAULT_TOUR_FILTERS,
   appliedFilterTags,
@@ -109,6 +111,148 @@ describe('parseSdovolenaTour', () => {
     expect(starsFromClass('7')).toBe(3)
     expect(starsFromClass('1')).toBeNull()
     expect(starsFromClass(undefined)).toBeNull()
+  })
+})
+
+describe('parseSdovolenaTour — odchylky feedu TUI', () => {
+  it('velká písmena tagů, strava jen popisem a „Brno-Tuřany“ se sjednotí', () => {
+    const xml = `<TOUR><TOUR_ID>AYT12012</TOUR_ID><TOUR_TYPE>100</TOUR_TYPE>
+      <TOUR_DETAIL_URL>https://www.tui.cz/dovolena/turecko/maxx-royal-ayt12012</TOUR_DETAIL_URL>
+      <LOCATIONS><LOCATION><COUNTRY_ID>TUR</COUNTRY_ID><AREA_TITLE>Turecká riviéra</AREA_TITLE><PLACE_TITLE>Kiris</PLACE_TITLE></LOCATION></LOCATIONS>
+      <TOUR_TITLE>Maxx Royal Kemer Resort</TOUR_TITLE>
+      <ACCOMMODATION><CLASS_ID>10</CLASS_ID><GPS><LAT>36.5</LAT><LON>30.5</LON></GPS></ACCOMMODATION>
+      <PHOTOS><PHOTO><ORDER>1</ORDER><URL>https://r.cdn.redgalaxy.com/a.jpg?x=1&amp;y=2</URL></PHOTO></PHOTOS>
+      <TERM_GROUPS>
+        <TERM_GROUP><BOARD><ID/><DESC>All inclusive plus</DESC></BOARD><TRANSPORT><ID>2</ID></TRANSPORT>
+          <DEPT_PLACES><PLACE>Brno-Tuřany</PLACE></DEPT_PLACES>
+          <TERMS><TERM><START>2027-05-22</START><END>2027-05-29</END><NIGHT_COUNT>7</NIGHT_COUNT>
+            <PRICES><PRICE><DESC_ID>1</DESC_ID><FINAL_PRICE>119451</FINAL_PRICE></PRICE><PRICE_ORIG>119451</PRICE_ORIG></PRICES></TERM></TERMS>
+        </TERM_GROUP>
+        <TERM_GROUP><BOARD><ID>2</ID><DESC>Snídaně</DESC></BOARD><TRANSPORT><ID>2</ID></TRANSPORT>
+          <DEPT_PLACES><PLACE>Frankfurt</PLACE></DEPT_PLACES>
+          <TERMS><TERM><START>2027-05-22</START><END>2027-05-29</END><NIGHT_COUNT>7</NIGHT_COUNT>
+            <PRICES><PRICE><DESC_ID>1</DESC_ID><FINAL_PRICE>50000</FINAL_PRICE></PRICE><PRICE_ORIG>50000</PRICE_ORIG></PRICES></TERM></TERMS>
+        </TERM_GROUP>
+      </TERM_GROUPS></TOUR>`
+    const rows = parseSdovolenaTour(xml, 'tui', '2026-10-23')
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      source: 'tui',
+      externalId: 'AYT12012',
+      board: '8',
+      departures: ['Brno'],
+      stars: 5,
+      price: 119451,
+      originalPrice: null,
+      photoUrl: 'https://r.cdn.redgalaxy.com/a.jpg?x=1&y=2',
+    })
+  })
+
+  it('boardCode: kód má přednost, popis jen náhradou', () => {
+    expect(boardCode('6', 'Snídaně')).toBe('6')
+    expect(boardCode('', 'Ultra All Inclusive')).toBe('8')
+    expect(boardCode('', 'All Inclusive')).toBe('6')
+    expect(boardCode('', 'Polopenze Plus')).toBe('4')
+    expect(boardCode('', 'Bez stravy')).toBe('1')
+    expect(boardCode('', '')).toBeNull()
+    expect(normalizeAirportName('Ostrava-Mošnov')).toBe('Ostrava')
+    expect(normalizeAirportName('Vídeň (Schwechat)')).toBe('Vídeň')
+    expect(normalizeAirportName('Varšava')).toBeNull()
+  })
+
+  it('TourChunker bere i <TOUR> velkými písmeny', () => {
+    const chunker = new TourChunker()
+    expect(chunker.push('<TOURS><TOUR><A>1</A></TOUR><TOUR><A>2</A></TOUR></TOURS>')).toEqual([
+      '<TOUR><A>1</A></TOUR>',
+      '<TOUR><A>2</A></TOUR>',
+    ])
+  })
+})
+
+describe('mapCjProduct — produktový katalog CJ (Fischer, Exim)', () => {
+  const fischer = TOUR_SOURCES.find((s) => s.id === 'fischer')!
+  const exim = TOUR_SOURCES.find((s) => s.id === 'exim')!
+  const product = (o: Partial<CjTravelProduct> = {}): CjTravelProduct => ({
+    id: '2480',
+    title: 'Jaz Elite Negma',
+    brand: 'FISCHER',
+    link: 'https://www.fischer.cz/egypt/marsa-alam/jaz-elite-negma?DS=256&DI=AI&NN=3&DD=2027-01-07&AC1=2',
+    imageLink: 'https://img.fischer.cz/hotels/720/x.jpg',
+    price: { amount: '18390.00', currency: 'CZK' },
+    destinationCountry: 'EG',
+    destinationName: 'Marsa Alam',
+    destinationLatitude: '25.1',
+    destinationLongitude: '34.9',
+    originCity: 'PRG',
+    starRating: '5.0',
+    diningOptions: 'All Inclusive',
+    duration: '3 noci',
+    travelStartDate: '2027-01-06T23:00:00Z',
+    ...o,
+  })
+
+  it('přeloží produkt na řádek s jedním termínem (údaje z deep-linku)', () => {
+    expect(mapCjProduct(product(), fischer, '2026-10-23')).toEqual({
+      source: 'fischer',
+      externalId: '2480',
+      kind: 'stay',
+      title: 'Jaz Elite Negma',
+      countryCode: 'EGY',
+      area: 'Marsa Alam',
+      place: null,
+      stars: 5,
+      board: '6',
+      departures: ['Praha'],
+      terms: [['2027-01-07', 3, 18390, 0]],
+      termFrom: '2027-01-07',
+      termTo: null,
+      nights: 3,
+      price: 18390,
+      originalPrice: null,
+      termCount: 1,
+      photoUrl: 'https://img.fischer.cz/hotels/720/x.jpg',
+      detailUrl:
+        'https://www.fischer.cz/egypt/marsa-alam/jaz-elite-negma?DS=256&DI=AI&NN=3&DD=2027-01-07&AC1=2',
+      lat: 25.1,
+      lng: 34.9,
+    })
+  })
+
+  it('cizí značku v katalogu vynechá, bez deep-link parametrů bere pole katalogu a pražský den', () => {
+    expect(mapCjProduct(product({ brand: 'EXIM TOURS' }), fischer, '2026-10-23')).toBeNull()
+    const ex = mapCjProduct(
+      product({
+        brand: 'KARTAGO TOURS',
+        link: 'https://www.eximtours.cz/egypt/hurghada/hotel',
+        diningOptions: 'All Inclusive Ultra',
+        starRating: '4.5',
+        originCity: 'BTS',
+      }),
+      exim,
+      '2026-10-23',
+    )
+    expect(ex).toMatchObject({
+      source: 'exim',
+      board: '8',
+      stars: 4,
+      departures: ['Bratislava'],
+      terms: [['2027-01-07', 3, 18390, 0]],
+    })
+    expect(pragueDay('2027-01-06T23:00:00Z')).toBe('2027-01-07')
+    expect(pragueDay('2027-06-30T22:00:00Z')).toBe('2027-07-01')
+    // Poznávací podle stravy „dle programu“; cizí měna, minulý termín a neznámé letiště = nic.
+    expect(
+      mapCjProduct(
+        product({ link: 'https://www.fischer.cz/x?DI=IT&NN=7&DD=2027-03-01' }),
+        fischer,
+        '2026-10-23',
+      )?.kind,
+    ).toBe('tour')
+    expect(
+      mapCjProduct(product({ price: { amount: '100', currency: 'EUR' } }), fischer, '2026-10-23'),
+    ).toBeNull()
+    expect(mapCjProduct(product(), fischer, '2027-02-01')).toBeNull()
+    expect(mapCjProduct(product({ originCity: 'FRA' }), fischer, '2026-10-23')).toBeNull()
   })
 })
 

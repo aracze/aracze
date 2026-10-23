@@ -79,6 +79,14 @@ services:
       CEDOK_SFTP_USER: ${CEDOK_SFTP_USER}
       CEDOK_SFTP_PASSWORD: ${CEDOK_SFTP_PASSWORD}
       CEDOK_SFTP_PATH: ${CEDOK_SFTP_PATH}
+      # TUI: veřejný https feed, jen adresa (`<PREFIX>_FEED_URL` má přednost před SFTP).
+      TUI_FEED_URL: ${TUI_FEED_URL}
+      # Fischer + Exim: produktový katalog CJ (GraphQL) — token a CID z /opt/aracze/.env,
+      # zdroje se zapínají `<PREFIX>_FEED=cj`.
+      CJ_API_TOKEN: ${CJ_API_TOKEN}
+      CJ_COMPANY_ID: ${CJ_COMPANY_ID}
+      FISCHER_FEED: ${FISCHER_FEED}
+      EXIM_FEED: ${EXIM_FEED}
       # Počasí na stránkách Počasí: Meteostat (měsíční sync klimatických normálů
       # /api/sync-climate-normals) a OpenWeather One Call 3.0 (aktuální stav
       # a předpověď při renderu). Platí stejná past jako u Kiwi výš — bez těchto

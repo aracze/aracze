@@ -252,6 +252,8 @@ storage credentials, the following variables drive user-visible features:
 | `TURNSTILE_SECRET_KEY`                                                                                 | Optional                   | Cloudflare Turnstile secret key (server-side token verification).                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `KIWI_TEQUILA_API_KEY`                                                                                 | For Akční nabídky          | Server-side klíč Kiwi Tequila Search API pro denní sync `/api/sync-affiliate-deals` (sekce „Akční nabídky"). Účet je schválený partner z 2023 — od 5/2024 Tequila nové partnery nebere, klíč nerušit.                                                                                                                                                                                                                                                                                                         |
 | `CEDOK_SFTP_HOST`, `CEDOK_SFTP_USER`, `CEDOK_SFTP_PASSWORD`, `CEDOK_SFTP_PATH`                         | For Zájezdy                | SFTP přístup k feedu zájezdů Čedoku (formát Sdovolená.cz) pro denní sync `/api/sync-tour-offers` (podstránky „Zájezdy“). Další cestovky mají stejnou čtveřici s předponou podle `src/lib/tour-sources.ts` (`FISCHER_`, `EXIM_`, `TUI_`, `BLUESTYLE_`); zdroj bez hosta se přeskočí. Údaje přišly e-mailem od cestovky — jen do `.env` a serverového compose, nikdy do kódu.                                                                                                                                   |
+| `TUI_FEED_URL`                                                                                         | For Zájezdy                | Veřejný https feed zájezdů TUI (formát Sdovolená.cz, ~5 MB) pro denní sync `/api/sync-tour-offers`. `<PREFIX>_FEED_URL` má u zdroje přednost před SFTP proměnnými.                                                                                                                                                                                                                                                                                                                                            |
+| `CJ_API_TOKEN`, `CJ_COMPANY_ID`, `FISCHER_FEED`, `EXIM_FEED`                                           | For Zájezdy                | Produktový katalog sítě CJ (GraphQL `ads.api.cj.com`, typ TravelExperience) pro Fischer a Exim, které feed Sdovolená nedávají. Osobní token z developers.cj.com + Company ID (CID); `FISCHER_FEED=cj` / `EXIM_FEED=cj` zdroj zapínají. Z každého katalogu se bere jen vlastní značka (oba nesou tytéž hotely skupiny DER Touristik).                                                                                                                                                                          |
 
 > `NEXT_PUBLIC_*` variables are inlined into the client bundle at build time and
 > are therefore public. Keep secrets (e.g. `OPENWEATHER_API_KEY`, `PAYLOAD_SECRET`)
@@ -585,9 +587,18 @@ Denní obnova kolekce **`tour-offers`**, ze které se kreslí podstránky
 
 - **Zdroje** = cestovky schválené v síti CJ (`src/lib/tour-sources.ts`: Čedok,
   Fischer, Exim Tours, TUI, Blue Style). Každá dává nabídkový XML ve formátu
-  **Sdovolená.cz** na SFTP; přístup je v env `<PREFIX>_SFTP_*` a zdroj bez
-  hosta se přeskočí (zatím feed jen od Čedoku — ostatní ho dávají „na
-  vyžádání“ přes VIVnetworks). Číselníky formátu (strava 1–8, doprava, typ
+  **Sdovolená.cz**: Čedok na SFTP (`<PREFIX>_SFTP_*`), TUI veřejně přes https
+  (`<PREFIX>_FEED_URL`). **Fischer a Exim** feed Sdovolená nedávají — berou se
+  z **produktového katalogu CJ** (`<PREFIX>_FEED=cj`, `src/lib/cj-travel.ts`:
+  GraphQL `products` typu TravelExperience, stránkování po 500). Katalog má
+  jeden produkt = jeden hotel s JEDINOU nabídkou (odlet `DD`, nocí `NN`
+  a strava `DI` z deep-linku, cena za osobu), bez původní ceny; oba katalogy
+  jsou společná nabídka skupiny (značky FISCHER / EXIM TOURS / KARTAGO
+  TOURS), proto se z každého bere jen vlastní značka (`cjBrands`), jinak by
+  se karty zdvojily. Zdroj bez nastavení se přeskočí (Blue Style zatím). Feedy se liší
+  v drobnostech a parser je sjednocuje: TUI píše tagy velkými písmeny, u „All
+  inclusive plus“ posílá prázdné `board/id` a jen popis (→ kód 8), letiště
+  jako „Brno-Tuřany“ (→ Brno, `normalizeAirportName`). Číselníky formátu (strava 1–8, doprava, typ
   zájezdu, hvězdy) drží `src/lib/sdovolena.ts`.
 - **Feed Čedoku má 3,4 GB** (každý termín nese dvě dlouhé URL), proto se
   stahuje `fastGet` do dočasného souboru (paralelní bloky, ~8 MB/s; sekvenční

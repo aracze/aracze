@@ -64,3 +64,26 @@ export function airportRank(name: string): number {
   const i = TOUR_AIRPORTS.findIndex((a) => a.name === name)
   return i === -1 ? Number.MAX_SAFE_INTEGER : i
 }
+
+const fold = (v: string) =>
+  v
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z]+/g, ' ')
+    .trim()
+
+/**
+ * Jméno odletového místa z feedu → letiště ze seznamu, nebo null. Cestovky
+ * píšou totéž letiště různě („Brno-Tuřany“, „Praha“, „Ostrava-Mošnov“), proto
+ * se porovnává začátek jména bez diakritiky a interpunkce.
+ */
+export function normalizeAirportName(place: string): string | null {
+  const f = fold(place)
+  if (!f) return null
+  for (const a of TOUR_AIRPORTS) {
+    const name = fold(a.name)
+    if (f === name || f.startsWith(name + ' ')) return a.name
+  }
+  return null
+}

@@ -1,10 +1,12 @@
 import { XMLParser } from 'fast-xml-parser'
-import { TOUR_AIRPORTS, airportRank } from './tour-airports'
+import { airportRank, normalizeAirportName } from './tour-airports'
 import type { TourSourceId } from './tour-sources'
 
 /**
- * Parser nabídkového feedu ve formátu **Sdovolená.cz** (Čedok a na vyžádání
- * i Fischer/Exim/TUI/Blue Style). Spec: https://o-seznam.cz/napoveda/sdovolena/pro-inzerenty/specifikace-xml/
+ * Parser nabídkového feedu ve formátu **Sdovolená.cz** (Čedok přes SFTP, TUI
+ * přes https; Fischer/Exim/Blue Style na vyžádání). Feedy se liší v drobnostech
+ * (velikost písmen tagů, strava jen popisem, „Brno-Tuřany“ místo „Brno“) —
+ * parser je sjednocuje. Spec: https://o-seznam.cz/napoveda/sdovolena/pro-inzerenty/specifikace-xml/
  *
  * Feed je obří (Čedok 3,4 GB: každý `<term>` nese dvě dlouhé URL), proto se
  * nečte celý do paměti — `TourChunker` ze streamu vyřezává jednotlivé
@@ -52,8 +54,6 @@ export function starsFromClass(classId: string | number | null | undefined): num
 
 const TRANSPORT_FLIGHT = '2'
 const KIND_BY_TOUR_TYPE: Record<string, TourKind> = { '1': 'stay', '2': 'tour' }
-
-const AIRPORT_NAMES: readonly string[] = TOUR_AIRPORTS.map((a) => a.name)
 
 /**
  * Kompaktní termín pro JSON: [odlet YYYY-MM-DD, nocí, cena, původní cena nebo 0].
@@ -104,7 +104,7 @@ type Term = {
   prices?: { price?: { desc_id?: unknown; final_price?: unknown }[]; price_orig?: unknown }
 }
 type TermGroup = {
-  board?: { id?: unknown }
+  board?: { id?: unknown; desc?: unknown }
   transport?: { id?: unknown }
   dept_places?: { place?: unknown[] }
   terms?: { term?: Term[] }
@@ -135,8 +135,32 @@ const parser = new XMLParser({
   // Čísla nechat jako text: `tour_id` i ceny se dál zpracovávají ručně a
   // automatický převod by z „0123“ udělal 123.
   parseTagValue: false,
+  // Čedok píše tagy malými písmeny, TUI velkými (`<TOUR_ID>`) — spec je
+  // nepředepisuje, tak se všechno sjednotí na malá.
+  transformTagName: (name) => name.toLowerCase(),
   isArray: (_name, jpath) => ARRAY_PATHS.has(String(jpath)),
 })
+
+/**
+ * Kód stravy: primárně `board/id` z číselníku; když chybí (TUI u „All
+ * inclusive plus“ posílá prázdné id a jen popis), odvodí se z popisu.
+ */
+export function boardCode(id: unknown, desc: unknown): string | null {
+  const code = text(id)
+  if (BOARD_LABELS[code]) return code
+  const d = text(desc).toLowerCase()
+  if (!d) return null
+  if (d.includes('all inclusive') || d.includes('all-inclusive')) {
+    return d.includes('ultra') || d.includes('plus') || d.includes('premium') ? '8' : '6'
+  }
+  if (d.includes('plná penze') || d.includes('plna penze')) return '5'
+  if (d.includes('polopenze')) return '4'
+  if (d.includes('večeře') || d.includes('vecere')) return '3'
+  if (d.includes('snídan') || d.includes('snidan')) return '2'
+  if (d.includes('bez strav')) return '1'
+  if (d.includes('program')) return '7'
+  return null
+}
 
 /**
  * Textová hodnota z parseru, ZPLOŠTĚNÁ: fast-xml-parser vrací podřetězce
@@ -210,11 +234,11 @@ export function parseSdovolenaTour(
   const rows: TourOfferRow[] = []
   for (const group of tour.term_groups?.term_group ?? []) {
     if (text(group.transport?.id) !== TRANSPORT_FLIGHT) continue
-    const board = text(group.board?.id)
-    if (!BOARD_LABELS[board]) continue
+    const board = boardCode(group.board?.id, group.board?.desc)
+    if (!board) continue
     const departures = (group.dept_places?.place ?? [])
-      .map(text)
-      .filter((p) => AIRPORT_NAMES.includes(p))
+      .map((p) => normalizeAirportName(text(p)))
+      .filter((p): p is string => p !== null)
       // Česká letiště první (Praha, Brno…), ať je na kartě hlavní odlet stabilní.
       .sort((a, b) => airportRank(a) - airportRank(b))
     const uniqueDepartures = [...new Set(departures)]
@@ -286,6 +310,15 @@ export function parseSdovolenaTour(
  * `<tours>` a hlavičku ignoruje. Hotové kusy se z bufferu hned odřezávají,
  * takže paměť drží jen jeden rozpracovaný zájezd (stovky kB), ne feed.
  */
+/** Pozice tagu bez ohledu na velikost písmen (Čedok `<tour>`, TUI `<TOUR>`). */
+function indexOfTag(haystack: string, tag: string, from: number): number {
+  const lower = haystack.indexOf(tag, from)
+  const upper = haystack.indexOf(tag.toUpperCase(), from)
+  if (lower === -1) return upper
+  if (upper === -1) return lower
+  return Math.min(lower, upper)
+}
+
 export class TourChunker {
   private buffer = ''
 
@@ -293,13 +326,13 @@ export class TourChunker {
     this.buffer += chunk
     const out: string[] = []
     for (;;) {
-      const start = this.buffer.indexOf('<tour>')
+      const start = indexOfTag(this.buffer, '<tour>', 0)
       if (start === -1) {
         // Nic rozpracovaného: držet jen konec, kde by mohl začínat ořezaný `<tour>`.
         if (this.buffer.length > 16) this.buffer = this.buffer.slice(-16)
         return out
       }
-      const end = this.buffer.indexOf('</tour>', start)
+      const end = indexOfTag(this.buffer, '</tour>', start)
       if (end === -1) {
         if (start > 0) this.buffer = this.buffer.slice(start)
         return out
